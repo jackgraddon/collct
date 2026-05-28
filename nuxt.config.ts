@@ -11,8 +11,10 @@ export default defineNuxtConfig({
   },
 
   site: {
-    name: 'Collct'
+    name: 'Collct',
   },
+
+  css: ['~/assets/css/main.css'],
 
   modules: [
     '@nuxt/fonts',
@@ -21,6 +23,7 @@ export default defineNuxtConfig({
     '@nuxt/image',
     '@nuxt/icon',
     'nuxt-auth-utils',
-    '@nuxtjs/seo'
+    '@nuxtjs/seo',
+    '@nuxt/ui',
   ]
 })
