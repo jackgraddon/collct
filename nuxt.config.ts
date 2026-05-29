@@ -11,6 +11,7 @@ export default defineNuxtConfig({
   },
 
   site: {
+    url: "https://collct.vercel.app/",
     name: 'Collct',
   },
 

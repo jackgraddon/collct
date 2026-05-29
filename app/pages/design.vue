@@ -4,7 +4,7 @@ const colorGroups = [
   {
     label: 'Sunflower Gold',
     alias: 'primary',
-    description: 'Brand identity — warm red-orange hues for CTAs, highlights, and interactive states.',
+    description: 'Brand identity — warm hues for CTAs, highlights, and interactive states.',
     swatches: [
       { step: 50,  value: 'oklch(97.59% 0.023 82.12)' },
       { step: 100, value: 'oklch(95.34% 0.046 85.19)' },
@@ -108,7 +108,7 @@ const typeRows = [
 
 // ─── Token table rows ─────────────────────────────────────────────────────────
 const tokenRows = [
-  { token: '--color-vibrant-twilight-*', maps: 'primary',  usage: 'CTAs, interactive elements, brand highlights' },
+  { token: '--color-sunflower-gold-*', maps: 'primary',  usage: 'CTAs, interactive elements, brand highlights' },
   { token: '--color-onyx-*',            maps: 'neutral',  usage: 'Surfaces, borders, text hierarchy' },
   { token: '--color-jungle-teal-*',     maps: 'success',  usage: 'Confirmations, completed states' },
   { token: '--color-smart-blue-*',      maps: 'info',     usage: 'Notices, tooltips, neutral callouts' },
@@ -177,7 +177,7 @@ function copy(token: string) {
                 <button
                   v-for="swatch in group.swatches"
                   :key="swatch.step"
-                  class="group flex-1 flex flex-col items-center gap-1 py-2 transition-all hover:flex-[1.5] cursor-pointer border-none bg-transparent"
+                  class="group flex-1 flex flex-col items-center gap-1 py-2 transition-all border-none bg-transparent"
                   :title="`--color-${group.label.toLowerCase().replace(' ', '-')}-${swatch.step}`"
                   @click="copy(`--color-${group.label.toLowerCase().replace(' ', '-')}-${swatch.step}`)"
                 >
@@ -462,7 +462,7 @@ function copy(token: string) {
             <pre class="text-sm leading-relaxed overflow-x-auto"><code><span class="text-muted">export default</span> defineAppConfig({
   ui: {
     colors: {
-      primary: <span class="text-primary">'vibrant-twilight'</span>,
+      primary: <span class="text-primary">'sunflower-gold'</span>,
       neutral: <span class="text-neutral">'onyx'</span>,
       success: <span class="text-success">'jungle-teal'</span>,
       info:    <span class="text-info">'smart-blue'</span>,
