@@ -1,7 +1,7 @@
 <template>
-  <UPageGrid>
+  <div>
     
-  </UPageGrid>
+  </div>
 </template>
 
 <script lang="ts" setup>

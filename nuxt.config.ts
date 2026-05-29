@@ -17,6 +17,11 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  hub: {
+    blob: true,
+    db: 'sqlite',
+  },
+
   modules: [
     '@nuxt/fonts',
     '@vite-pwa/nuxt',
@@ -26,5 +31,6 @@ export default defineNuxtConfig({
     'nuxt-auth-utils',
     '@nuxtjs/seo',
     '@nuxt/ui',
+    '@nuxthub/core'
   ]
 })
