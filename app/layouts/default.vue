@@ -1,6 +1,7 @@
 <template>
+  <CollctHeader />
   <div>
-    
+    <slot />
   </div>
 </template>
 

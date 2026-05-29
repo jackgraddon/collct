@@ -1,4 +1,5 @@
 <template>
+  <CollctHeader />
   <UPage>
     <UPageAside>
       <template #left />
