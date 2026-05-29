@@ -1,4 +1,4 @@
-@theme {
+@theme static {
     --color-onyx-50: oklch(96.36% 0.003 106.45);
     --color-onyx-100: oklch(92.51% 0.003 84.56);
     --color-onyx-200: oklch(84.93% 0.008 80.72);
@@ -11,17 +11,17 @@
     --color-onyx-900: oklch(21.81% 0.004 84.59);
     --color-onyx-950: oklch(18.30% 0.003 67.66);
 
-    --color-bright-snow-50: oklch(95.68% 0.006 17.27);
-    --color-bright-snow-100: oklch(91.40% 0.014 17.42);
-    --color-bright-snow-200: oklch(82.66% 0.030 17.77);
-    --color-bright-snow-300: oklch(73.80% 0.046 18.26);
-    --color-bright-snow-400: oklch(65.05% 0.064 18.93);
-    --color-bright-snow-500: oklch(55.92% 0.082 20);
-    --color-bright-snow-600: oklch(47.90% 0.069 19.94);
-    --color-bright-snow-700: oklch(39.17% 0.056 19.88);
-    --color-bright-snow-800: oklch(30.16% 0.040 19.64);
-    --color-bright-snow-900: oklch(20.42% 0.022 19.11);
-    --color-bright-snow-950: oklch(17.14% 0.016 18.80);
+    --color-sunflower-gold-50: oklch(97.59% 0.023 82.12);
+    --color-sunflower-gold-100: oklch(95.34% 0.046 85.19);
+    --color-sunflower-gold-200: oklch(90.74% 0.090 83.84);
+    --color-sunflower-gold-300: oklch(86.70% 0.130 82.62);
+    --color-sunflower-gold-400: oklch(82.93% 0.157 79.84);
+    --color-sunflower-gold-500: oklch(79.52% 0.168 74.06);
+    --color-sunflower-gold-600: oklch(67.37% 0.142 74.38);
+    --color-sunflower-gold-700: oklch(54.65% 0.115 74.90);
+    --color-sunflower-gold-800: oklch(41% 0.085 76.55);
+    --color-sunflower-gold-900: oklch(26.47% 0.053 81.74);
+    --color-sunflower-gold-950: oklch(21.72% 0.043 84.73);
 
     --color-bubblegum-pink-50: oklch(94.81% 0.023 14.26);
     --color-bubblegum-pink-100: oklch(89.61% 0.046 14.73);

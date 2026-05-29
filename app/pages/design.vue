@@ -1,27 +1,22 @@
 <script setup lang="ts">
-// DesignSystem.vue
-// Navigation via UTabs, all content via Nuxt UI components + Tailwind utilities only.
-// Colors reference the named type tokens (bubblegum-pink, onyx, etc.) mapped to
-// Nuxt UI's primary/neutral/success/info/error via app.config.ts.
-
 // ─── Color palette data ───────────────────────────────────────────────────────
 const colorGroups = [
   {
-    label: 'Bubblegum Pink',
+    label: 'Sunflower Gold',
     alias: 'primary',
     description: 'Brand identity — warm red-orange hues for CTAs, highlights, and interactive states.',
     swatches: [
-      { step: 50,  value: 'oklch(94.81% 0.023 14.26)' },
-      { step: 100, value: 'oklch(89.61% 0.046 14.73)' },
-      { step: 200, value: 'oklch(79.66% 0.100 14.90)' },
-      { step: 300, value: 'oklch(70.74% 0.154 17.89)' },
-      { step: 400, value: 'oklch(63.64% 0.204 21.40)' },
-      { step: 500, value: 'oklch(59.19% 0.232 26.32)' },
-      { step: 600, value: 'oklch(50.26% 0.196 25.92)' },
-      { step: 700, value: 'oklch(40.75% 0.156 25.65)' },
-      { step: 800, value: 'oklch(30.87% 0.115 24.48)' },
-      { step: 900, value: 'oklch(20% 0.067 22.58)'    },
-      { step: 950, value: 'oklch(16.31% 0.053 19.61)' },
+      { step: 50,  value: 'oklch(97.59% 0.023 82.12)' },
+      { step: 100, value: 'oklch(95.34% 0.046 85.19)' },
+      { step: 200, value: 'oklch(90.74% 0.090 83.84)' },
+      { step: 300, value: 'oklch(86.70% 0.130 82.62)' },
+      { step: 400, value: 'oklch(82.93% 0.157 79.84)' },
+      { step: 500, value: 'oklch(79.52% 0.168 74.06)' },
+      { step: 600, value: 'oklch(67.37% 0.142 74.38)' },
+      { step: 700, value: 'oklch(54.65% 0.115 74.90)' },
+      { step: 800, value: 'oklch(41% 0.085 76.55)' },
+      { step: 900, value: 'oklch(26.47% 0.053 81.74)' },
+      { step: 950, value: 'oklch(21.72% 0.043 84.73)' },
     ],
   },
   {
@@ -79,21 +74,21 @@ const colorGroups = [
     ],
   },
   {
-    label: 'Bright Snow',
+    label: 'Bubblegum Pink',
     alias: 'error',
     description: 'Destructive and warning states — desaturated terracotta reds for alerts, validation, and danger zones.',
     swatches: [
-      { step: 50,  value: 'oklch(95.68% 0.006 17.27)' },
-      { step: 100, value: 'oklch(91.40% 0.014 17.42)' },
-      { step: 200, value: 'oklch(82.66% 0.030 17.77)' },
-      { step: 300, value: 'oklch(73.80% 0.046 18.26)' },
-      { step: 400, value: 'oklch(65.05% 0.064 18.93)' },
-      { step: 500, value: 'oklch(55.92% 0.082 20)'    },
-      { step: 600, value: 'oklch(47.90% 0.069 19.94)' },
-      { step: 700, value: 'oklch(39.17% 0.056 19.88)' },
-      { step: 800, value: 'oklch(30.16% 0.040 19.64)' },
-      { step: 900, value: 'oklch(20.42% 0.022 19.11)' },
-      { step: 950, value: 'oklch(17.14% 0.016 18.80)' },
+      { step: 50,  value: 'oklch(94.81% 0.023 14.26)' },
+      { step: 100, value: 'oklch(89.61% 0.046 14.73)' },
+      { step: 200, value: 'oklch(79.66% 0.100 14.90)' },
+      { step: 300, value: 'oklch(70.74% 0.154 17.89)' },
+      { step: 400, value: 'oklch(63.64% 0.204 21.40)' },
+      { step: 500, value: 'oklch(59.19% 0.232 26.32)' },
+      { step: 600, value: 'oklch(50.26% 0.196 25.92)' },
+      { step: 700, value: 'oklch(40.75% 0.156 25.65)' },
+      { step: 800, value: 'oklch(30.87% 0.115 24.48)' },
+      { step: 900, value: 'oklch(20% 0.067 22.58)'    },
+      { step: 950, value: 'oklch(16.31% 0.053 19.61)' },
     ],
   },
 ]
@@ -113,12 +108,12 @@ const typeRows = [
 
 // ─── Token table rows ─────────────────────────────────────────────────────────
 const tokenRows = [
-  { token: '--color-bright-snow-*',    maps: 'primary',  usage: 'CTAs, interactive elements, brand highlights' },
-  { token: '--color-onyx-*',           maps: 'neutral',  usage: 'Surfaces, borders, text hierarchy' },
-  { token: '--color-jungle-teal-*',    maps: 'success',  usage: 'Confirmations, completed states' },
-  { token: '--color-smart-blue-*',     maps: 'info',     usage: 'Notices, tooltips, neutral callouts' },
-  { token: '--color-bubblegum-pink-*', maps: 'error',    usage: 'Alerts, validation errors, danger zones' },
-  { token: '--font-sans',              maps: '—',        usage: "Figtree, system-ui — all body and UI text" },
+  { token: '--color-vibrant-twilight-*', maps: 'primary',  usage: 'CTAs, interactive elements, brand highlights' },
+  { token: '--color-onyx-*',            maps: 'neutral',  usage: 'Surfaces, borders, text hierarchy' },
+  { token: '--color-jungle-teal-*',     maps: 'success',  usage: 'Confirmations, completed states' },
+  { token: '--color-smart-blue-*',      maps: 'info',     usage: 'Notices, tooltips, neutral callouts' },
+  { token: '--color-bubblegum-pink-*',  maps: 'error',    usage: 'Alerts, validation errors, danger zones' },
+  { token: '--font-sans',               maps: '—',        usage: "Figtree, system-ui — all body and UI text" },
 ]
 
 // ─── UTabs items ─────────────────────────────────────────────────────────────
@@ -145,8 +140,7 @@ function copy(token: string) {
     <div class="mb-10">
       <div class="flex items-center gap-3 mb-3">
         <UBadge color="primary" variant="subtle" size="sm">Design System</UBadge>
-        <UBadge color="neutral" variant="subtle" size="sm">Nuxt UI v3</UBadge>
-        <UBadge color="neutral" variant="subtle" size="sm">OKLCH</UBadge>
+        <UBadge color="neutral" variant="subtle" size="sm">Nuxt UI v4</UBadge>
       </div>
       <h1 class="text-4xl font-bold tracking-tight mb-2">Design Tokens</h1>
       <p class="text-muted text-lg">
@@ -468,7 +462,7 @@ function copy(token: string) {
             <pre class="text-sm leading-relaxed overflow-x-auto"><code><span class="text-muted">export default</span> defineAppConfig({
   ui: {
     colors: {
-      primary: <span class="text-primary">'bright-snow'</span>,
+      primary: <span class="text-primary">'vibrant-twilight'</span>,
       neutral: <span class="text-neutral">'onyx'</span>,
       success: <span class="text-success">'jungle-teal'</span>,
       info:    <span class="text-info">'smart-blue'</span>,
