@@ -1,0 +1,83 @@
+@import 'colors.types.css';
+
+@theme {
+    /* ----------------------------------------------------
+        BRAND COLORS
+       ---------------------------------------------------- */
+    /* Primary / Brand */
+    --color-primary-50: var(--color-bubblegum-pink-50);
+    --color-primary-100: var(--color-bubblegum-pink-100);
+    --color-primary-200: var(--color-bubblegum-pink-200);
+    --color-primary-300: var(--color-bubblegum-pink-300);
+    --color-primary-400: var(--color-bubblegum-pink-400);
+    --color-primary-500: var(--color-bubblegum-pink-500);
+    --color-primary-600: var(--color-bubblegum-pink-600);
+    --color-primary-700: var(--color-bubblegum-pink-700);
+    --color-primary-800: var(--color-bubblegum-pink-800);
+    --color-primary-900: var(--color-bubblegum-pink-900);
+    --color-primary-950: var(--color-bubblegum-pink-950);
+
+    /* Neutral / Surface */
+    --color-neutral-50: var(--color-onyx-50);
+    --color-neutral-100: var(--color-onyx-100);
+    --color-neutral-200: var(--color-onyx-200);
+    --color-neutral-300: var(--color-onyx-300);
+    --color-neutral-400: var(--color-onyx-400);
+    --color-neutral-500: var(--color-onyx-500);
+    --color-neutral-600: var(--color-onyx-600);
+    --color-neutral-700: var(--color-onyx-700);
+    --color-neutral-800: var(--color-onyx-800);
+    --color-neutral-900: var(--color-onyx-900);
+    --color-neutral-950: var(--color-onyx-950);
+
+    /* ----------------------------------------------------
+        GLOBAL SEMANTIC OVERRIDES
+       ---------------------------------------------------- */
+    /* Dark Background (Deepest Onyx Step) */
+    --color-background: var(--color-neutral-500);
+    
+    /* Light Text (High-contrast Bright Snow step) */
+    --color-text: var(--color-bright-snow-500);
+
+    /* ----------------------------------------------------
+        STATE COLORS
+       ---------------------------------------------------- */
+    /* Success State */
+    --color-success-50: var(--color-jungle-teal-50);
+    --color-success-100: var(--color-jungle-teal-100);
+    --color-success-200: var(--color-jungle-teal-200);
+    --color-success-300: var(--color-jungle-teal-300);
+    --color-success-400: var(--color-jungle-teal-400);
+    --color-success-500: var(--color-jungle-teal-500);
+    --color-success-600: var(--color-jungle-teal-600);
+    --color-success-700: var(--color-jungle-teal-700);
+    --color-success-800: var(--color-jungle-teal-800);
+    --color-success-900: var(--color-jungle-teal-900);
+    --color-success-950: var(--color-jungle-teal-950);
+
+    /* Info State */
+    --color-info-50: var(--color-smart-blue-50);
+    --color-info-100: var(--color-smart-blue-100);
+    --color-info-200: var(--color-smart-blue-200);
+    --color-info-300: var(--color-smart-blue-300);
+    --color-info-400: var(--color-smart-blue-400);
+    --color-info-500: var(--color-smart-blue-500);
+    --color-info-600: var(--color-smart-blue-600);
+    --color-info-700: var(--color-smart-blue-700);
+    --color-info-800: var(--color-smart-blue-800);
+    --color-info-900: var(--color-smart-blue-900);
+    --color-info-950: var(--color-smart-blue-950);
+
+    /* Error/Warning State */
+    --color-error-50: var(--color-bright-snow-50);
+    --color-error-100: var(--color-bright-snow-100);
+    --color-error-200: var(--color-bright-snow-200);
+    --color-error-300: var(--color-bright-snow-300);
+    --color-error-400: var(--color-bright-snow-400);
+    --color-error-500: var(--color-bright-snow-500);
+    --color-error-600: var(--color-bright-snow-600);
+    --color-error-700: var(--color-bright-snow-700);
+    --color-error-800: var(--color-bright-snow-800);
+    --color-error-900: var(--color-bright-snow-900);
+    --color-error-950: var(--color-bright-snow-950);
+}
