@@ -20,9 +20,9 @@
 </template>
 
 <script lang="ts" setup>
-definePageMeta({
-  middleware: ['user-logged-in'], 
-})
+// definePageMeta({
+//   middleware: ['user-logged-in'], 
+// })
 
 import type { ButtonProps, PageFeatureProps } from '@nuxt/ui'
 
