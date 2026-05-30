@@ -33,12 +33,14 @@ export default defineEventHandler((event) => {
     
     // Generate a random seed so Picsum gives unique images even if dimensions match
     const seed = Math.random().toString(36).substring(2, 10);
-    const img = `https://picsum.photos/seed/${seed}/${dims.w}/${dims.h}`;
+    const img = `https://picsum.photos/seed/${seed}/${dims?.w}/${dims?.h}`;
 
     return {
       id,
       author,
-      img
+      img,
+      width: dims?.w,
+      height: dims?.h,
     };
   });
 

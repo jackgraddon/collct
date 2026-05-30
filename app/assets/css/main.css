@@ -11,6 +11,10 @@
   h2 { @apply text-3xl font-semibold; }
   h3 { @apply text-2xl font-semibold; }
   h4 { @apply text-xl font-medium; }
+
+  a, button, [role="button"] {
+    cursor: pointer;
+  }
 }
 
 /* @custom-variant dark (&:where(.dark, .dark *)); */

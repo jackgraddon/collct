@@ -4,7 +4,7 @@
     <UPageAside>
       <template #left />
     </UPageAside>
-    <UPageHeader :title="title" :description="description" />
+    <UPageHeader :title="title" :description="description" class="border-b-0"/>
     <UPageBody>
       <slot />
     </UPageBody>
