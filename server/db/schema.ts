@@ -5,7 +5,7 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  password: text('password').notNull(), // Remember to hash this before insertion!
+  password: text('password').notNull(),
   avatarUrl: text('avatar_url'), 
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 })
@@ -15,7 +15,7 @@ export const photos = sqliteTable('photos', {
   userId: integer('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
-  blobPathname: text('blob_pathname').notNull(), // Links directly to Nuxt Hub Blob
+  blobPathname: text('blob_pathname').notNull(),
   caption: text('caption'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 })

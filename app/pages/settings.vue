@@ -1,62 +1,57 @@
 <template>
   <!-- <UPageCard class="w-full"> -->
     <UTabs :items="tabs" variant="link">
-
       <template #account>
-        <UCard>
-          <template #header>
-            <div class="flex items-center gap-4">
-              <div class="relative group cursor-pointer" @click="triggerAvatarUpload">
-                <UAvatar
-                  :src="user.avatarUrl ?? undefined"
-                  :alt="user.name"
-                  size="xl"
-                />
-                <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                  <UIcon name="i-lucide-camera" class="text-white size-5" />
-                </div>
-                <input
-                  ref="avatarInput"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  class="hidden"
-                  @change="onAvatarChange"
-                />
+        <div class="my-4">
+          <div class="flex items-center gap-4">
+            <div class="relative group cursor-pointer" @click="triggerAvatarUpload">
+              <UAvatar
+                :src="user.avatarUrl ?? undefined"
+                :alt="user.name"
+                size="xl"
+              />
+              <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <UIcon name="i-lucide-camera" class="text-white size-5" />
               </div>
-              <div>
-                <p class="font-semibold text-lg">{{ user.name }}</p>
-                <p class="text-sm text-muted">{{ user.email }}</p>
-              </div>
+              <input
+                ref="avatarInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                class="hidden"
+                @change="onAvatarChange"
+              />
             </div>
-          </template>
+            <div>
+              <p class="font-semibold text-lg">{{ user.name }}</p>
+              <p class="text-sm text-muted">{{ user.email }}</p>
+            </div>
+          </div>
 
-          <UForm :state="accountState" class="flex flex-col gap-4" @submit="onSaveAccount">
-            <UFormField label="Full Name" name="name">
-              <UInput v-model="accountState.name" class="w-full" />
-            </UFormField>
-            <UFormField label="Email" name="email">
-              <UInput v-model="accountState.email" type="email" class="w-full" />
-            </UFormField>
-          </UForm>
+            <UForm :state="accountState" class="flex flex-col gap-4" @submit="onSaveAccount">
+              <UFormField label="Full Name" name="name">
+                <UInput v-model="accountState.name" class="w-full" />
+              </UFormField>
+              <UFormField label="Email" name="email">
+                <UInput v-model="accountState.email" type="email" class="w-full" />
+              </UFormField>
+            </UForm>
 
-          <template #footer>
+          <div>
             <div class="flex justify-end gap-2">
               <UButton variant="outline" color="neutral" @click="onResetAccount">Reset</UButton>
               <UButton @click="onSaveAccount" :loading="saving">Save changes</UButton>
             </div>
-          </template>
-        </UCard>
+          </div>
+        </div>
       </template>
 
       <template #appearance>
-        <UCard title="Appearance" description="Customize your experience">
+        <div>
           <UFormField label="Color Theme">
             <UColorModeSelect />
           </UFormField>
-          <template #footer>
-            <p>Check out the <ULink to="/design">design page</ULink> to see your changes.</p>
-          </template>
-        </UCard>
+          <p>Check out the <ULink to="/design">design page</ULink> to see your changes.</p>
+        </div>
       </template>
 
     </UTabs>
