@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
-import { blob } from 'hub:blob'
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
@@ -9,10 +8,10 @@ export default defineEventHandler(async (event) => {
   if (user.avatarUrl) {
     const oldPathname = new URL(user.avatarUrl).pathname
       .replace(/^\/avatars\//, '')
-    await blob.delete(oldPathname).catch(() => null)
+    await hubBlob().delete(oldPathname).catch(() => null)
   }
 
-  const [uploaded] = await blob.handleUpload(event, {
+  const [uploaded] = await hubBlob().handleUpload(event, {
     formKey: 'file',
     multiple: false,
     ensure: {
