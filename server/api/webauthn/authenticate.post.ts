@@ -27,9 +27,10 @@ export default defineWebAuthnAuthenticateEventHandler({
 
     if (!credential) throw createError({ statusCode: 400, message: 'Credential not found' })
 
+    // nuxt-auth-utils expects publicKey as a string (base64url), not Uint8Array
     return {
       ...credential,
-      publicKey: new Uint8Array(Buffer.from(credential.publicKey, 'base64')),
+      publicKey: credential.publicKey, // already stored as base64url string, return as-is
       backedUp: credential.backedUp === 1,
       transports: credential.transports ? JSON.parse(credential.transports) : [],
     }
@@ -46,8 +47,10 @@ export default defineWebAuthnAuthenticateEventHandler({
       .where(eq(schema.users.id, credential.userId))
       .then(r => r[0])
 
+    if (!user) throw createError({ statusCode: 400, message: 'User not found' })
+
     await setUserSession(event, {
-      user: { id: user!.id, name: user!.name, email: user!.email },
+      user: { id: user.id, name: user.name, email: user.email },
     })
   },
 })

@@ -18,22 +18,25 @@ export default defineWebAuthnRegisterEventHandler({
     if (!dbUser) {
       const [newUser] = await db
         .insert(schema.users)
-        .values({ name: user.userName.split('@')[0], email: user.userName })
+        .values({
+          name: user.userName.split('@')[0]!,  // non-null assertion fixes "possibly undefined"
+          email: user.userName,
+        })
         .returning()
-      dbUser = newUser
+      dbUser = newUser!
     }
 
     await db.insert(schema.credentials).values({
       id: credential.id,
-      userId: dbUser!.id,
-      publicKey: Buffer.from(credential.publicKey).toString('base64'),
+      userId: dbUser.id,
+      publicKey: Buffer.from(credential.publicKey).toString('base64url'),
       counter: credential.counter,
       backedUp: credential.backedUp ? 1 : 0,
       transports: JSON.stringify(credential.transports),
     })
 
     await setUserSession(event, {
-      user: { id: dbUser!.id, name: dbUser!.name, email: dbUser!.email },
+      user: { id: dbUser.id, name: dbUser.name, email: dbUser.email },
     })
   },
 })

@@ -3,6 +3,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  typescript: {
+    tsConfig: {
+      include: ['types/**/*.d.ts']
+    }
+  },
 
   site: {
     url: "https://collct.vercel.app/",
