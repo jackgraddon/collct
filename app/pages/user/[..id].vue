@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+
 const route = useRoute()
 const id = Number(route.params.id)
 
@@ -117,7 +118,7 @@ const formattedDate = computed(() => {
       </div>
 
       <!-- Photo -->
-      <NuxtImg
+      <img
         :src="post.url"
         :alt="post.caption ?? `Photo by ${post.user.name}`"
         class="w-full h-auto rounded-xl"

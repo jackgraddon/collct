@@ -20,9 +20,9 @@
 </template>
 
 <script lang="ts" setup>
-// definePageMeta({
-//   middleware: ['user-logged-in'], 
-// })
+definePageMeta({
+  middleware: ['user-logged-in'], 
+})
 
 import type { ButtonProps, PageFeatureProps } from '@nuxt/ui'
 
@@ -39,10 +39,19 @@ const links = ref<ButtonProps[]>([
   }
 ])
 
+const aboutProps = ref<PageFeatureProps[]>  ([
+  {
+    title : ''
+  },
+  {
+    title: ''
+  }
+])
+
 const features = ref<PageFeatureProps[]>([
   {
     title: 'No Algorithm',
-    description: 'You create what you see, no algorithm behind the scenes.' ,
+    description: 'You create what you see, no algorithm pulling the strings behind the scenes.' ,
     icon: 'solar:chef-hat-heart-linear',
   },
   {
@@ -52,7 +61,7 @@ const features = ref<PageFeatureProps[]>([
   },
   {
     title: 'No Strangers',
-    description: 'Only your friends can see each others photos. You control who sees what.',
+    description: 'Only your friends can see each others photos. You control who sees your posts.',
     icon: 'solar:users-group-two-rounded-linear',
   }
 ])

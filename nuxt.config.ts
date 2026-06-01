@@ -19,7 +19,7 @@ export default defineNuxtConfig({
 
   hub: {
     blob: true,
-    db: 'sqlite',
+    db: 'postgresql',
   },
 
   modules: [
