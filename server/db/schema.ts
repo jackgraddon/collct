@@ -1,21 +1,21 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { pgTable, serial, text, timestamp, integer } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
-export const users = sqliteTable('users', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
-  avatarUrl: text('avatar_url'), 
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  avatarUrl: text('avatar_url'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
-export const photos = sqliteTable('photos', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
+export const photos = pgTable('photos', {
+  id: serial('id').primaryKey(),
   userId: integer('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   blobPathname: text('blob_pathname').notNull(),
   caption: text('caption'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
