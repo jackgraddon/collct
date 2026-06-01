@@ -22,6 +22,10 @@ export default defineNuxtConfig({
     db: 'postgresql',
   },
 
+  auth: {
+    webAuthn: true,
+  },
+
   modules: [
     '@nuxt/fonts',
     '@vite-pwa/nuxt',
