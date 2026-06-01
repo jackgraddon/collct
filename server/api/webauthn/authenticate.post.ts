@@ -3,6 +3,8 @@ import { db, schema } from '@nuxthub/db'
 
 export default defineWebAuthnAuthenticateEventHandler({
   async allowCredentials(event, userName) {
+    if (!userName) return []
+
     const user = await db
       .select()
       .from(schema.users)
