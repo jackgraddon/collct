@@ -44,7 +44,7 @@ export default defineEventHandler(async (event) => {
 
   const nextCursor =
     rows.length === limit
-      ? rows[rows.length - 1].createdAt?.getTime() ?? null
+      ? (rows[rows.length - 1].createdAt as Date)?.getTime() ?? null
       : null
 
   return { photos, nextCursor }

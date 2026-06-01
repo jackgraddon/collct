@@ -1,5 +1,4 @@
 import { db, schema } from '@nuxthub/db'
-import { blob } from 'hub:blob'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 10 * 1024 * 1024 // 10MB
@@ -27,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   const arrayBuffer = await file.arrayBuffer()
 
-  await blob.put(blobPathname, arrayBuffer, {
+  await hubBlob().put(blobPathname, arrayBuffer, {
     contentType: file.type,
     addRandomSuffix: false,
   })
