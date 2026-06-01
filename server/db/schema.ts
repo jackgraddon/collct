@@ -5,8 +5,19 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
-  password: text('password').notNull(),
   avatarUrl: text('avatar_url'),
+  createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+})
+
+export const credentials = pgTable('credentials', {
+  id: text('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  publicKey: text('public_key').notNull(),
+  counter: integer('counter').notNull().default(0),
+  backedUp: integer('backed_up').notNull().default(0),
+  transports: text('transports'),
   createdAt: timestamp('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 })
 
