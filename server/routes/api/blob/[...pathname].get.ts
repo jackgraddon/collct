@@ -1,3 +1,5 @@
+import { blob } from '@nuxthub/blob'
+
 export default defineEventHandler(async (event) => {
   const { pathname } = getRouterParams(event)
 
@@ -5,5 +7,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
   }
 
-  return hubBlob().serve(event, pathname)
+  // Use the modern blob SDK to serve the file
+  return blob.serve(event, pathname)
 })
