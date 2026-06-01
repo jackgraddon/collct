@@ -5,6 +5,6 @@ export default defineConfig({
   schema: './server/db/schema.ts',
   out: './server/db/migrations',
   dbCredentials: {
-    url: process.env.COLLCT_NEON_DATABASE_URL!,
+    url: process.env.DATABASE_URL!,
   },
 })

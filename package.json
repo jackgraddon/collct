@@ -6,9 +6,9 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "db:generate": "drizzle-kit generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
+    "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "vercel-build": "npm run db:migrate && nuxt build"
   },
