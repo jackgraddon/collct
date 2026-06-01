@@ -13,7 +13,7 @@ export default defineNuxtConfig({
 
   hub: {
     blob: true,
-    db: true,
+    db: 'postgresql',
   },
 
   auth: {
