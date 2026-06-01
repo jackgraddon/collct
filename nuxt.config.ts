@@ -12,7 +12,10 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   hub: {
-    blob: true,
+    blob: {
+      driver: 'vercel-blob',
+      access: 'private',
+    },
     db: 'postgresql',
   },
 
