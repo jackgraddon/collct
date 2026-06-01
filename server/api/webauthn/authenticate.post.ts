@@ -29,7 +29,7 @@ export default defineWebAuthnAuthenticateEventHandler({
 
     return {
       ...credential,
-      publicKey: new Uint8Array(Buffer.from(credential.publicKey, 'base64url')) as unknown as string,
+      publicKey: credential.publicKey, 
       backedUp: credential.backedUp === 1,
       transports: credential.transports ? JSON.parse(credential.transports) : [],
     }
