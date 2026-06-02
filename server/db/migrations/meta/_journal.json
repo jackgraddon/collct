@@ -15,6 +15,13 @@
       "when": 1780354857980,
       "tag": "0001_long_psylocke",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780368233144,
+      "tag": "0002_goofy_annihilus",
+      "breakpoints": true
     }
   ]
 }

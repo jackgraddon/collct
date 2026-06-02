@@ -1,105 +1,80 @@
-import type { H3Event } from 'h3'
 import { eq } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
 
 export default defineWebAuthnAuthenticateEventHandler({
-  async allowCredentials(event: H3Event, userName: string) {
-    if (!userName) return []
-
-    // Find the user by e‑mail
-    const user = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, userName))
-      .then((rows) => rows[0])
-
-    if (!user) {
-      throw createError({ statusCode: 400, message: 'User not found' })
+  async storeChallenge(event, challenge, attemptId) {
+    await hubKV().set(`auth:challenge:${attemptId}`, challenge, { ttl: 60 })
+  },
+  async getChallenge(event, attemptId) {
+    const challenge = await hubKV().get<string>(`auth:challenge:${attemptId}`)
+    if (!challenge) {
+      throw createError({
+        statusCode: 400,
+        message: 'Challenge not found or expired'
+      })
     }
-
-    // Pull all credential rows that belong to that user
-    const userCredentials = await db
-      .select()
+    await hubKV().del(`auth:challenge:${attemptId}`)
+    return challenge
+  },
+  async allowCredentials(event, userName) {
+    const rows = await db
+      .select({
+        id: schema.credentials.id,
+        transports: schema.credentials.transports
+      })
       .from(schema.credentials)
-      .where(eq(schema.credentials.userId, user.id))
+      .innerJoin(schema.users, eq(schema.users.id, schema.credentials.userId))
+      .where(eq(schema.users.username, userName))
 
-    // The library only cares about the credential id (as a base64url string)
-    return userCredentials.map((c) => ({
-      id: c.id,
+    return rows.map(row => ({
+      id: row.id,
+      transports: typeof row.transports === 'string' ? JSON.parse(row.transports) : (row.transports ?? [])
     }))
   },
-
-  async getCredential(event: H3Event, credentialId: string) {
-    const credential = await db
-      .select()
-      .from(schema.credentials)
-      .where(eq(schema.credentials.id, credentialId))
-      .then((rows) => rows[0])
-
-    if (!credential) {
-      throw createError({ statusCode: 400, message: 'Credential not found' })
+  async getCredential(event, credentialID) {
+    const cred = await db.select().from(schema.credentials).where(eq(schema.credentials.id, credentialID)).then(r => r[0])
+    
+    if (!cred) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Credential not found'
+      })
     }
 
-    // Helper: turn ordinary base64 → base64url (required by WebAuthn)
-    const b64ToB64url = (b64: string) =>
-      b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
-
-    // `publicKey` may be stored as raw bytes (bytea) or as a base64 string.
-    // Normalise it to a base64url string for the client.
-    const publicKeyB64 = typeof credential.publicKey === 'string'
-      ? credential.publicKey
-      : Buffer.from(credential.publicKey as Uint8Array).toString('base64')
-    const publicKeyB64url = b64ToB64url(publicKeyB64)
-
+    // Returns standard WebAuthnCredential shape explicitly
     return {
-      ...credential,
-      // The shape expected by nuxt‑auth‑utils:
-      publicKey: publicKeyB64url,
-      backedUp: credential.backedUp === 1,
-      transports: credential.transports
-        ? JSON.parse(credential.transports as string)
-        : [],
+      id: cred.id,
+      publicKey: cred.publicKey,
+      counter: cred.counter,
+      backedUp: cred.backedUp,
+      transports: typeof cred.transports === 'string' ? JSON.parse(cred.transports) : (cred.transports ?? [])
     }
   },
-
-  async onSuccess(
-    event: H3Event,
-    {
-      credential,
-      authenticationInfo,
-    }: {
-      credential: any
-      authenticationInfo: { newCounter: number }
-    }
-  ) {
-    // Update the stored counter (prevents replay attacks)
-    await db
-      .update(schema.credentials)
+  async onSuccess(event, { credential, authenticationInfo }) {
+    // 1. Update authentication counter
+    await db.update(schema.credentials)
       .set({ counter: authenticationInfo.newCounter })
       .where(eq(schema.credentials.id, credential.id))
 
-    // Retrieve the user linked to this credential
-    const user = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.id, Number(credential.userId))) // ← cast to number
-      .then((rows) => rows[0])
+    // 2. Fetch corresponding user details cleanly via a Join 
+    // This avoids type errors regarding credential property extensions
+    const row = await db
+      .select({ user: schema.users })
+      .from(schema.credentials)
+      .innerJoin(schema.users, eq(schema.users.id, schema.credentials.userId))
+      .where(eq(schema.credentials.id, credential.id))
+      .then(r => r[0])
 
-    if (!user) {
-      throw createError({ statusCode: 400, message: 'User not found' })
+    if (!row) {
+      throw createError({ statusCode: 400, message: 'User associated with credential not found' })
     }
 
-    // Create the session (match the shape used elsewhere)
     await setUserSession(event, {
       user: {
-        id: user.id,
-        // Adjust the field names to whatever your schema actually defines
-        // (e.g. `full_name` instead of `name` if that is the column name)
-        name: (user as any).name ?? (user as any).full_name ?? '',
-        email: user.email,
-        avatarUrl: (user as any).avatarUrl ?? null,
-      },
-      loggedInAt: Date.now(),
+        id: row.user.id,
+        username: row.user.username,
+        name: row.user.name || row.user.username
+      }
     })
-  },
+  }
 })

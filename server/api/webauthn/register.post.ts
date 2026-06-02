@@ -1,62 +1,78 @@
+import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
-import type { H3Event } from 'h3'
 
 export default defineWebAuthnRegisterEventHandler({
-  async validateUser(userBody: any, event: H3Event) {
-    // optional: protect linking to an already‑authenticated user
-    const session = await getUserSession(event)
-    if (session?.user?.email && session.user.email !== userBody.userName) {
-      throw createError({ statusCode: 400, message: 'Email not matching current session' })
-    }
-
-    if (!userBody.userName?.includes('@')) {
-      throw createError({ statusCode: 400, message: 'Invalid email' })
-    }
-
-    // Return exactly what onSuccess expects
-    return { userName: userBody.userName }
+  async storeChallenge(event, challenge, attemptId) {
+    await hubKV().set(`auth:challenge:${attemptId}`, challenge, { ttl: 60 })
   },
-
-  async onSuccess(event: H3Event, { credential, user }: { credential: any; user: { userName: string } }) {
-    // 2️⃣a️⃣ Look up existing user
-    let dbUser = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, user.userName))
-      .then((rows) => rows[0])
-
-    // 2️⃣b️⃣ Create user if needed
+  async getChallenge(event, attemptId) {
+    const challenge = await hubKV().get<string>(`auth:challenge:${attemptId}`)
+    if (!challenge) {
+      throw createError({
+        statusCode: 400,
+        message: 'Challenge not found or expired'
+      })
+    }
+    await hubKV().del(`auth:challenge:${attemptId}`)
+    return challenge
+  },
+  validateUser: user => z.object({
+    userName: z.string().min(1).toLowerCase().trim(),
+    displayName: z.string().min(1).trim()
+  }).parseAsync(user),
+  async onSuccess(event, { user, credential }) {
+    // Look up existing user safely with Postgres syntax
+    const existingUser = await db.select().from(schema.users).where(eq(schema.users.username, user.userName)).then(r => r[0])
+    
+    let dbUser = existingUser
     if (!dbUser) {
-      const [newUser] = await db
-        .insert(schema.users)
-        .values({
-          name: user.userName.split('@')[0],
-          email: user.userName,
-        })
-        .returning()
-      dbUser = newUser
+      // Avoid .get(), destruct row array instead
+      const [newRow] = await db.insert(schema.users).values({
+        username: user.userName,
+        name: user.displayName,
+        email: user.userName, // Assuming username maps to email
+        createdAt: new Date(),
+        lastLoginAt: new Date()
+      }).returning()
+      dbUser = newRow
     }
 
-    // 2️⃣c️⃣ Store the new WebAuthn credential
+    if (!dbUser) {
+      throw createError({ statusCode: 400, message: 'User creation failed' })
+    }
+
+    // Stringify transports array for text column compatibility
     await db.insert(schema.credentials).values({
       id: credential.id,
-      userId: dbUser!.id,
-      // Either raw Uint8Array (bytea) or base64url string:
-      publicKey: Buffer.from(credential.publicKey).toString('base64url'),
+      userId: dbUser.id,
+      publicKey: credential.publicKey,
       counter: credential.counter,
-      backedUp: credential.backedUp ? 1 : 0,
-      transports: JSON.stringify(credential.transports),
+      backedUp: credential.backedUp,
+      transports: JSON.stringify(credential.transports ?? [])
     })
 
-    // 2️⃣d️⃣ Create the session
     await setUserSession(event, {
       user: {
-        id: dbUser!.id,
-        name: dbUser!.name,
-        email: dbUser!.email,
-      },
-      loggedInAt: Date.now(),
+        id: dbUser.id,
+        username: dbUser.username,
+        name: dbUser.name || dbUser.username
+      }
     })
   },
+  async excludeCredentials(event, userName) {
+    const rows = await db
+      .select({
+        id: schema.credentials.id,
+        transports: schema.credentials.transports
+      })
+      .from(schema.credentials)
+      .innerJoin(schema.users, eq(schema.users.id, schema.credentials.userId))
+      .where(eq(schema.users.username, userName))
+
+    return rows.map(row => ({
+      id: row.id,
+      transports: typeof row.transports === 'string' ? JSON.parse(row.transports) : (row.transports ?? [])
+    }))
+  }
 })

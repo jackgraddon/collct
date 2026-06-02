@@ -22,9 +22,10 @@ export default defineNuxtConfig({
       access: 'private',
     },
     db: 'postgresql',
+    kv: true,
   },
 
-  image: { provider: 'none' },
+  image: { provider: 'vercel' },
 
   auth: {
     webAuthn: true,
@@ -41,11 +42,4 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     '@nuxthub/core'
   ],
-
-
-  $production: {
-    image: {
-      provider: 'vercel'
-    }
-  }
 })
