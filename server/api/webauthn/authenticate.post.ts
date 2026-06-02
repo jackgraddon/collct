@@ -29,11 +29,16 @@ export default defineWebAuthnAuthenticateEventHandler({
 
     if (!credential) throw createError({ statusCode: 400, message: 'Credential not found' })
 
+    const base64ToBase64Url = (b64: string) =>
+      b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+
     return {
       ...credential,
-      publicKey: (typeof credential.publicKey === 'string'
-        ? Buffer.from(credential.publicKey, 'base64')
-        : credential.publicKey) as unknown as string,
+      publicKey: base64ToBase64Url(
+        typeof credential.publicKey === 'string'
+          ? credential.publicKey
+          : Buffer.from(credential.publicKey).toString('base64')
+      ) as unknown as string,
       backedUp: credential.backedUp === 1,
       transports: credential.transports ? JSON.parse(credential.transports) : [],
     }

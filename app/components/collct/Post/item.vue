@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-2 p-4">
-    <NuxtImg 
+    <img 
       :src="postData.img" 
       :alt="`Post by ${postData.author}`" 
       class="w-full h-full"
