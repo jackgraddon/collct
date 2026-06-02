@@ -42,10 +42,14 @@ export default defineWebAuthnAuthenticateEventHandler({
       .set({ counter: authenticationInfo.newCounter })
       .where(eq(schema.credentials.id, credential.id))
 
+    const userIdAsNumber = typeof credential.userId === 'string' 
+      ? parseInt(credential.userId, 10) 
+      : (credential.userId as number)
+
     const user = await db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.id, credential.userId as number)) // cast unknown → number
+      .where(eq(schema.users.id, userIdAsNumber))
       .then(r => r[0])
 
     if (!user) throw createError({ statusCode: 400, message: 'User not found' })
@@ -55,7 +59,7 @@ export default defineWebAuthnAuthenticateEventHandler({
         id: user.id,
         name: user.name,
         email: user.email,
-        avatarUrl: user.avatarUrl ?? null, // required by your User type
+        avatarUrl: user.avatarUrl ?? null,
       },
     })
   },

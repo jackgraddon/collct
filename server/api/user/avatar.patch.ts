@@ -36,7 +36,7 @@ export default defineEventHandler(async (event) => {
   })
 
   const requestUrl = getRequestURL(event)
-  const avatarUrl = `${requestUrl.origin}/api/blob/${blobPathname}`
+  const avatarUrl = `${requestUrl.origin}/avatars/${blobPathname}`
 
   const [updated] = await db
     .update(schema.users)
