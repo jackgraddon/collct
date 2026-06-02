@@ -36,7 +36,6 @@ export default defineWebAuthnRegisterEventHandler({
     if (!dbUser) {
       // Avoid .get(), destruct row array instead
       const [newRow] = await db.insert(schema.users).values({
-        username: user.userName,
         name: user.displayName || user.userName.split('@')[0],
         email: user.userName, // Assuming username maps to email
         createdAt: new Date(),

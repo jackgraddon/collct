@@ -61,18 +61,22 @@ const items = computed<NavigationMenuItem[]>(() => [
 
 // Define dropdown menu actions for the logged-in user
 const userDropdownItems = computed(() => [
-  {
-    label: user.value?.username || 'Account',
-    type: 'label'
-  },
-  {
-    label: 'Sign Out',
-    icon: 'solar:logout-3-linear',
-    onSelect: async () => {
-      await clear()
-      router.push('/login')
+  [
+    {
+      label: user.value?.username || 'Account',
+      type: 'label' as const // 👈 Add 'as const' right here
     }
-  }
+  ],
+  [
+    {
+      label: 'Sign Out',
+      icon: 'solar:logout-3-linear',
+      onSelect: async () => {
+        await clear()
+        router.push('/login')
+      }
+    }
+  ]
 ])
 
 const uploadModal = ref(false)

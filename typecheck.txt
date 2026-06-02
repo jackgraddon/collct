@@ -1,0 +1,65 @@
+[@nuxtjs/sitemap] ℹ zeroRuntime enabled - sitemap routes will be prerendered.
+ℹ Nuxt Icon server bundle mode is set to local
+✔ Nuxt Icon discovered local-installed 1 collections: solar
+app/components/collct/Header.vue(84,27): error TS2304: Cannot find name 'PostData'.
+app/components/collct/Post/grid.vue(21,10): error TS2304: Cannot find name 'PostData'.
+app/components/collct/Post/grid.vue(37,18): error TS2304: Cannot find name 'PostData'.
+app/components/collct/Post/gridItem.vue(28,13): error TS2304: Cannot find name 'PostData'.
+app/components/collct/Post/item.vue(14,13): error TS2304: Cannot find name 'PostData'.
+app/components/collct/UploadModal.vue(8,20): error TS2304: Cannot find name 'PostData'.
+app/components/collct/UploadModal.vue(51,31): error TS2304: Cannot find name 'PostData'.
+app/composables/useUploadBus.ts(4,23): error TS2304: Cannot find name 'PostData'.
+app/composables/useUploadBus.ts(8,31): error TS2304: Cannot find name 'PostData'.
+app/pages/feed.vue(23,22): error TS2304: Cannot find name 'PostData'.
+app/pages/post/[...id].vue(5,47): error TS2304: Cannot find name 'PostData'.
+app/pages/post/[...id].vue(36,44): error TS2339: Property 'id' does not exist on type 'User'.
+app/pages/settings.vue(9,28): error TS2339: Property 'avatarUrl' does not exist on type 'User'.
+app/pages/settings.vue(10,28): error TS2339: Property 'name' does not exist on type 'User'.
+app/pages/settings.vue(25,56): error TS2339: Property 'name' does not exist on type 'User'.
+app/pages/settings.vue(26,53): error TS2339: Property 'email' does not exist on type 'User'.
+app/pages/settings.vue(75,20): error TS2339: Property 'name' does not exist on type 'User'.
+app/pages/settings.vue(76,21): error TS2339: Property 'email' does not exist on type 'User'.
+app/pages/settings.vue(97,18): error TS2339: Property 'avatarUrl' does not exist on type '{ name: any; email: any; }'.
+app/pages/settings.vue(109,34): error TS2339: Property 'name' does not exist on type 'User'.
+app/pages/settings.vue(110,35): error TS2339: Property 'email' does not exist on type 'User'.
+app/pages/settings.vue(111,16): error TS2339: Property 'avatarUrl' does not exist on type '{ name: any; email: any; }'.
+app/pages/settings.vue(111,39): error TS2339: Property 'avatarUrl' does not exist on type 'User'.
+app/pages/settings.vue(122,33): error TS2339: Property 'avatarUrl' does not exist on type '{ name: any; email: any; }'.
+app/pages/settings.vue(139,23): error TS2339: Property 'avatarUrl' does not exist on type 'User'.
+app/pages/settings.vue(140,23): error TS2339: Property 'name' does not exist on type 'User'.
+app/pages/user/[..id].vue(6,47): error TS2304: Cannot find name 'PostData'.
+app/pages/user/[..id].vue(37,44): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/photos/[id].delete.ts(20,37): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/photos/[id].delete.ts(25,80): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/photos/index.post.ts(22,47): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/photos/index.post.ts(32,36): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/photos/user/[userId].get.ts(47,10): error TS2532: Object is possibly 'undefined'.
+server/api/user/avatar.patch.ts(22,12): error TS2339: Property 'avatarUrl' does not exist on type 'User'.
+server/api/user/avatar.patch.ts(23,30): error TS2339: Property 'avatarUrl' does not exist on type 'User'.
+server/api/user/avatar.patch.ts(30,40): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/user/avatar.patch.ts(44,37): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/user/me.get.ts(11,12): error TS2339: Property 'avatarPathname' does not exist on type 'User'.
+server/api/user/me.get.ts(15,22): error TS2339: Property 'avatarPathname' does not exist on type 'User'.
+server/api/user/me.get.ts(23,14): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/user/me.get.ts(24,16): error TS2339: Property 'name' does not exist on type 'User'.
+server/api/user/me.get.ts(25,20): error TS2339: Property 'username' does not exist on type 'User'.
+server/api/user/update.patch.ts(15,37): error TS2339: Property 'id' does not exist on type 'User'.
+server/api/version.get.ts(6,27): error TS2339: Property 'rows' does not exist on type 'RowList<Record<string, unknown>[]>'.
+server/api/webauthn/register.post.ts(39,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { email: string | SQL<unknown> | Placeholder<string, any>; name: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<...>; id?: number | ... 2 more ... | undefined; createdAt?: Date | ... 2 more ... | undefined; avatarUrl?: string | ... 3 more ... | undefined; lastLoginAt?: Date | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Type 'string | undefined' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+      Type 'undefined' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { email: string | SQL<unknown> | Placeholder<string, any>; name: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<...>; id?: number | ... 2 more ... | undefined; createdAt?: Date | ... 2 more ... | undefined; avatarUrl?: string | ... 3 more ... | undefined; lastLoginAt?: Date | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'name' does not exist in type '{ email: string | SQL<unknown> | Placeholder<string, any>; name: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; id?: number | ... 2 more ... | undefined; createdAt?: Date | ... 2 more ... | undefined; avatarUrl?: string | ... 3 more ... | undefined; last...'.
+server/api/photos/user/[userId].get.ts(47,10): error TS2532: Object is possibly 'undefined'.
+server/api/user/avatar.patch.ts(50,5): error TS2739: Type '{ id: number; email: string; name: string; avatarUrl: string | null; }' is missing the following properties from type 'User': username, avatarPathname
+server/api/user/update.patch.ts(24,5): error TS2739: Type '{ id: number; email: string; name: string; avatarUrl: string | null; }' is missing the following properties from type 'User': username, avatarPathname
+server/api/version.get.ts(6,27): error TS2339: Property 'rows' does not exist on type 'RowList<Record<string, unknown>[]>'.
+server/api/webauthn/authenticate.post.ts(80,7): error TS2739: Type '{ id: number; username: string; name: string; avatarPathname: string | null; }' is missing the following properties from type 'User': email, avatarUrl
+server/api/webauthn/register.post.ts(39,9): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { email: string | SQL<unknown> | Placeholder<string, any>; name: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<...>; id?: number | ... 2 more ... | undefined; createdAt?: Date | ... 2 more ... | undefined; avatarUrl?: string | ... 3 more ... | undefined; lastLoginAt?: Date | ... 3 more ... | undefined; }): PgInsertBase<...>', gave the following error.
+    Type 'string | undefined' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+      Type 'undefined' is not assignable to type 'string | SQL<unknown> | Placeholder<string, any>'.
+  Overload 2 of 2, '(values: { email: string | SQL<unknown> | Placeholder<string, any>; name: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<...>; id?: number | ... 2 more ... | undefined; createdAt?: Date | ... 2 more ... | undefined; avatarUrl?: string | ... 3 more ... | undefined; lastLoginAt?: Date | ... 3 more ... | undefined; }[]): PgInsertBase<...>', gave the following error.
+    Object literal may only specify known properties, and 'name' does not exist in type '{ email: string | SQL<unknown> | Placeholder<string, any>; name: string | SQL<unknown> | Placeholder<string, any>; username: string | SQL<unknown> | Placeholder<string, any>; id?: number | ... 2 more ... | undefined; createdAt?: Date | ... 2 more ... | undefined; avatarUrl?: string | ... 3 more ... | undefined; last...'.
+server/api/webauthn/register.post.ts(62,7): error TS2739: Type '{ id: number; username: string; name: string; }' is missing the following properties from type 'User': email, avatarPathname, avatarUrl
