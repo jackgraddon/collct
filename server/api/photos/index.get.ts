@@ -33,20 +33,35 @@ export default defineEventHandler(async (event) => {
 
   const token = await getDelegationToken()
 
-  const photos = rows.map((row) => {
-    const signedUrl = presignUrl(token, {
+  const photos = await Promise.all(rows.map(async (row) => {
+    const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
       pathname: row.blobPathname,
-      operation: 'get',
       access: 'private',
+      operation: 'get',
       validUntil: Date.now() + 60 * 60 * 1000 
     })
 
+    let signedAvatarUrl = row.user.avatarUrl
+    if (row.user.avatarUrl) {
+      const { presignedUrl: avatarUrl } = await presignUrl(token, {
+        pathname: row.user.avatarUrl,
+        access: 'private',
+        operation: 'get',
+        validUntil: Date.now() + 60 * 60 * 1000
+      })
+      signedAvatarUrl = avatarUrl
+    }
+
     return {
       ...row,
-      url: signedUrl,
+      url: signedPhotoUrl,
       blobPathname: undefined,
+      user: {
+        ...row.user,
+        avatarUrl: signedAvatarUrl
+      }
     }
-  })
+  }))
 
   // Fallback handling if rows object is evaluated as optional
   const lastRow = rows[rows.length - 1]

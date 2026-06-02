@@ -33,16 +33,15 @@ export default defineEventHandler(async (event) => {
 
   const token = await getDelegationToken()
   
-  const signedUrl = presignUrl(token, {
+  const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
     pathname: row.blobPathname,
-    operation: 'get',
     access: 'private',
+    operation: 'get',
     validUntil: Date.now() + 60 * 60 * 1000
   })
 
   return {
     ...row,
-    url: signedUrl,
-    blobPathname: undefined,
+    url: signedPhotoUrl
   }
 })

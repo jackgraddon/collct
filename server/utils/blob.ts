@@ -15,7 +15,7 @@ export async function getDelegationToken() {
   // Ask Vercel for a short-lived token valid for wildcard pathnames
   cachedToken = await issueSignedToken({
     validUntil: now + 60 * 60 * 1000, // Token valid for 1 hour
-    operations: ['get'] // Only allow read access [cite: 2.1.1]
+    operations: ['get'] // Only allow read access
   })
   
   // Refresh 5 minutes early to prevent expiration overlap during a request
