@@ -40,6 +40,7 @@
             <div class="flex justify-end gap-2">
               <UButton variant="outline" color="neutral" @click="onResetAccount">Reset</UButton>
               <UButton @click="onSaveAccount" :loading="saving">Save changes</UButton>
+              <CollctLogoutButton />
             </div>
           </div>
         </div>
