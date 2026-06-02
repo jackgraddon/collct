@@ -24,6 +24,8 @@ export default defineNuxtConfig({
     db: 'postgresql',
   },
 
+  image: { provider: 'none' },
+
   auth: {
     webAuthn: true,
   },
@@ -38,5 +40,12 @@ export default defineNuxtConfig({
     '@nuxtjs/seo',
     '@nuxt/ui',
     '@nuxthub/core'
-  ]
+  ],
+
+
+  $production: {
+    image: {
+      provider: 'vercel'
+    }
+  }
 })

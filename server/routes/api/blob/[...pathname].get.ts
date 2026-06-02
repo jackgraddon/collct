@@ -1,10 +1,10 @@
-import { blob } from '@nuxthub/blob'
+import { blob } from 'hub:blob'
+import { createError, eventHandler, getRouterParam } from 'h3'
 
-export default defineEventHandler(async (event) => {
-  const { pathname } = getRouterParams(event)
-
-  if (!pathname || !(pathname.startsWith('photos/'))) {
-    throw createError({ statusCode: 403, statusMessage: 'Forbidden' })
+export default eventHandler(async (event) => {
+  const pathname = getRouterParam(event, 'pathname')
+  if (!pathname) {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
   return blob.serve(event, pathname)
