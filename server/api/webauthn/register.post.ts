@@ -19,7 +19,7 @@ export default defineWebAuthnRegisterEventHandler({
   },
   validateUser: user => z.object({
     userName: z.string().min(1).toLowerCase().trim(),
-    displayName: z.string().min(1).trim()
+    displayName: z.string().min(1).trim().optional()
   }).parseAsync(user),
   async onSuccess(event, { user, credential }) {
     // Look up existing user safely with Postgres syntax
@@ -30,7 +30,7 @@ export default defineWebAuthnRegisterEventHandler({
       // Avoid .get(), destruct row array instead
       const [newRow] = await db.insert(schema.users).values({
         username: user.userName,
-        name: user.displayName,
+        name: user.displayName || user.userName.split('@')[0],
         email: user.userName, // Assuming username maps to email
         createdAt: new Date(),
         lastLoginAt: new Date()
