@@ -14,17 +14,14 @@
 <script lang="ts" setup>
 import { useIntersectionObserver } from '@vueuse/core'
 
-// Prepend any photo uploaded via the Header's upload modal
 const { on } = useUploadBus()
-on((post) => allPosts.value.unshift(post))
-
-// Cursor-based pagination — `null` means "fetch from the top", a timestamp means "fetch older than this"
+// Keep a buffer for manually appended items (like via the Upload modal)
+const appendedPosts = ref<PostData[]>([]) 
 const cursor = ref<number | null>(null)
-const allPosts = ref<PostData[]>([])
-const exhausted = ref(false)
 const loadMoreTrigger = ref(null)
 
-const { data, status } = await useFetch('/api/photos', {
+const { data, status, error } = await useFetch('/api/photos', {
+  key: 'feed-photos', // Essential for SSR/Client hydration
   query: computed(() => ({
     limit: 20,
     ...(cursor.value !== null ? { before: cursor.value } : {}),
@@ -33,16 +30,18 @@ const { data, status } = await useFetch('/api/photos', {
   lazy: true,
 })
 
-watch(data, (result) => {
-  if (!result) return
-  allPosts.value.push(...result.photos)
-  if (result.nextCursor === null) {
-    exhausted.value = true
-  } else {
-    cursor.value = result.nextCursor
-  }
+// Fix: Derive the grid data directly from the fetch result
+const allPosts = computed(() => {
+  const fetched = data.value?.photos || []
+  return [...appendedPosts.value, ...fetched]
 })
 
+const exhausted = computed(() => data.value?.nextCursor === null)
+
+// Handle manual uploads
+on((post) => appendedPosts.value.unshift(post))
+
+// Intersection Observer stays the same, but update cursor based on data
 useIntersectionObserver(
   loadMoreTrigger,
   (entries) => {
