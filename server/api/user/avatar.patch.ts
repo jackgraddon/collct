@@ -20,10 +20,8 @@ export default defineEventHandler(async (event) => {
 
   // Delete old avatar if exists
   if (user.avatarUrl) {
-    const oldPathname = user.avatarUrl.split('/avatars/')[1]
-    if (oldPathname) {
-      await blob.delete(`avatars/${oldPathname}`).catch(() => null)
-    }
+    // Use the stored pathname to delete
+    await blob.delete(user.avatarUrl).catch(() => null)
   }
 
   const ext = file.type.split('/')[1]!.replace('jpeg', 'jpg')
@@ -35,12 +33,9 @@ export default defineEventHandler(async (event) => {
     addRandomSuffix: false,
   })
 
-  const requestUrl = getRequestURL(event)
-  const avatarUrl = `${requestUrl.origin}/avatars/${blobPathname}`
-
   const [updated] = await db
     .update(schema.users)
-    .set({ avatarUrl })
+    .set({ avatarUrl: blobPathname })
     .where(eq(schema.users.id, user.id))
     .returning()
 
