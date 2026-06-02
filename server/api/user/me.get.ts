@@ -3,6 +3,7 @@ import { presignUrl } from '@vercel/blob'
 export default defineEventHandler(async (event) => {
   // Ensure the user is logged in
   const session = await requireUserSession(event)
+  const token = await getDelegationToken()
   
   const user = session.user
   let signedAvatarUrl = null
@@ -11,12 +12,13 @@ export default defineEventHandler(async (event) => {
   if (user.avatarPathname) {
     const token = await getDelegationToken()
     
-    signedAvatarUrl = presignUrl(token, {
-      pathname: user.avatarPathname,
-      operation: 'get',
+    const { presignedUrl } = await presignUrl(token, {
+      pathname: user.avatarUrl, // This is the key 'avatars/1-123.jpg'
       access: 'private',
+      operation: 'get',
       validUntil: Date.now() + 60 * 60 * 1000
     })
+    signedAvatarUrl = presignedUrl
   }
 
   return {
