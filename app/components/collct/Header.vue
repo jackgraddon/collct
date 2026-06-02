@@ -10,7 +10,7 @@
         <button class="flex items-center focus:outline-none group">
           <NuxtImg
             v-if="user.avatarUrl"
-            :src="user.avatarUrl"
+            :src="`/api/avatar/${user.avatarUrl}`"
             width="32"
             height="32"
             class="w-8 h-8 rounded-full object-cover ring-2 ring-transparent group-hover:ring-primary-500 transition"

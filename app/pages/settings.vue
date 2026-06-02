@@ -6,7 +6,7 @@
           <div class="flex items-center gap-4">
             <div class="relative group cursor-pointer" @click="triggerAvatarUpload">
               <UAvatar
-                :src="user.avatarUrl ?? undefined"
+                :src="`/api/avatar/${user.avatarUrl}` ?? undefined"
                 :alt="user.name"
                 size="xl"
               />
