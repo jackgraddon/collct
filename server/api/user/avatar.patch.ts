@@ -21,7 +21,9 @@ export default defineEventHandler(async (event) => {
   // Delete old avatar if exists
   if (user.avatarUrl) {
     // Use the stored pathname to delete
-    await blob.delete(user.avatarUrl).catch(() => null)
+    await blob.delete(user.avatarUrl).catch((err) => {
+      console.error("Failed to delete old avatar:", err)
+    })
   }
 
   const ext = file.type.split('/')[1]!.replace('jpeg', 'jpg')
