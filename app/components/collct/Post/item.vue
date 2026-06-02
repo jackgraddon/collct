@@ -1,20 +1,16 @@
 <template>
   <div class="flex flex-col gap-2 p-4">
-    <img 
-      :src="postData.img" 
-      :alt="`Post by ${postData.author}`" 
-      class="w-full h-full"
-      :width="postData.imgWidth" :height="postData.imgWidth"
+    <NuxtImg 
+      :src="postData.url" 
+      :alt="`Post by ${postData.user.name}`" 
+      class="w-full h-auto"
     />
-    <p>{{ postData.author }}</p>
+    <p>{{ postData.user.name }}</p>
   </div>
 </template>
 
 <script lang="ts" setup>
 defineProps<{
-  postData : { id: string; author: string; img: string, imgWidth?: number, imgHeight? :number }; 
+  postData: PostData
 }>()
 </script>
-
-<style scoped>
-</style>

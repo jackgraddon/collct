@@ -4,6 +4,7 @@ declare module '#auth-utils' {
     username: string
     name: string
     email: string
+    avatarPathname: string | null
     avatarUrl: string | null
   }
 }

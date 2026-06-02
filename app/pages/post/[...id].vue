@@ -119,15 +119,10 @@ const formattedDate = computed(() => {
       <!-- Photo -->
       <NuxtImg
         :src="post.url"
-        :alt="post.caption || `Photo by ${post.author}`"
+        :alt="post.caption || `Photo by ${post.user.name}`"
+        sizes="sm:100vw md:800px"
+        format="webp"
         class="w-full h-auto rounded-xl"
-      />
-
-      <img
-        :src="post.url"
-        :alt="post.caption || `Photo by ${post.author}`"
-        class="w-full h-auto rounded-xl"
-        loading="lazy"
       />
 
       <!-- Caption -->

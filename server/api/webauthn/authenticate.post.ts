@@ -80,7 +80,8 @@ export default defineWebAuthnAuthenticateEventHandler({
       user: {
         id: row.user.id,
         username: row.user.username,
-        name: row.user.name || row.user.username
+        name: row.user.name || row.user.username,
+        avatarPathname: row.user.avatarUrl
       }
     })
   }

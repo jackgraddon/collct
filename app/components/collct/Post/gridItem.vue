@@ -9,9 +9,11 @@
         class="absolute inset-0 w-full h-full min-h-[120px]"
       />
 
-      <img
+      <NuxtImg
         :src="postData.url"
         :alt="postData.caption ?? `Photo by ${postData.user.name}`"
+        width="400"
+        format="webp"
         class="w-full h-auto block hover:scale-[1.05] transition-[300ms]"
         :class="isLoaded ? 'opacity-100' : 'opacity-0'"
         @load="isLoaded = true"
