@@ -3,17 +3,24 @@ import { db, schema } from '@nuxthub/db'
 
 export default defineWebAuthnAuthenticateEventHandler({
   async storeChallenge(event, challenge, attemptId) {
-    await hubKV().set(`auth:challenge:${attemptId}`, challenge, { ttl: 60 })
+    setCookie(event, `webauthn_challenge_${attemptId}`, challenge, {
+      maxAge: 60,
+      httpOnly: true, // Prevents XSS access
+      secure: true,   // Required for WebAuthn in production
+      sameSite: 'lax'
+    })
   },
   async getChallenge(event, attemptId) {
-    const challenge = await hubKV().get<string>(`auth:challenge:${attemptId}`)
+    const challenge = getCookie(event, `webauthn_challenge_${attemptId}`)
+    
     if (!challenge) {
       throw createError({
         statusCode: 400,
-        message: 'Challenge not found or expired'
+        message: 'Challenge expired or invalid'
       })
     }
-    await hubKV().del(`auth:challenge:${attemptId}`)
+    
+    deleteCookie(event, `webauthn_challenge_${attemptId}`)
     return challenge
   },
   async allowCredentials(event, userName) {

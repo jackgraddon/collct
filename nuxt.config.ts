@@ -26,7 +26,7 @@ export default defineNuxtConfig({
       access: 'private',
     },
     db: 'postgresql',
-    kv: true,
+    kv: false,
   },
 
   image: { provider: 'vercel' },
