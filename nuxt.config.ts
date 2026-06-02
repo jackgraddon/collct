@@ -14,6 +14,10 @@ export default defineNuxtConfig({
     name: 'Collct',
   },
 
+  sitemap: {
+    zeroRuntime: true
+  },
+
   css: ['~/assets/css/main.css'],
 
   hub: {
