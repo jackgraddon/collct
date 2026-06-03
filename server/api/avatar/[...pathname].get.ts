@@ -7,5 +7,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
-  return blob.serve(event, pathname)
+  // Ensure we only serve from the avatars/ directory
+  // We strip the prefix if it's already there to avoid double-prefixing
+  const cleanPath = pathname.replace(/^avatars\//, '')
+  return blob.serve(event, `avatars/${cleanPath}`)
 })
