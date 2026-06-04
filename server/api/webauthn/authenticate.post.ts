@@ -76,13 +76,26 @@ export default defineWebAuthnAuthenticateEventHandler({
       throw createError({ statusCode: 400, message: 'User associated with credential not found' })
     }
 
+    if (row.user.totpEnabled) {
+      // Create a temporary session without user object to enforce MFA
+      await setUserSession(event, {
+        unverifiedUserId: row.user.id,
+        loggedInAt: Date.now(),
+      })
+      return { mfaRequired: true } as any
+    }
+
     await setUserSession(event, {
       user: {
         id: row.user.id,
         username: row.user.username,
-        name: row.user.name || row.user.username,
-        avatarPathname: row.user.avatarUrl
-      }
+        name: row.user.name,
+        email: row.user.email,
+        avatarUrl: row.user.avatarUrl,
+        avatarPathname: row.user.avatarUrl,
+        totpEnabled: false
+      },
+      loggedInAt: Date.now()
     })
   }
 })

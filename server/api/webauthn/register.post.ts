@@ -24,10 +24,28 @@ export default defineWebAuthnRegisterEventHandler({
     deleteCookie(event, `webauthn_challenge_${attemptId}`)
     return challenge
   },
-  validateUser: user => z.object({
-    userName: z.string().min(1).toLowerCase().trim(),
-    displayName: z.string().min(1).trim().optional()
-  }).parseAsync(user),
+  async validateUser(user, event) {
+    const session = await getUserSession(event)
+    const userBody = await z.object({
+      userName: z.string().min(1).toLowerCase().trim(),
+      displayName: z.string().min(1).trim().optional()
+    }).parseAsync(user)
+
+    if (session.user?.username) {
+      // Existing session: must match username (normal re-registration or adding a device)
+      if (session.user.username !== userBody.userName) {
+        throw createError({ statusCode: 400, message: 'Username does not match session' })
+      }
+    } else if (session.recoveryUserId && session.recoveryScope === 'passkey_registration') {
+       // Recovery flow: ensure username matches the recovery user's email/username
+       const dbUser = await db.select().from(schema.users).where(eq(schema.users.id, session.recoveryUserId)).then(r => r[0])
+       if (!dbUser || dbUser.username !== userBody.userName) {
+         throw createError({ statusCode: 400, message: 'Username does not match recovery session' })
+       }
+    }
+
+    return userBody
+  },
   async onSuccess(event, { user, credential }) {
     // Look up existing user safely with Postgres syntax
     const existingUser = await db.select().from(schema.users).where(eq(schema.users.username, user.userName)).then(r => r[0])
@@ -37,9 +55,11 @@ export default defineWebAuthnRegisterEventHandler({
       // Avoid .get(), destruct row array instead
       const [newRow] = await db.insert(schema.users).values({
         name: user.displayName || user.userName.split('@')[0],
+        username: user.userName,
         email: user.userName, // Assuming username maps to email
         createdAt: new Date(),
-        lastLoginAt: new Date()
+        lastLoginAt: new Date(),
+        totpEnabled: false
       }).returning()
       dbUser = newRow
     }
@@ -62,8 +82,13 @@ export default defineWebAuthnRegisterEventHandler({
       user: {
         id: dbUser.id,
         username: dbUser.username,
-        name: dbUser.name || dbUser.username
-      }
+        name: dbUser.name,
+        email: dbUser.email,
+        avatarUrl: dbUser.avatarUrl,
+        avatarPathname: dbUser.avatarUrl,
+        totpEnabled: dbUser.totpEnabled
+      },
+      loggedInAt: Date.now()
     })
   },
   async excludeCredentials(event, userName) {

@@ -1,0 +1,49 @@
+import { createHash, randomBytes } from 'node:crypto'
+import * as OTPAuth from 'otpauth'
+
+// ------- Recovery codes -------
+
+/** Generate N random recovery codes in XXXX-XXXX-XXXX format */
+export function generateRecoveryCodes(count = 10): string[] {
+  return Array.from({ length: count }, () => {
+    const bytes = randomBytes(6).toString('hex').toUpperCase()
+    return `${bytes.slice(0, 4)}-${bytes.slice(4, 8)}-${bytes.slice(8, 12)}`
+  })
+}
+
+/** SHA-256 hash a code for storage. Not bcrypt — codes are high-entropy so fast hash is fine. */
+export function hashRecoveryCode(code: string): string {
+  return createHash('sha256').update(code.toUpperCase().replace(/-/g, '')).digest('hex')
+}
+
+/** Normalise user input before hashing (strips dashes, uppercases) */
+export function normaliseCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-F0-9]/g, '')
+}
+
+// ------- TOTP -------
+
+export function createTotpSecret(email: string, issuer = 'Collct') {
+  const secret = new OTPAuth.Secret({ size: 20 })
+  const totp = new OTPAuth.TOTP({
+    issuer,
+    label: email,
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    secret,
+  })
+  return { totp, secret: secret.base32, uri: totp.toString() }
+}
+
+export function verifyTotpToken(secretBase32: string, token: string): boolean {
+  const totp = new OTPAuth.TOTP({
+    algorithm: 'SHA1',
+    digits: 6,
+    period: 30,
+    secret: OTPAuth.Secret.fromBase32(secretBase32),
+  })
+  // window: 1 = accepts one period before/after to handle clock drift
+  const delta = totp.validate({ token, window: 1 })
+  return delta !== null
+}
