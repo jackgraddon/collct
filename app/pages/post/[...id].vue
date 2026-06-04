@@ -8,7 +8,9 @@ const toast = useToast()
 const router = useRouter()
 
 // ─── Session ──────────────────────────────────────────────────────────────────
-const { user } = useUserSession()
+const { user: sessionUser } = useUserSession()
+const user = sessionUser as Ref<UserSession | null>
+
 const isOwner = computed(() => user.value?.id === post.value?.user.id)
 const isLoggedIn = computed(() => !!user.value?.id)
 
@@ -42,56 +44,8 @@ function share() {
   toast.add({ title: 'Link copied', color: 'neutral', icon: 'i-lucide-link' })
 }
 
-// ─── Likes ────────────────────────────────────────────────────────────────────
-const { data: likeData, refresh: refreshLikes } = await useFetch<{
-  liked: boolean
-  count: number | null
-}>(`/api/photos/${id}/likes`)
-
-const liked = computed(() => likeData.value?.liked ?? false)
-const likeCount = computed(() => likeData.value?.count ?? null)
-const liking = ref(false)
-
-async function toggleLike() {
-  if (!isLoggedIn.value) return
-  liking.value = true
-  try {
-    const result = await $fetch<{ liked: boolean; count: number | null }>(
-      `/api/photos/${id}/likes`,
-      { method: 'POST' },
-    )
-    if (likeData.value) {
-      likeData.value.liked = result.liked
-      likeData.value.count = result.count
-    }
-  } catch {
-    toast.add({ title: 'Could not update like', color: 'error', icon: 'i-lucide-triangle-alert' })
-  } finally {
-    liking.value = false
-  }
-}
-
-// ─── Comments ─────────────────────────────────────────────────────────────────
-type ReactionType = 'thumbs_up' | 'thumbs_down' | 'heart' | 'cry'
-type ReactionCounts = Record<ReactionType, number>
-
-interface CommentUser {
-  id: number
-  name: string
-  username: string
-  avatarUrl: string | null
-}
-
-interface CommentItem {
-  id: number
-  body: string
-  createdAt: string
-  user: CommentUser
-  reactions: {
-    counts: ReactionCounts
-    myReaction: ReactionType | null
-  }
-}
+// ─── Types ────────────────────────────────────────────────────────────────────
+// All types are imported from shared/types/posts.ts above
 
 const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
   { type: 'thumbs_up',   emoji: '👍', label: 'Like' },
@@ -100,14 +54,85 @@ const REACTIONS: { type: ReactionType; emoji: string; label: string }[] = [
   { type: 'cry',         emoji: '😢', label: 'Sad' },
 ]
 
-const { data: commentsData, refresh: refreshComments } = await useFetch<CommentItem[]>(
-  `/api/photos/${id}/comments`,
-)
-const commentList = computed(() => commentsData.value ?? [])
+// ─── Likes ────────────────────────────────────────────────────────────────────
+// Use local refs rather than useFetch so optimistic updates are instant.
+// Poll every 10s to pick up other users' likes.
 
-// New comment
+const liked = ref(false)
+const likeCount = ref<number | null>(null)
+const liking = ref(false)
+
+async function fetchLikes() {
+  const data = await $fetch<{ liked: boolean; count: number | null }>(`/api/photos/${id}/likes`)
+  // Only update count from server (not liked) while the user is mid-interaction
+  if (!liking.value) liked.value = data.liked
+  likeCount.value = data.count
+}
+
+async function toggleLike() {
+  if (!isLoggedIn.value || liking.value) return
+  liking.value = true
+
+  // Optimistic update
+  liked.value = !liked.value
+  if (likeCount.value !== null) {
+    likeCount.value += liked.value ? 1 : -1
+  }
+
+  try {
+    const result = await $fetch<{ liked: boolean; count: number | null }>(
+      `/api/photos/${id}/likes`,
+      { method: 'POST' },
+    )
+    // Settle with server truth
+    liked.value = result.liked
+    likeCount.value = result.count
+  } catch {
+    // Revert optimistic update
+    liked.value = !liked.value
+    if (likeCount.value !== null) {
+      likeCount.value += liked.value ? 1 : -1
+    }
+    toast.add({ title: 'Could not update like', color: 'error', icon: 'i-lucide-triangle-alert' })
+  } finally {
+    liking.value = false
+  }
+}
+
+// ─── Comments ─────────────────────────────────────────────────────────────────
+const commentList = ref<CommentItem[]>([])
 const newComment = ref('')
 const submittingComment = ref(false)
+
+async function fetchComments() {
+  const fresh = await $fetch<CommentItem[]>(`/api/photos/${id}/comments`)
+
+  // Merge: update existing comments in place (preserves reaction state for
+  // the current user mid-interaction), and append any new ones from the server.
+  const existingIds = new Set(commentList.value.map((c) => c.id))
+  const freshIds = new Set(fresh.map((c) => c.id))
+
+  // Remove comments that were deleted server-side
+  commentList.value = commentList.value.filter((c) => freshIds.has(c.id))
+
+  for (const freshComment of fresh) {
+    const idx = commentList.value.findIndex((c) => c.id === freshComment.id)
+    if (idx !== -1) {
+      // Update reactions from server but preserve body/user (they don't change)
+      const updated: CommentItem = {
+        id: commentList.value[idx].id,
+        body: commentList.value[idx].body,
+        createdAt: commentList.value[idx].createdAt,
+        user: commentList.value[idx].user,
+        reactions: freshComment.reactions,
+      }
+      commentList.value[idx] = updated
+    } else if (!existingIds.has(freshComment.id)) {
+      // New comment from another user — append
+      commentList.value.push(freshComment)
+    }
+  }
+}
 
 async function submitComment() {
   const body = newComment.value.trim()
@@ -118,7 +143,7 @@ async function submitComment() {
       method: 'POST',
       body: { body },
     })
-    commentsData.value = [...(commentsData.value ?? []), created]
+    commentList.value.push(created)
     newComment.value = ''
   } catch {
     toast.add({ title: 'Could not post comment', color: 'error', icon: 'i-lucide-triangle-alert' })
@@ -128,8 +153,8 @@ async function submitComment() {
 }
 
 // ─── Comment reactions ────────────────────────────────────────────────────────
-// Track which comment's reaction picker is open
 const openReactionPicker = ref<number | null>(null)
+const reactingOn = ref<number | null>(null)
 
 function toggleReactionPicker(commentId: number) {
   openReactionPicker.value = openReactionPicker.value === commentId ? null : commentId
@@ -139,27 +164,64 @@ function closeReactionPicker() {
   openReactionPicker.value = null
 }
 
-const reactingOn = ref<number | null>(null)
-
 async function react(comment: CommentItem, type: ReactionType) {
   if (!isLoggedIn.value) return
   reactingOn.value = comment.id
+
+  // Optimistic update
+  const prev = { ...comment.reactions }
+  const idx = commentList.value.findIndex((c) => c.id === comment.id)
+  if (idx !== -1) {
+    const counts: ReactionCounts = { ...comment.reactions.counts }
+    if (comment.reactions.myReaction) {
+      counts[comment.reactions.myReaction] = Math.max(0, counts[comment.reactions.myReaction] - 1)
+    }
+    const isToggleOff = comment.reactions.myReaction === type
+    if (!isToggleOff) {
+      counts[type] = (counts[type] ?? 0) + 1
+    }
+    // Spread-merge all fields to avoid type issues
+    const updated: CommentItem = {
+      id: commentList.value[idx].id,
+      body: commentList.value[idx].body,
+      createdAt: commentList.value[idx].createdAt,
+      user: commentList.value[idx].user,
+      reactions: {
+        counts,
+        myReaction: isToggleOff ? null : type,
+      },
+    }
+    commentList.value[idx] = updated
+  }
+
   try {
     const result = await $fetch<{ counts: ReactionCounts; myReaction: ReactionType | null }>(
       `/api/comments/${comment.id}/reactions`,
       { method: 'POST', body: { type } },
     )
-    // Patch in place so we don't re-fetch the whole list
-    if (commentsData.value) {
-      const idx = commentsData.value.findIndex((c) => c.id === comment.id)
-      if (idx !== -1) {
-        commentsData.value[idx] = {
-          ...commentsData.value[idx],
-          reactions: result,
-        }
+    // Settle with server truth
+    if (idx !== -1) {
+      const settled: CommentItem = {
+        id: commentList.value[idx].id,
+        body: commentList.value[idx].body,
+        createdAt: commentList.value[idx].createdAt,
+        user: commentList.value[idx].user,
+        reactions: result,
       }
+      commentList.value[idx] = settled
     }
   } catch {
+    // Revert
+    if (idx !== -1) {
+      const reverted: CommentItem = {
+        id: commentList.value[idx].id,
+        body: commentList.value[idx].body,
+        createdAt: commentList.value[idx].createdAt,
+        user: commentList.value[idx].user,
+        reactions: prev,
+      }
+      commentList.value[idx] = reverted
+    }
     toast.add({ title: 'Could not add reaction', color: 'error', icon: 'i-lucide-triangle-alert' })
   } finally {
     reactingOn.value = null
@@ -167,7 +229,29 @@ async function react(comment: CommentItem, type: ReactionType) {
   }
 }
 
-// Format comment timestamps as relative time
+// ─── Polling ──────────────────────────────────────────────────────────────────
+// WebSockets are not supported on Vercel serverless. Poll every 10s instead.
+// The merge strategies above ensure polls don't clobber local optimistic state.
+
+const POLL_INTERVAL = 10_000
+
+let likesTimer: ReturnType<typeof setInterval> | null = null
+let commentsTimer: ReturnType<typeof setInterval> | null = null
+
+onMounted(async () => {
+  // Initial fetch
+  await Promise.all([fetchLikes(), fetchComments()])
+
+  likesTimer = setInterval(fetchLikes, POLL_INTERVAL)
+  commentsTimer = setInterval(fetchComments, POLL_INTERVAL)
+})
+
+onUnmounted(() => {
+  if (likesTimer) clearInterval(likesTimer)
+  if (commentsTimer) clearInterval(commentsTimer)
+})
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatRelative(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60_000)
@@ -180,7 +264,6 @@ function formatRelative(dateStr: string) {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(dateStr))
 }
 
-// Total reactions on a comment for display
 function totalReactions(counts: ReactionCounts) {
   return Object.values(counts).reduce((a, b) => a + b, 0)
 }
@@ -289,16 +372,15 @@ function totalReactions(counts: ReactionCounts) {
           <UButton
             :color="liked ? 'error' : 'neutral'"
             :variant="liked ? 'soft' : 'ghost'"
-            :icon="liked ? 'i-lucide-heart' : 'i-lucide-heart'"
-            :loading="liking"
             size="sm"
+            :loading="liking"
             :disabled="!isLoggedIn"
             :title="isLoggedIn ? (liked ? 'Unlike' : 'Like') : 'Sign in to like'"
             @click="toggleLike"
           >
             <template #leading>
               <UIcon
-                :name="liked ? 'i-lucide-heart' : 'i-lucide-heart'"
+                name="i-lucide-heart"
                 :class="liked ? 'fill-current text-error' : 'text-muted'"
                 class="w-4 h-4"
               />
@@ -321,7 +403,6 @@ function totalReactions(counts: ReactionCounts) {
             :key="comment.id"
             class="flex gap-3"
           >
-            <!-- Avatar -->
             <UAvatar
               :src="comment.user.avatarUrl ? `/api/avatar/${comment.user.avatarUrl}` : undefined"
               :alt="comment.user.name"
@@ -331,7 +412,6 @@ function totalReactions(counts: ReactionCounts) {
             />
 
             <div class="flex-1 min-w-0">
-              <!-- Name + time -->
               <div class="flex items-baseline gap-2 flex-wrap">
                 <ULink
                   :to="`/user/${comment.user.id}`"
@@ -342,13 +422,11 @@ function totalReactions(counts: ReactionCounts) {
                 <span class="text-muted text-xs">{{ formatRelative(comment.createdAt) }}</span>
               </div>
 
-              <!-- Body -->
               <p class="text-sm text-default mt-0.5 break-words">{{ comment.body }}</p>
 
               <!-- Reaction bar -->
               <div class="flex items-center gap-1 mt-1.5 flex-wrap relative">
 
-                <!-- Existing reactions summary (shown when there are any) -->
                 <template v-if="totalReactions(comment.reactions.counts) > 0">
                   <button
                     v-for="r in REACTIONS.filter(r => comment.reactions.counts[r.type] > 0)"
@@ -366,7 +444,6 @@ function totalReactions(counts: ReactionCounts) {
                   </button>
                 </template>
 
-                <!-- Add reaction button → opens picker -->
                 <div v-if="isLoggedIn" class="relative">
                   <button
                     class="inline-flex items-center gap-1 text-xs text-muted hover:text-default rounded-full px-2 py-0.5 hover:bg-muted/30 transition-colors"
@@ -376,7 +453,6 @@ function totalReactions(counts: ReactionCounts) {
                     <UIcon name="i-lucide-smile-plus" class="w-3.5 h-3.5" />
                   </button>
 
-                  <!-- Emoji picker popover -->
                   <Transition
                     enter-active-class="transition ease-out duration-100"
                     enter-from-class="opacity-0 scale-95"
