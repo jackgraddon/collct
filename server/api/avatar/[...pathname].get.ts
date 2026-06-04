@@ -2,11 +2,10 @@ import { blob } from 'hub:blob'
 
 export default defineEventHandler(async (event) => {
   const pathname = getRouterParam(event, 'pathname')
-  
-  if (!pathname) {
+
+  if (!pathname || !pathname.startsWith('avatars/') || pathname.includes('..')) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
-  const cleanPath = pathname.replace(/^avatars\//, '')
-  return blob.serve(event, `avatars/${cleanPath}`)
+  return blob.serve(event, pathname)
 })
