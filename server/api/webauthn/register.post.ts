@@ -42,6 +42,12 @@ export default defineWebAuthnRegisterEventHandler({
        if (!dbUser || dbUser.username !== userBody.userName) {
          throw createError({ statusCode: 400, message: 'Username does not match recovery session' })
        }
+    } else {
+      // No session: check if user already exists (prevent account takeover)
+      const existingUser = await db.select().from(schema.users).where(eq(schema.users.username, userBody.userName)).then(r => r[0])
+      if (existingUser) {
+        throw createError({ statusCode: 400, message: 'Username is already taken' })
+      }
     }
 
     return userBody
