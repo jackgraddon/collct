@@ -1,5 +1,6 @@
 import { db, schema } from '@nuxthub/db'
 import { blob } from 'hub:blob'
+import { presignUrl } from '@vercel/blob'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 10 * 1024 * 1024
@@ -32,5 +33,13 @@ export default defineEventHandler(async (event) => {
     .values({ userId: session.user.id, blobPathname, caption })
     .returning()
 
-  return { ...photo, url: `/api/blob/${blobPathname}` }
+  const token = await getDelegationToken()
+  const { presignedUrl } = await presignUrl(token, {
+    pathname: blobPathname,
+    access: 'private',
+    operation: 'get',
+    validUntil: Date.now() + 60 * 60 * 1000
+  })
+
+  return { ...photo, url: presignedUrl }
 })
