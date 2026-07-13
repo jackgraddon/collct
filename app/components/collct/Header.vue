@@ -69,6 +69,18 @@ const userDropdownItems = computed(() => [
   ],
   [
     {
+      label: 'Settings',
+      icon: 'solar:settings-minimalistic-linear',
+      onSelect: () => router.push('/settings')
+    },
+    {
+      label: 'Security',
+      icon: 'solar:shield-check-linear',
+      onSelect: () => router.push('/account/security')
+    }
+  ],
+  [
+    {
       label: 'Sign Out',
       icon: 'solar:logout-3-linear',
       onSelect: async () => {

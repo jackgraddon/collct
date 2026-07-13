@@ -28,8 +28,8 @@ export function useTotp() {
     return $fetch('/api/auth/totp/challenge', { method: 'POST', body: { token } })
   }
 
-  async function disable() {
-    return $fetch('/api/auth/totp/disable', { method: 'POST' })
+  async function disable(body: { token?: string, recoveryCode?: string }) {
+    return $fetch('/api/auth/totp/disable', { method: 'POST', body })
   }
 
   return { uri, secret, loading, error, setup, verify, challenge, disable }

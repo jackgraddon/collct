@@ -55,6 +55,15 @@
         </div>
       </template>
 
+      <template #security>
+        <div class="my-4 space-y-4">
+          <p class="text-sm text-muted">Manage your two-factor authentication, recovery codes, and other security settings.</p>
+          <UButton to="/account/security" icon="solar:shield-check-linear">
+            Open Security Settings
+          </UButton>
+        </div>
+      </template>
+
     </UTabs>
   <!-- </UPageCard> -->
 </template>
@@ -139,6 +148,11 @@ const tabs = computed(() => [
       src: user.value.avatarUrl ?? undefined,
       alt: user.value.name,
     },
+  },
+  {
+    slot: 'security',
+    label: 'Security',
+    icon: 'solar:shield-check-linear',
   },
   {
     slot: 'appearance',
