@@ -22,6 +22,20 @@
       "when": 1780368233144,
       "tag": "0002_goofy_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1780593288748,
+      "tag": "0003_ambitious_frog_thor",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1780606190291,
+      "tag": "0004_vengeful_diamondback",
+      "breakpoints": true
     }
   ]
 }

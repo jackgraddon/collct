@@ -39,6 +39,15 @@ export default defineNuxtConfig({
     webAuthn: true,
   },
 
+  qrcode: {
+    options: {
+      variant: 'rounded',
+      radius: 1,
+      blackColor: 'var(--ui-text-highlighted)',
+      whiteColor: 'var(--ui-bg)',
+    },
+  },
+
   modules: [
     '@nuxt/fonts',
     '@vite-pwa/nuxt',
@@ -48,6 +57,7 @@ export default defineNuxtConfig({
     'nuxt-auth-utils',
     '@nuxtjs/seo',
     '@nuxt/ui',
-    '@nuxthub/core'
+    '@nuxthub/core',
+    'nuxt-qrcode',
   ],
 })

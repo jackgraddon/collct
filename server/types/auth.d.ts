@@ -4,8 +4,17 @@ declare module '#auth-utils' {
     username: string
     name: string
     email: string
-    avatarPathname: string | null
     avatarUrl: string | null
+    avatarPathname: string | null
+    totpEnabled: boolean
+  }
+
+  interface UserSession {
+    user?: User
+    unverifiedUserId?: number
+    recoveryUserId?: number
+    recoveryScope?: 'passkey_registration'
+    loggedInAt?: number
   }
 }
 

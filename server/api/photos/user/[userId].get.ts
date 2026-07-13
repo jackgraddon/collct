@@ -1,5 +1,6 @@
 import { db, schema } from '@nuxthub/db'
 import { eq, and, lt, desc } from 'drizzle-orm'
+import { presignUrl } from '@vercel/blob'
 
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
@@ -36,15 +37,46 @@ export default defineEventHandler(async (event) => {
     .orderBy(desc(schema.photos.createdAt))
     .limit(limit)
 
-  const photos = rows.map((row) => ({
-    ...row,
-    url: `/api/blob/${row.blobPathname}`,
-    blobPathname: undefined,
+  if (rows.length === 0) {
+    return { photos: [], nextCursor: null }
+  }
+
+  const token = await getDelegationToken()
+
+  const photos = await Promise.all(rows.map(async (row) => {
+    const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
+      pathname: row.blobPathname,
+      access: 'private',
+      operation: 'get',
+      validUntil: Date.now() + 60 * 60 * 1000
+    })
+
+    let signedAvatarUrl = row.user.avatarUrl
+    if (row.user.avatarUrl) {
+      const { presignedUrl: avatarUrl } = await presignUrl(token, {
+        pathname: row.user.avatarUrl,
+        access: 'private',
+        operation: 'get',
+        validUntil: Date.now() + 60 * 60 * 1000
+      })
+      signedAvatarUrl = avatarUrl
+    }
+
+    return {
+      ...row,
+      url: signedPhotoUrl,
+      blobPathname: undefined,
+      user: {
+        ...row.user,
+        avatarUrl: signedAvatarUrl
+      }
+    }
   }))
 
+  const lastRow = rows[rows.length - 1]
   const nextCursor =
-    rows.length === limit
-      ? (rows[rows.length - 1].createdAt as Date)?.getTime() ?? null
+    rows.length === limit && lastRow?.createdAt
+      ? lastRow.createdAt.getTime()
       : null
 
   return { photos, nextCursor }

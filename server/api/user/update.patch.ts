@@ -1,16 +1,21 @@
+import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
 
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
-  const { name, email, avatarUrl } = await readBody(event)
+  
+  const body = await readBody(event)
+  const { name, email } = await z.object({
+    name: z.string().min(1).max(100),
+    email: z.string().email().max(255),
+  }).parseAsync(body)
 
   const [updated] = await db
     .update(schema.users)
     .set({
       name,
       email,
-      ...(avatarUrl !== undefined && { avatarUrl }),
     })
     .where(eq(schema.users.id, user.id))
     .returning()
@@ -19,9 +24,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'User not found' })
   }
 
-  // Reseal the session with fresh values
+  // Reseal the session with fresh values, preserving existing properties
   await setUserSession(event, {
     user: {
+      ...user,
       id: updated.id,
       email: updated.email,
       name: updated.name,

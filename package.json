@@ -23,9 +23,12 @@
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "nuxt": "^4.4.6",
+    "nuxt-qrcode": "^0.4.10",
+    "otpauth": "^9.5.1",
     "postgres": "^3.4.9",
     "vue": "^3.5.34",
-    "vue-router": "^5.0.7"
+    "vue-router": "^5.0.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@iconify-json/solar": "^1.2.5",
