@@ -9,7 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "DATABASE_URL=postgresql://collct:collct@localhost:5432/collct drizzle-kit migrate"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.4.6",

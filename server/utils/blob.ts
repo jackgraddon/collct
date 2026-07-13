@@ -1,24 +1,33 @@
-import { issueSignedToken } from '@vercel/blob'
-
-// We store these globally in the server instance to persist across requests
 let cachedToken: any = null
 let tokenExpiresAt = 0
 
-export async function getDelegationToken() {
+async function getDelegationToken() {
+  if (process.dev) return null
+
   const now = Date.now()
-  
-  // Return the cached token if it is still valid
-  if (cachedToken && now < tokenExpiresAt) {
-    return cachedToken
-  }
-  
-  // Ask Vercel for a short-lived token valid for wildcard pathnames
+  if (cachedToken && now < tokenExpiresAt) return cachedToken
+
+  const { issueSignedToken } = await import('@vercel/blob')
   cachedToken = await issueSignedToken({
-    validUntil: now + 60 * 60 * 1000, // Token valid for 1 hour
-    operations: ['get'] // Only allow read access
+    validUntil: now + 60 * 60 * 1000,
+    operations: ['get']
   })
-  
-  // Refresh 5 minutes early to prevent expiration overlap during a request
-  tokenExpiresAt = now + 55 * 60 * 1000 
+  tokenExpiresAt = now + 55 * 60 * 1000
   return cachedToken
+}
+
+export async function getBlobUrl(pathname: string): Promise<string> {
+  if (process.dev) {
+    return `/api/blob/${pathname}`
+  }
+
+  const { presignUrl } = await import('@vercel/blob')
+  const token = await getDelegationToken()
+  const { presignedUrl } = await presignUrl(token, {
+    pathname,
+    access: 'private',
+    operation: 'get',
+    validUntil: Date.now() + 60 * 60 * 1000
+  })
+  return presignedUrl
 }

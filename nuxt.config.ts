@@ -3,6 +3,13 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  devServer: {
+    https: {
+      key: './localhost-key.pem',
+      cert: './localhost.pem',
+    }
+  },
+
   typescript: {
     tsConfig: {
       include: ['types/**/*.d.ts']
@@ -21,10 +28,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   hub: {
-    blob: {
-      driver: 'vercel-blob',
-      access: 'private',
-    },
+    blob: { access: 'private' },
     db: 'postgresql',
     kv: false,
   },

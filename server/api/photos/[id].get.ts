@@ -1,6 +1,5 @@
 import { db, schema } from '@nuxthub/db'
 import { eq } from 'drizzle-orm'
-import { presignUrl } from '@vercel/blob'
 
 export default defineEventHandler(async (event) => {
   await requireUserSession(event)
@@ -31,17 +30,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Photo not found' })
   }
 
-  const token = await getDelegationToken()
-  
-  const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
-    pathname: row.blobPathname,
-    access: 'private',
-    operation: 'get',
-    validUntil: Date.now() + 60 * 60 * 1000
-  })
+  const url = await getBlobUrl(row.blobPathname)
 
   return {
     ...row,
-    url: signedPhotoUrl
+    url
   }
 })

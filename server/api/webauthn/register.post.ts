@@ -29,15 +29,27 @@ export default defineWebAuthnRegisterEventHandler({
     displayName: z.string().min(1).trim().optional()
   }).parseAsync(user),
   async onSuccess(event, { user, credential }) {
-    // Look up existing user safely with Postgres syntax
-    const existingUser = await db.select().from(schema.users).where(eq(schema.users.username, user.userName)).then(r => r[0])
+    // Check for existing user by email (the actual user-provided identifier)
+    const email = user.userName
+    const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, email)).then(r => r[0])
     
     let dbUser = existingUser
     if (!dbUser) {
-      // Avoid .get(), destruct row array instead
+      // Derive username from email local part, ensure uniqueness
+      const baseUsername = email.split('@')[0]
+      let username = baseUsername
+      let counter = 1
+      while (true) {
+        const taken = await db.select().from(schema.users).where(eq(schema.users.username, username)).then(r => r[0])
+        if (!taken) break
+        username = `${baseUsername}${counter}`
+        counter++
+      }
+
       const [newRow] = await db.insert(schema.users).values({
-        name: user.displayName || user.userName.split('@')[0],
-        email: user.userName, // Assuming username maps to email
+        username,
+        name: user.displayName || baseUsername,
+        email,
         createdAt: new Date(),
         lastLoginAt: new Date()
       }).returning()
