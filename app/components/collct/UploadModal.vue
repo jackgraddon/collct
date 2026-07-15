@@ -190,7 +190,7 @@ async function upload() {
           <!-- No private groups: public by default -->
           <div v-if="!hasPrivateGroups" class="rounded-lg bg-muted/30 p-3 space-y-2">
             <div class="flex items-center gap-2">
-              <UIcon name="i-solar-globe-linear" class="w-4 h-4 text-muted" />
+              <UIcon name="i-solar-global-linear" class="w-4 h-4 text-muted" />
               <p class="text-xs text-muted">Visible to everyone on this server</p>
             </div>
             <p class="text-xs text-muted">
