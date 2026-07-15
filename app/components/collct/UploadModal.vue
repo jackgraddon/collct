@@ -24,19 +24,17 @@ const { data: groupsData } = await useFetch<{ groups: GroupData[] }>('/api/group
 })
 
 const selectedGroupIds = ref<number[]>([])
-const publicGroup = computed(() => groupsData.value?.groups.find((g) => g.isPublic))
 const nonPublicGroups = computed(() => groupsData.value?.groups.filter((g) => !g.isPublic) ?? [])
 const hasPrivateGroups = computed(() => nonPublicGroups.value.length > 0)
 
-// Initialize selection with Public when modal opens
+// Start with no groups selected — empty selection = post publicly to everyone
 watch(() => props.open, (isOpen) => {
   if (isOpen) {
-    const pub = publicGroup.value
-    selectedGroupIds.value = pub ? [pub.id] : []
+    selectedGroupIds.value = []
   }
 })
 
-const canSubmit = computed(() => !!file.value && selectedGroupIds.value.length > 0)
+const canSubmit = computed(() => !!file.value)
 
 // Create group confirmation
 const showCreateGroupDialog = ref(false)
@@ -167,37 +165,39 @@ async function upload() {
             <p class="text-xs font-medium text-muted uppercase tracking-wider">Visible to</p>
             <div class="space-y-1.5">
               <label
-                v-for="group in [publicGroup, ...nonPublicGroups].filter(Boolean)"
-                :key="group!.id"
+                v-for="group in nonPublicGroups"
+                :key="group.id"
                 class="flex items-center gap-2.5 cursor-pointer group"
               >
                 <UCheckbox
-                  :model-value="selectedGroupIds.includes(group!.id)"
-                  :disabled="group!.isPublic"
+                  :model-value="selectedGroupIds.includes(group.id)"
                   @update:model-value="(val: boolean | 'indeterminate') => {
-                  if (val === true) {
-                    selectedGroupIds.push(group!.id)
-                  } else if (val === false) {
-                    selectedGroupIds = selectedGroupIds.filter(id => id !== group!.id)
-                  }
-                }"
+                    if (val === true) {
+                      selectedGroupIds.push(group.id)
+                    } else if (val === false) {
+                      selectedGroupIds = selectedGroupIds.filter(id => id !== group.id)
+                    }
+                  }"
                 />
-                <span class="text-sm text-default">{{ group!.name }}</span>
+                <span class="text-sm text-default">{{ group.name }}</span>
               </label>
             </div>
-
-            <!-- Create a group link (only when no private groups exist) -->
-            <button
-              v-if="!hasPrivateGroups"
-              class="text-xs text-primary hover:underline mt-1"
-              @click.prevent="showCreateGroupDialog = true"
-            >
-              + Create a group
-            </button>
+            <p class="text-xs text-muted">
+              <template v-if="selectedGroupIds.length === 0">
+                Visible to everyone on this server
+              </template>
+              <template v-else>
+                Also visible to everyone on this server
+              </template>
+            </p>
           </div>
 
-          <!-- Create a group prompt (when no private groups) -->
-          <div v-if="!hasPrivateGroups" class="rounded-lg bg-muted/30 p-3">
+          <!-- No private groups: public by default -->
+          <div v-if="!hasPrivateGroups" class="rounded-lg bg-muted/30 p-3 space-y-2">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-solar-globe-linear" class="w-4 h-4 text-muted" />
+              <p class="text-xs text-muted">Visible to everyone on this server</p>
+            </div>
             <p class="text-xs text-muted">
               Want to share privately?
               <button class="text-primary hover:underline font-medium" @click.prevent="showCreateGroupDialog = true">
@@ -234,7 +234,7 @@ async function upload() {
       <UCard>
         <template #header>
           <div class="flex items-center gap-2">
-            <UIcon name="i-solar-users-group-two-linear" class="w-5 h-5 text-primary" />
+            <UIcon name="i-solar-users-group-rounded-linear" class="w-5 h-5 text-primary" />
             <span class="font-semibold">Create a group?</span>
           </div>
         </template>
