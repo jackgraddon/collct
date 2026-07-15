@@ -183,12 +183,7 @@ async function upload() {
               </label>
             </div>
             <p class="text-xs text-muted">
-              <template v-if="selectedGroupIds.length === 0">
-                Visible to everyone on this server
-              </template>
-              <template v-else>
-                Also visible to everyone on this server
-              </template>
+              Visible only to members of selected groups. Uncheck all to post publicly.
             </p>
           </div>
 
