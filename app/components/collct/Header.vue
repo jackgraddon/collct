@@ -53,7 +53,7 @@ const items = computed<NavigationMenuItem[]>(() => [
   },
   {
     label: 'Groups',
-    icon: 'solar:users-group-two-linear',
+    icon: 'solar:users-group-rounded-linear',
     to: '/groups',
     active: route.path.startsWith('/groups'),
   },
@@ -86,7 +86,7 @@ const userDropdownItems = computed(() => [
     },
     {
       label: 'Groups',
-      icon: 'solar:users-group-two-linear',
+      icon: 'solar:users-group-rounded-linear',
       onSelect: () => router.push('/groups')
     }
   ],

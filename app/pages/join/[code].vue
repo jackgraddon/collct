@@ -50,7 +50,7 @@ async function redeemInvite() {
     <!-- Invite prompt -->
     <template v-else>
       <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-        <UIcon name="i-solar-users-group-two-linear" class="w-8 h-8 text-primary" />
+        <UIcon name="i-solar-users-group-rounded-linear" class="w-8 h-8 text-primary" />
       </div>
       <h1 class="text-xl font-semibold">Join a group</h1>
       <p class="text-muted text-sm">

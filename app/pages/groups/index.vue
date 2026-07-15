@@ -65,7 +65,7 @@ async function createGroup() {
         <div class="flex items-center gap-3 min-w-0">
           <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <UIcon
-              :name="group.isPublic ? 'i-solar-globe-linear' : 'i-solar-users-group-two-linear'"
+              :name="group.isPublic ? 'i-solar-globe-linear' : 'i-solar-users-group-rounded-linear'"
               class="w-5 h-5 text-primary"
             />
           </div>
@@ -92,7 +92,7 @@ async function createGroup() {
         <UCard>
           <template #header>
             <div class="flex items-center gap-2">
-              <UIcon name="i-solar-users-group-two-linear" class="w-5 h-5 text-primary" />
+              <UIcon name="i-solar-users-group-rounded-linear" class="w-5 h-5 text-primary" />
               <span class="font-semibold">Create a group</span>
             </div>
           </template>

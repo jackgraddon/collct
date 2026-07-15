@@ -132,7 +132,7 @@ watchEffect(() => {
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <UIcon name="i-solar-users-group-two-linear" class="w-6 h-6 text-primary" />
+            <UIcon name="i-solar-users-group-rounded-linear" class="w-6 h-6 text-primary" />
           </div>
           <div>
             <h1 class="text-xl font-semibold">{{ group.name }}</h1>
