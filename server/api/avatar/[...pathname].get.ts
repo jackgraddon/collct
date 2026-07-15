@@ -1,8 +1,6 @@
 import { blob } from 'hub:blob'
 
 export default defineEventHandler(async (event) => {
-  await requireUserSession(event)
-
   const pathname = getRouterParam(event, 'pathname')
 
   if (!pathname || !pathname.startsWith('avatars/') || pathname.includes('..')) {
