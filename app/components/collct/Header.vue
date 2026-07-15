@@ -52,6 +52,12 @@ const items = computed<NavigationMenuItem[]>(() => [
     active: route.path.startsWith('/feed'),
   },
   {
+    label: 'Groups',
+    icon: 'solar:users-group-two-linear',
+    to: '/groups',
+    active: route.path.startsWith('/groups'),
+  },
+  {
     label: 'Settings',
     icon: 'solar:settings-minimalistic-linear',
     to: '/settings',
@@ -77,6 +83,11 @@ const userDropdownItems = computed(() => [
       label: 'Security',
       icon: 'solar:shield-check-linear',
       onSelect: () => router.push('/account/security')
+    },
+    {
+      label: 'Groups',
+      icon: 'solar:users-group-two-linear',
+      onSelect: () => router.push('/groups')
     }
   ],
   [

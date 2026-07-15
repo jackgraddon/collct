@@ -27,13 +27,31 @@ export default defineEventHandler(async (event) => {
     z.object({ type: z.enum(['thumbs_up', 'thumbs_down', 'heart', 'cry']) }).parse,
   )
 
-  // Verify comment exists
+  // Verify comment exists and get its photoId
   const [comment] = await db
-    .select({ id: schema.comments.id })
+    .select({ id: schema.comments.id, photoId: schema.comments.photoId })
     .from(schema.comments)
     .where(eq(schema.comments.id, commentId))
     .limit(1)
   if (!comment) throw createError({ statusCode: 404, message: 'Comment not found' })
+
+  // Check viewer can see this comment's photo's groups
+  const [viewerMembership] = await db
+    .select({ id: schema.groupMembers.id })
+    .from(schema.groupMembers)
+    .innerJoin(
+      schema.photoGroups,
+      and(
+        eq(schema.photoGroups.groupId, schema.groupMembers.groupId),
+        eq(schema.photoGroups.photoId, comment.photoId),
+      ),
+    )
+    .where(eq(schema.groupMembers.userId, currentUserId))
+    .limit(1)
+
+  if (!viewerMembership) {
+    throw createError({ statusCode: 404, message: 'Comment not found' })
+  }
 
   // Check for existing reaction from this user
   const [existing] = await db
@@ -70,13 +88,13 @@ export default defineEventHandler(async (event) => {
     .where(eq(schema.commentReactions.commentId, commentId))
 
   const counts = Object.fromEntries(
-    REACTION_TYPES.map((t: ReactionType) => [
+    REACTION_TYPES.map((t) => [
       t,
-      allReactions.filter((r: typeof allReactions[number]) => r.type === t).length,
+      allReactions.filter((r: { type: ReactionType; userId: number }) => r.type === t).length,
     ]),
   ) as ReactionCounts
 
-  const myReaction = allReactions.find((r: typeof allReactions[number]) => r.userId === currentUserId)?.type ?? null
+  const myReaction = allReactions.find((r: { type: ReactionType; userId: number }) => r.userId === currentUserId)?.type ?? null
 
   return { counts, myReaction }
 })

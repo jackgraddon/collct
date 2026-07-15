@@ -11,5 +11,39 @@ declare global {
       name: string
       avatarUrl: string | null
     }
+    groups?: { id: number; name: string }[]
+  }
+
+  interface GroupData {
+    id: number
+    name: string
+    slug: string
+    isPublic: boolean
+    ownerId: number | null
+    createdAt: string | Date
+    role?: string
+    members?: GroupMember[]
+  }
+
+  interface GroupMember {
+    id: number
+    userId: number
+    role: string
+    joinedAt: string | Date
+    username: string
+    name: string
+    avatarUrl: string | null
+  }
+
+  interface GroupInvite {
+    id: string
+    groupId: number
+    code: string
+    createdBy: number
+    maxUses: number | null
+    useCount: number
+    expiresAt: string | Date | null
+    revokedAt: string | Date | null
+    createdAt: string | Date
   }
 }

@@ -1,9 +1,10 @@
 import { db, schema } from '@nuxthub/db'
-import { eq, and, lt, desc } from 'drizzle-orm'
+import { eq, and, lt, desc, inArray } from 'drizzle-orm'
 import { presignUrl } from '@vercel/blob'
 
 export default defineEventHandler(async (event) => {
-  await requireUserSession(event)
+  const session = await requireUserSession(event)
+  const viewerId = session.user.id
 
   const userId = Number(getRouterParam(event, 'userId'))
   if (!userId || isNaN(userId)) {
@@ -14,6 +15,14 @@ export default defineEventHandler(async (event) => {
   const limit = Math.min(Number(query.limit) || 20, 50)
   const before = query.before ? Number(query.before) : null
 
+  // Get all photos visible to the viewer
+  const visibleIds = await getVisiblePhotoIds(viewerId)
+
+  if (visibleIds.length === 0) {
+    return { photos: [], nextCursor: null }
+  }
+
+  // Fetch visible photos by this user
   const rows = await db
     .select({
       id: schema.photos.id,
@@ -31,8 +40,9 @@ export default defineEventHandler(async (event) => {
     .where(
       and(
         eq(schema.photos.userId, userId),
-        before ? lt(schema.photos.createdAt, new Date(before)) : undefined
-      )
+        inArray(schema.photos.id, visibleIds),
+        before ? lt(schema.photos.createdAt, new Date(before)) : undefined,
+      ),
     )
     .orderBy(desc(schema.photos.createdAt))
     .limit(limit)
@@ -43,35 +53,34 @@ export default defineEventHandler(async (event) => {
 
   const token = await getDelegationToken()
 
-  const photos = await Promise.all(rows.map(async (row) => {
-    const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
-      pathname: row.blobPathname,
-      access: 'private',
-      operation: 'get',
-      validUntil: Date.now() + 60 * 60 * 1000
-    })
-
-    let signedAvatarUrl = row.user.avatarUrl
-    if (row.user.avatarUrl) {
-      const { presignedUrl: avatarUrl } = await presignUrl(token, {
-        pathname: row.user.avatarUrl,
+  const photos = await Promise.all(
+    rows.map(async (row) => {
+      const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
+        pathname: row.blobPathname,
         access: 'private',
         operation: 'get',
-        validUntil: Date.now() + 60 * 60 * 1000
+        validUntil: Date.now() + 60 * 60 * 1000,
       })
-      signedAvatarUrl = avatarUrl
-    }
 
-    return {
-      ...row,
-      url: signedPhotoUrl,
-      blobPathname: undefined,
-      user: {
-        ...row.user,
-        avatarUrl: signedAvatarUrl
+      let signedAvatarUrl = row.user.avatarUrl
+      if (row.user.avatarUrl) {
+        const { presignedUrl: avatarUrl } = await presignUrl(token, {
+          pathname: row.user.avatarUrl,
+          access: 'private',
+          operation: 'get',
+          validUntil: Date.now() + 60 * 60 * 1000,
+        })
+        signedAvatarUrl = avatarUrl
       }
-    }
-  }))
+
+      return {
+        ...row,
+        url: signedPhotoUrl,
+        blobPathname: undefined,
+        user: { ...row.user, avatarUrl: signedAvatarUrl },
+      }
+    }),
+  )
 
   const lastRow = rows[rows.length - 1]
   const nextCursor =

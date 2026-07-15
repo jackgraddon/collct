@@ -1,12 +1,12 @@
-import { eq, and, count as drizzleCount } from 'drizzle-orm'
-import { schema } from '@nuxthub/db'
+import { db, schema } from '@nuxthub/db'
+import { eq, and, sql, count as drizzleCount } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const photoId = Number(getRouterParam(event, 'id'))
   if (isNaN(photoId)) throw createError({ statusCode: 400, message: 'Invalid photo ID' })
 
   const session = await getUserSession(event)
-  const currentUserId: number | null = session?.user?.id ?? null
+  const viewerId: number | null = session?.user?.id ?? null
 
   // Resolve photo owner once
   const [photo] = await db
@@ -17,46 +17,102 @@ export default defineEventHandler(async (event) => {
 
   if (!photo) throw createError({ statusCode: 404, message: 'Photo not found' })
 
-  const isOwner = currentUserId !== null && currentUserId === photo.userId
+  const isOwner = viewerId !== null && viewerId === photo.userId
 
   if (event.method === 'GET') {
-    const liked =
-      currentUserId !== null
-        ? (
-            await db
-              .select({ id: schema.likes.id })
-              .from(schema.likes)
-              .where(
-                and(
-                  eq(schema.likes.photoId, photoId),
-                  eq(schema.likes.userId, currentUserId),
-                ),
-              )
-              .limit(1)
-          ).length > 0
-        : false
+    // Check if viewer can see likes on this photo
+    if (viewerId === null) {
+      return { liked: false, count: null }
+    }
 
-    const [{ total }] = await db
+    // Viewer-scoped like count: only count likes where the liker and viewer share a group on this photo
+    const [countResult] = await db
       .select({ total: drizzleCount() })
       .from(schema.likes)
-      .where(eq(schema.likes.photoId, photoId))
+      .innerJoin(
+        schema.photoGroups,
+        eq(schema.photoGroups.photoId, schema.likes.photoId),
+      )
+      .innerJoin(
+        schema.groupMembers,
+        and(
+          eq(schema.groupMembers.groupId, schema.photoGroups.groupId),
+          eq(schema.groupMembers.userId, viewerId),
+        ),
+      )
+      .where(
+        and(
+          eq(schema.likes.photoId, photoId),
+          sql`EXISTS (
+            SELECT 1
+            FROM ${schema.photoGroups} pg2
+            JOIN ${schema.groupMembers} gm_liker
+              ON gm_liker.group_id = pg2.group_id AND gm_liker.user_id = ${schema.likes.userId}
+            WHERE pg2.photo_id = ${photoId}
+          )`,
+        ),
+      )
+
+    const totalCount = countResult ? Number(countResult.total) : 0
+
+    // Did the current viewer like this photo?
+    const [viewerLike] = await db
+      .select({ id: schema.likes.id })
+      .from(schema.likes)
+      .innerJoin(
+        schema.photoGroups,
+        eq(schema.photoGroups.photoId, schema.likes.photoId),
+      )
+      .innerJoin(
+        schema.groupMembers,
+        and(
+          eq(schema.groupMembers.groupId, schema.photoGroups.groupId),
+          eq(schema.groupMembers.userId, viewerId),
+        ),
+      )
+      .where(
+        and(
+          eq(schema.likes.photoId, photoId),
+          eq(schema.likes.userId, viewerId),
+        ),
+      )
+      .limit(1)
 
     return {
-      liked,
-      count: isOwner ? Number(total) : null,
+      liked: !!viewerLike,
+      count: isOwner ? totalCount : null,
     }
   }
 
   if (event.method === 'POST') {
-    if (!currentUserId) throw createError({ statusCode: 401, message: 'Not authenticated' })
+    if (!viewerId) throw createError({ statusCode: 401, message: 'Not authenticated' })
 
+    // Check viewer can see this photo's groups
+    const [viewerMembership] = await db
+      .select({ id: schema.groupMembers.id })
+      .from(schema.groupMembers)
+      .innerJoin(
+        schema.photoGroups,
+        and(
+          eq(schema.photoGroups.groupId, schema.groupMembers.groupId),
+          eq(schema.photoGroups.photoId, photoId),
+        ),
+      )
+      .where(eq(schema.groupMembers.userId, viewerId))
+      .limit(1)
+
+    if (!viewerMembership) {
+      throw createError({ statusCode: 404, message: 'Photo not found' })
+    }
+
+    // Toggle like
     const [existing] = await db
       .select({ id: schema.likes.id })
       .from(schema.likes)
       .where(
         and(
           eq(schema.likes.photoId, photoId),
-          eq(schema.likes.userId, currentUserId),
+          eq(schema.likes.userId, viewerId),
         ),
       )
       .limit(1)
@@ -64,17 +120,42 @@ export default defineEventHandler(async (event) => {
     if (existing) {
       await db.delete(schema.likes).where(eq(schema.likes.id, existing.id))
     } else {
-      await db.insert(schema.likes).values({ userId: currentUserId, photoId })
+      await db.insert(schema.likes).values({ userId: viewerId, photoId })
     }
 
-    const [{ total }] = await db
+    // Re-fetch viewer-scoped count
+    const [postCountResult] = await db
       .select({ total: drizzleCount() })
       .from(schema.likes)
-      .where(eq(schema.likes.photoId, photoId))
+      .innerJoin(
+        schema.photoGroups,
+        eq(schema.photoGroups.photoId, schema.likes.photoId),
+      )
+      .innerJoin(
+        schema.groupMembers,
+        and(
+          eq(schema.groupMembers.groupId, schema.photoGroups.groupId),
+          eq(schema.groupMembers.userId, viewerId),
+        ),
+      )
+      .where(
+        and(
+          eq(schema.likes.photoId, photoId),
+          sql`EXISTS (
+            SELECT 1
+            FROM ${schema.photoGroups} pg2
+            JOIN ${schema.groupMembers} gm_liker
+              ON gm_liker.group_id = pg2.group_id AND gm_liker.user_id = ${schema.likes.userId}
+            WHERE pg2.photo_id = ${photoId}
+          )`,
+        ),
+      )
+
+    const postTotalCount = postCountResult ? Number(postCountResult.total) : 0
 
     return {
       liked: !existing,
-      count: isOwner ? Number(total) : null,
+      count: isOwner ? postTotalCount : null,
     }
   }
 

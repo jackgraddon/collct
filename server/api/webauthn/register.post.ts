@@ -58,7 +58,9 @@ export default defineWebAuthnRegisterEventHandler({
     const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, email)).then(r => r[0])
     
     let dbUser = existingUser
+    let isNewUser = false
     if (!dbUser) {
+      isNewUser = true
       // Derive username from email local part, ensure uniqueness
       const baseUsername = email.split('@')[0]
       let username = baseUsername
@@ -84,6 +86,11 @@ export default defineWebAuthnRegisterEventHandler({
 
     if (!dbUser) {
       throw createError({ statusCode: 400, message: 'User creation failed' })
+    }
+
+    // Auto-join new users to the Public group
+    if (isNewUser) {
+      await joinUserToPublic(dbUser.id)
     }
 
     // Stringify transports array for text column compatibility

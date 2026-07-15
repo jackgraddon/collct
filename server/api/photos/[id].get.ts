@@ -1,12 +1,31 @@
 import { db, schema } from '@nuxthub/db'
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
-  await requireUserSession(event)
+  const session = await requireUserSession(event)
+  const userId = session.user.id
 
   const id = Number(getRouterParam(event, 'id'))
   if (!id || isNaN(id)) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid photo ID' })
+  }
+
+  // Check if viewer can see this photo (must share at least one group)
+  const visibleIds = await db
+    .selectDistinct({ photoId: schema.photoGroups.photoId })
+    .from(schema.photoGroups)
+    .innerJoin(
+      schema.groupMembers,
+      and(
+        eq(schema.groupMembers.groupId, schema.photoGroups.groupId),
+        eq(schema.groupMembers.userId, userId),
+      ),
+    )
+    .where(eq(schema.photoGroups.photoId, id))
+
+  if (visibleIds.length === 0) {
+    // 404, not 403 — don't confirm existence
+    throw createError({ statusCode: 404, statusMessage: 'Photo not found' })
   }
 
   const [row] = await db
@@ -31,9 +50,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const url = await getBlobUrl(row.blobPathname)
+  const groupsMap = await getVisiblePhotoGroups([id], userId)
 
   return {
     ...row,
-    url
+    url,
+    groups: groupsMap.get(id) ?? [],
   }
 })

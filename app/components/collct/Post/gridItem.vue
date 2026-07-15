@@ -18,6 +18,12 @@
         :class="isLoaded ? 'opacity-100' : 'opacity-0'"
         @load="isLoaded = true"
       />
+
+      <!-- Group chips overlay -->
+      <CollctPostGroupChips
+        :groups="postData.groups"
+        class="absolute bottom-2 left-2 right-2"
+      />
     </ULink>
   </div>
 </template>

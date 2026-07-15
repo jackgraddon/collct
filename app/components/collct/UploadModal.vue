@@ -9,6 +9,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const router = useRouter()
 
 // File input
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -16,6 +17,29 @@ const file = ref<File | null>(null)
 const preview = ref<string | null>(null)
 const caption = ref('')
 const uploading = ref(false)
+
+// Groups
+const { data: groupsData } = await useFetch<{ groups: GroupData[] }>('/api/groups', {
+  watch: [() => props.open],
+})
+
+const selectedGroupIds = ref<number[]>([])
+const publicGroup = computed(() => groupsData.value?.groups.find((g) => g.isPublic))
+const nonPublicGroups = computed(() => groupsData.value?.groups.filter((g) => !g.isPublic) ?? [])
+const hasPrivateGroups = computed(() => nonPublicGroups.value.length > 0)
+
+// Initialize selection with Public when modal opens
+watch(() => props.open, (isOpen) => {
+  if (isOpen) {
+    const pub = publicGroup.value
+    selectedGroupIds.value = pub ? [pub.id] : []
+  }
+})
+
+const canSubmit = computed(() => !!file.value && selectedGroupIds.value.length > 0)
+
+// Create group confirmation
+const showCreateGroupDialog = ref(false)
 
 function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement
@@ -39,14 +63,21 @@ function close() {
   emit('update:open', false)
 }
 
+function goToGroups() {
+  showCreateGroupDialog.value = false
+  close()
+  router.push('/groups')
+}
+
 async function upload() {
-  if (!file.value) return
+  if (!file.value || !canSubmit.value) return
 
   uploading.value = true
   try {
     const form = new FormData()
     form.append('photo', file.value)
     if (caption.value.trim()) form.append('caption', caption.value.trim())
+    form.append('groupIds', JSON.stringify(selectedGroupIds.value))
 
     const post = await $fetch<PostData>('/api/photos', { method: 'POST', body: form })
 
@@ -125,11 +156,56 @@ async function upload() {
           <!-- Caption -->
           <UTextarea
             v-model="caption"
-            placeholder="Add a caption…"
+            placeholder="Add a caption..."
             :rows="3"
             :maxlength="500"
           />
           <p class="text-xs text-muted text-right -mt-2">{{ caption.length }} / 500</p>
+
+          <!-- Visible to (only when user has private groups) -->
+          <div v-if="hasPrivateGroups" class="space-y-2">
+            <p class="text-xs font-medium text-muted uppercase tracking-wider">Visible to</p>
+            <div class="space-y-1.5">
+              <label
+                v-for="group in [publicGroup, ...nonPublicGroups].filter(Boolean)"
+                :key="group!.id"
+                class="flex items-center gap-2.5 cursor-pointer group"
+              >
+                <UCheckbox
+                  :model-value="selectedGroupIds.includes(group!.id)"
+                  :disabled="group!.isPublic"
+                  @update:model-value="(val: boolean | 'indeterminate') => {
+                  if (val === true) {
+                    selectedGroupIds.push(group!.id)
+                  } else if (val === false) {
+                    selectedGroupIds = selectedGroupIds.filter(id => id !== group!.id)
+                  }
+                }"
+                />
+                <span class="text-sm text-default">{{ group!.name }}</span>
+              </label>
+            </div>
+
+            <!-- Create a group link (only when no private groups exist) -->
+            <button
+              v-if="!hasPrivateGroups"
+              class="text-xs text-primary hover:underline mt-1"
+              @click.prevent="showCreateGroupDialog = true"
+            >
+              + Create a group
+            </button>
+          </div>
+
+          <!-- Create a group prompt (when no private groups) -->
+          <div v-if="!hasPrivateGroups" class="rounded-lg bg-muted/30 p-3">
+            <p class="text-xs text-muted">
+              Want to share privately?
+              <button class="text-primary hover:underline font-medium" @click.prevent="showCreateGroupDialog = true">
+                Create a group
+              </button>
+              to control who sees your photos.
+            </p>
+          </div>
 
         </div>
 
@@ -140,11 +216,40 @@ async function upload() {
               color="primary"
               variant="solid"
               :loading="uploading"
-              :disabled="!file"
+              :disabled="!canSubmit"
               icon="i-solar-upload-square-linear"
               @click="upload"
             >
               Upload
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </template>
+  </UModal>
+
+  <!-- Create group confirmation dialog -->
+  <UModal v-model:open="showCreateGroupDialog">
+    <template #content>
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <UIcon name="i-solar-users-group-two-linear" class="w-5 h-5 text-primary" />
+            <span class="font-semibold">Create a group?</span>
+          </div>
+        </template>
+
+        <p class="text-sm text-muted">
+          You'll be taken to the Groups page to create your group. Your current post draft will not be saved.
+        </p>
+
+        <template #footer>
+          <div class="flex justify-end gap-2">
+            <UButton color="neutral" variant="ghost" @click="showCreateGroupDialog = false">
+              Stay here
+            </UButton>
+            <UButton color="primary" variant="solid" @click="goToGroups">
+              Go to Groups
             </UButton>
           </div>
         </template>

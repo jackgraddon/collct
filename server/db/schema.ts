@@ -1,4 +1,5 @@
-import { pgTable, pgEnum, index, unique, serial, text, timestamp, integer, boolean, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, pgEnum, index, unique, serial, text, timestamp, integer, boolean, uuid } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -123,4 +124,71 @@ export const commentReactions = pgTable(
     unique('comment_reactions_user_comment_unique').on(t.userId, t.commentId),
     index('comment_reactions_comment_id_idx').on(t.commentId),
   ],
-);
+)
+
+// Groups & Visibility
+
+export const groupRoleEnum = pgEnum('group_role', ['owner', 'admin', 'member'])
+
+export const groups = pgTable('groups', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  slug: text('slug').notNull().unique(),
+  isPublic: boolean('is_public').notNull().default(false),
+  ownerId: integer('owner_id').references(() => users.id),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  archivedAt: timestamp('archived_at', { mode: 'date' }),
+})
+
+export const groupMembers = pgTable(
+  'group_members',
+  {
+    id: serial('id').primaryKey(),
+    groupId: integer('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: groupRoleEnum('role').notNull().default('member'),
+    joinedAt: timestamp('joined_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('group_members_group_user_unique').on(t.groupId, t.userId),
+    index('group_members_user_group_idx').on(t.userId, t.groupId),
+  ],
+)
+
+export const groupInvites = pgTable('group_invites', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  code: text('code').notNull().unique(),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  maxUses: integer('max_uses'),
+  useCount: integer('use_count').notNull().default(0),
+  expiresAt: timestamp('expires_at', { mode: 'date' }),
+  revokedAt: timestamp('revoked_at', { mode: 'date' }),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+})
+
+export const photoGroups = pgTable(
+  'photo_groups',
+  {
+    id: serial('id').primaryKey(),
+    photoId: integer('photo_id')
+      .notNull()
+      .references(() => photos.id, { onDelete: 'cascade' }),
+    groupId: integer('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    unique('photo_groups_photo_group_unique').on(t.photoId, t.groupId),
+    index('photo_groups_group_photo_idx').on(t.groupId, t.photoId),
+    index('photo_groups_photo_idx').on(t.photoId),
+  ],
+)

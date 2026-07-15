@@ -352,6 +352,9 @@ function totalReactions(counts: ReactionCounts) {
         class="w-full h-auto rounded-xl"
       />
 
+      <!-- Group chips -->
+      <CollctPostGroupChips :groups="post.groups" />
+
       <!-- Caption + Like row -->
       <div class="flex items-start justify-between gap-4">
         <p v-if="post.caption" class="text-base text-default flex-1">
