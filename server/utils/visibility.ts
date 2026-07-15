@@ -35,6 +35,28 @@ export async function joinUserToPublic(userId: number) {
     .onConflictDoNothing()
 }
 
+/**
+ * Ensure a user is a member of the Public group.
+ * Creates the group if needed. Idempotent — safe to call on every request.
+ * Handles users who registered before the auto-join code was deployed.
+ */
+export async function ensureUserInPublicGroup(userId: number) {
+  const pub = await ensurePublicGroup()
+  const [existing] = await db
+    .select({ id: schema.groupMembers.id })
+    .from(schema.groupMembers)
+    .where(
+      and(
+        eq(schema.groupMembers.groupId, pub.id),
+        eq(schema.groupMembers.userId, userId),
+      ),
+    )
+    .limit(1)
+  if (!existing) {
+    await joinUserToPublic(userId)
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Visibility query (a): Feed — which photos can viewer `viewerId` see?
 // ---------------------------------------------------------------------------
