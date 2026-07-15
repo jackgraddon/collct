@@ -1,7 +1,7 @@
 let cachedToken: any = null
 let tokenExpiresAt = 0
 
-async function getDelegationToken() {
+export async function getDelegationToken() {
   if (process.dev) return null
 
   const now = Date.now()
