@@ -20,6 +20,17 @@ function textColor(hex: string | null | undefined): string {
   const b = parseInt(c.slice(5, 7), 16)
   return (r * 299 + g * 587 + b * 114) / 1000 > 128 ? '#000000' : '#FFFFFF'
 }
+
+function lighten(hex: string | null | undefined, amount = 0.85): string {
+  const c = hex || DEFAULT_COLOR
+  const r = parseInt(c.slice(1, 3), 16)
+  const g = parseInt(c.slice(3, 5), 16)
+  const b = parseInt(c.slice(5, 7), 16)
+  const lr = Math.round(r + (255 - r) * amount)
+  const lg = Math.round(g + (255 - g) * amount)
+  const lb = Math.round(b + (255 - b) * amount)
+  return `#${lr.toString(16).padStart(2, '0')}${lg.toString(16).padStart(2, '0')}${lb.toString(16).padStart(2, '0')}`
+}
 </script>
 
 <template>
@@ -29,7 +40,7 @@ function textColor(hex: string | null | undefined): string {
       <span
         class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
         :style="{
-          backgroundColor: (displayGroups[0]!.color || DEFAULT_COLOR) + 'E6',
+          backgroundColor: lighten(displayGroups[0]!.color),
           color: displayGroups[0]!.color || DEFAULT_COLOR,
         }"
       >
@@ -46,7 +57,7 @@ function textColor(hex: string | null | undefined): string {
         class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px]"
         :title="group.name"
         :style="{
-          backgroundColor: (group.color || DEFAULT_COLOR) + 'E6',
+          backgroundColor: lighten(group.color),
           color: group.color || DEFAULT_COLOR,
         }"
       >
