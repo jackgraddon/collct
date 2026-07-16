@@ -1,75 +1,34 @@
-# Nuxt Minimal Starter
+# Collct
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A friends-first social media designed to connect you to your friends, and that's it.
 
-## Setup
+## What is Collct?
 
-Make sure to install dependencies:
+Collct is a new kind of social media that puts you and your friends at the center of the show. Gone are annoying ads, suggested content, "people you may know," and all of the annoyances the other guys shove in your face. Collct only shows you, your friends, and their photos. That's it.
 
-```bash
-# npm
-npm install
+### Key Features
 
-# pnpm
-pnpm install
+- **No Algorithm** — You create what you see, no algorithm pulling the strings behind the scenes.
+- **No Tracking** — We save the bare minimum. No habits, no preferences, no targeting, nothing.
+- **No Strangers** — Only your friends can see each other's photos. You control who sees your posts.
 
-# yarn
-yarn install
+### Additional Features
 
-# bun
-bun install
-```
+- **Groups** — Organize friends into groups with roles (owner, admin, member) and invite codes.
+- **Photo Sharing** — Upload photos with captions, likes, comments, and emoji reactions.
+- **Passkey Authentication** — Passwordless login via WebAuthn (no passwords to remember).
+- **Two-Factor Auth** — Optional TOTP 2FA with recovery codes for extra security.
+- **QR Codes** — Generate QR codes for easy group invites.
+- **PWA Support** — Installable as a progressive web app on any device.
 
-## Development Server
+## Tech Stack
 
-Start the development server on `http://localhost:3000`:
+- **Frontend:** Nuxt 4, Vue 3, Nuxt UI
+- **Backend:** Nuxt Server API, Drizzle ORM, PostgreSQL
+- **Auth:** WebAuthn (passkeys) + TOTP 2FA
+- **Storage:** Vercel Blob (private image storage)
+- **Deploy:** Vercel
 
-```bash
-# npm
-npm run dev
+## License
 
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Private project (for now).
