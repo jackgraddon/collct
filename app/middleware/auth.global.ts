@@ -6,7 +6,7 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // If not logged in and trying to access a protected route
   if (!loggedIn.value && !publicRoutes.includes(to.path)) {
-    return navigateTo('/login')
+    return navigateTo({ path: '/login', query: { redirect: to.fullPath } })
   }
 
   // If in a pending MFA state, force them to stay on the login page (which should show the MFA challenge)

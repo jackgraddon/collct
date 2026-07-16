@@ -97,10 +97,13 @@ const isLogin = ref(true)
 const loading = ref(false)
 const email = ref('')
 const toast = useToast()
+const route = useRoute()
 const { fetch: refreshSession } = useUserSession()
 const { register, authenticate } = useWebAuthn()
 const { challenge: verifyMfa } = useTotp()
 const { redeem } = useRecoveryCodes()
+
+const redirectTo = (route.query.redirect as string) || '/feed'
 
 const showMfa = ref(false)
 const mfaToken = ref('')
@@ -126,7 +129,7 @@ async function onSubmit() {
       await register({ userName: email.value })
     }
     await refreshSession()
-    navigateTo('/feed')
+    navigateTo(redirectTo)
   } catch (error: any) {
     toast.add({
       title: 'Authentication Failed',
@@ -143,7 +146,7 @@ async function onVerifyMfa() {
   try {
     await verifyMfa(mfaToken.value)
     await refreshSession()
-    navigateTo('/feed')
+    navigateTo(redirectTo)
   } catch (error: any) {
     toast.add({
       title: 'Verification Failed',
