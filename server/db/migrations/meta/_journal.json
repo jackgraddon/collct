@@ -50,6 +50,13 @@
       "when": 1784175600000,
       "tag": "0006_add_group_customization",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784176066341,
+      "tag": "0007_add_oobe_tracking",
+      "breakpoints": true
     }
   ]
 }

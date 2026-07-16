@@ -13,6 +13,7 @@ export function useUser() {
       username: resolved?.username ?? s.username,
       email: s.email,
       avatarUrl: resolved?.avatarUrl ?? null,
+      hasSeenOobe: resolved?.hasSeenOobe ?? false,
     }
   })
 

@@ -64,8 +64,24 @@
         </div>
       </template>
 
+      <template #help>
+        <div class="my-4 space-y-4">
+          <p class="text-sm text-muted">Revisit the app walkthrough to refresh your memory on how Collct works.</p>
+          <UButton
+            @click="showOobe = true"
+            color="neutral"
+            variant="outline"
+            icon="solar:info-circle-linear"
+          >
+            Replay Tour
+          </UButton>
+        </div>
+      </template>
+
     </UTabs>
   <!-- </UPageCard> -->
+
+  <CollctOobeModal v-model:open="showOobe" />
 </template>
 
 <script lang="ts" setup>
@@ -74,6 +90,7 @@ definePageMeta({ title: 'Settings', description: 'Manage your settings', layout:
 const { user, refresh: refreshMe, refreshSession } = useUser()
 const toast = useToast()
 const saving = ref(false)
+const showOobe = ref(false)
 
 const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
@@ -157,6 +174,11 @@ const tabs = computed(() => [
     slot: 'appearance',
     label: 'Appearance',
     icon: 'i-lucide-palette',
+  },
+  {
+    slot: 'help',
+    label: 'Help',
+    icon: 'i-lucide-circle-help',
   },
 ])
 </script>

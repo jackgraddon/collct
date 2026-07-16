@@ -11,6 +11,7 @@ export const users = pgTable('users', {
   recoveryCodesGeneratedAt: timestamp('recovery_codes_generated_at', { mode: 'date' }),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   lastLoginAt: timestamp('last_login_at', { mode: 'date' }),
+  toursCompleted: text('tours_completed').default('[]'),
 });
 
 // Security and Authentication
