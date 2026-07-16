@@ -118,7 +118,7 @@ async function upload() {
               v-if="preview"
               :src="preview"
               alt="Preview"
-              class="w-full h-auto object-contain"
+              class="w-full h-auto max-h-80 object-cover"
             />
 
             <!-- Placeholder -->
@@ -258,3 +258,21 @@ async function upload() {
     </template>
   </UModal>
 </template>
+
+<style scoped>
+@media (max-width: 768px) {
+  :deep(.ui-dialog) {
+    max-height: 100vh !important;
+    height: 100vh !important;
+  }
+
+  :deep(.ui-dialog__content) {
+    max-height: 100vh !important;
+  }
+}
+
+img {
+  max-height: 320px;
+  object-fit: cover;
+}
+</style>
