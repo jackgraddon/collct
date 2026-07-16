@@ -35,6 +35,12 @@ export default defineNuxtConfig({
 
   image: { provider: 'vercel' },
 
+  runtimeConfig: {
+    session: {
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    },
+  },
+
   auth: {
     webAuthn: true,
   },
