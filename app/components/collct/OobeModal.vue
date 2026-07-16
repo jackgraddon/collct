@@ -43,71 +43,75 @@ async function handleCta(action: string) {
     @update:open="emit('update:open', $event)"
     :ui="{ content: 'max-w-md' }"
   >
-    <div class="space-y-6">
-      <!-- Progress indicator -->
-      <div class="flex gap-1">
-        <div
-          v-for="(slide, idx) in OOBE_SLIDES"
-          :key="slide.id"
-          :class="[
-            'h-1 flex-1 rounded-full transition-colors',
-            idx <= currentSlide
-              ? 'bg-primary'
-              : 'bg-gray-200 dark:bg-gray-700',
-          ]"
-        />
-      </div>
+    <template #content>
+      <UCard>
+        <div class="space-y-6">
+          <!-- Progress indicator -->
+          <div class="flex gap-1">
+            <div
+              v-for="(slide, idx) in OOBE_SLIDES"
+              :key="slide.id"
+              :class="[
+                'h-1 flex-1 rounded-full transition-colors',
+                idx <= currentSlide
+                  ? 'bg-primary'
+                  : 'bg-gray-200 dark:bg-gray-700',
+              ]"
+            />
+          </div>
 
-      <!-- Slide content -->
-      <div class="space-y-4">
-        <h2 class="text-xl font-semibold">
-          {{ current.title }}
-        </h2>
-        <p class="text-muted leading-relaxed">
-          {{ current.content }}
-        </p>
-      </div>
+          <!-- Slide content -->
+          <div class="space-y-4">
+            <h2 class="text-xl font-semibold">
+              {{ current.title }}
+            </h2>
+            <p class="text-muted leading-relaxed">
+              {{ current.content }}
+            </p>
+          </div>
 
-      <!-- Final screen CTA -->
-      <div
-        v-if="currentSlide === OOBE_SLIDES.length - 1"
-        class="space-y-2 border-t pt-4"
-      >
-        <UButton
-          v-for="btn in OOBE_CTA_BUTTONS"
-          :key="btn.action"
-          @click="handleCta(btn.action)"
-          class="w-full"
-          variant="outline"
-        >
-          {{ btn.label }}
-        </UButton>
-      </div>
+          <!-- Final screen CTA -->
+          <div
+            v-if="currentSlide === OOBE_SLIDES.length - 1"
+            class="space-y-2 border-t pt-4"
+          >
+            <UButton
+              v-for="btn in OOBE_CTA_BUTTONS"
+              :key="btn.action"
+              @click="handleCta(btn.action)"
+              class="w-full"
+              variant="outline"
+            >
+              {{ btn.label }}
+            </UButton>
+          </div>
 
-      <!-- Navigation buttons -->
-      <div class="flex gap-3 justify-between">
-        <UButton
-          v-if="currentSlide > 0"
-          @click="previousSlide"
-          color="neutral"
-          variant="ghost"
-        >
-          Back
-        </UButton>
-        <div v-else />
+          <!-- Navigation buttons -->
+          <div class="flex gap-3 justify-between">
+            <UButton
+              v-if="currentSlide > 0"
+              @click="previousSlide"
+              color="neutral"
+              variant="ghost"
+            >
+              Back
+            </UButton>
+            <div v-else />
 
-        <UButton @click="close" color="neutral" variant="ghost">
-          Skip
-        </UButton>
+            <UButton @click="close" color="neutral" variant="ghost">
+              Skip
+            </UButton>
 
-        <UButton
-          v-if="currentSlide < OOBE_SLIDES.length - 1"
-          @click="nextSlide"
-        >
-          Next
-        </UButton>
-        <div v-else />
-      </div>
-    </div>
+            <UButton
+              v-if="currentSlide < OOBE_SLIDES.length - 1"
+              @click="nextSlide"
+            >
+              Next
+            </UButton>
+            <div v-else />
+          </div>
+        </div>
+      </UCard>
+    </template>
   </UModal>
 </template>
