@@ -92,7 +92,6 @@ export default defineWebAuthnAuthenticateEventHandler({
         name: row.user.name,
         email: row.user.email,
         avatarUrl: row.user.avatarUrl,
-        avatarPathname: row.user.avatarUrl,
         totpEnabled: false
       },
       loggedInAt: Date.now()

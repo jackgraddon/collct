@@ -5,7 +5,6 @@ declare module '#auth-utils' {
     name: string
     email: string
     avatarUrl: string | null
-    avatarPathname: string | null
     totpEnabled: boolean
   }
 

@@ -110,7 +110,6 @@ export default defineWebAuthnRegisterEventHandler({
         name: dbUser.name,
         email: dbUser.email,
         avatarUrl: dbUser.avatarUrl,
-        avatarPathname: dbUser.avatarUrl,
         totpEnabled: dbUser.totpEnabled
       },
       loggedInAt: Date.now()

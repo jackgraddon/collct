@@ -36,7 +36,6 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       email: user.email,
       avatarUrl: user.avatarUrl,
-      avatarPathname: user.avatarUrl,
       totpEnabled: user.totpEnabled
     },
     loggedInAt: Date.now(),
