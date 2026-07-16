@@ -93,18 +93,19 @@ async function upload() {
 <template>
   <UModal :open="props.open" @update:open="emit('update:open', $event)">
     <template #content>
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <UIcon name="i-solar-upload-square-linear" class="w-5 h-5 text-primary" />
-              <span class="font-semibold">Upload photo</span>
-            </div>
-            <UButton color="neutral" variant="ghost" icon="i-lucide-x" size="xs" @click="close" />
-          </div>
-        </template>
+      <div class="flex flex-col h-[100dvh] md:h-auto md:max-h-[85vh]">
 
-        <div class="space-y-4">
+        <!-- Fixed header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
+          <div class="flex items-center gap-2">
+            <UIcon name="i-solar-upload-square-linear" class="w-5 h-5 text-primary" />
+            <span class="font-semibold">Upload photo</span>
+          </div>
+          <UButton color="neutral" variant="ghost" icon="i-lucide-x" size="xs" @click="close" />
+        </div>
+
+        <!-- Scrollable content -->
+        <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
           <!-- Drop zone / preview -->
           <div
@@ -117,7 +118,7 @@ async function upload() {
               v-if="preview"
               :src="preview"
               alt="Preview"
-              class="w-full h-auto max-h-80 object-contain"
+              class="w-full h-auto object-contain"
             />
 
             <!-- Placeholder -->
@@ -159,6 +160,11 @@ async function upload() {
             :maxlength="500"
           />
           <p class="text-xs text-muted text-right -mt-2">{{ caption.length }} / 500</p>
+
+        </div>
+
+        <!-- Fixed footer: groups + upload button -->
+        <div class="border-t border-neutral-200 dark:border-neutral-800 px-6 py-4 space-y-4 shrink-0">
 
           <!-- Visible to (only when user has private groups) -->
           <div v-if="hasPrivateGroups" class="space-y-2">
@@ -202,9 +208,7 @@ async function upload() {
             </p>
           </div>
 
-        </div>
-
-        <template #footer>
+          <!-- Upload button -->
           <div class="flex justify-end gap-2">
             <UButton color="neutral" variant="ghost" @click="close">Cancel</UButton>
             <UButton
@@ -218,8 +222,10 @@ async function upload() {
               Upload
             </UButton>
           </div>
-        </template>
-      </UCard>
+
+        </div>
+
+      </div>
     </template>
   </UModal>
 
