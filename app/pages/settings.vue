@@ -71,25 +71,12 @@
 <script lang="ts" setup>
 definePageMeta({ title: 'Settings', description: 'Manage your settings', layout: 'page' })
 
-const { user: sessionUser, fetch: refreshSession } = useUserSession()
+const { user, refresh: refreshMe, refreshSession } = useUser()
 const toast = useToast()
 const saving = ref(false)
 
 const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
-
-// Fetch resolved avatar URL from /api/user/me (returns presigned blob URL)
-const { data: meData, refresh: refreshMe } = await useFetch('/api/user/me')
-
-const user = computed(() => {
-  const s = sessionUser.value
-  if (!s) return { name: '', email: '', avatarUrl: null }
-  return {
-    ...s,
-    // Use the presigned URL from /api/user/me if available, fall back to session
-    avatarUrl: meData.value?.avatarUrl ?? s.avatarUrl ?? null,
-  }
-})
 
 const accountState = reactive({
   name: user.value.name,

@@ -38,10 +38,9 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 const route = useRoute()
 const router = useRouter()
 const { emit } = useUploadBus()
-const { clear } = useUserSession()
+const { user, clear, refresh: refreshUser } = useUser()
 
-// Reactively fetch the authenticated user profile with the signed avatar URL
-const { data: user } = await useFetch('/api/user/me')
+watch(() => route.fullPath, () => refreshUser())
 
 const items = computed<NavigationMenuItem[]>(() => [
   {

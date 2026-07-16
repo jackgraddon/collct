@@ -8,11 +8,10 @@ const toast = useToast()
 const router = useRouter()
 
 // ─── Session ──────────────────────────────────────────────────────────────────
-const { user: sessionUser } = useUserSession()
-const user = sessionUser as Ref<UserSession | null>
+const { user, sessionUser } = useUser()
 
-const isOwner = computed(() => user.value?.id === post.value?.user.id)
-const isLoggedIn = computed(() => !!user.value?.id)
+const isOwner = computed(() => sessionUser.value?.id === post.value?.user.id)
+const isLoggedIn = computed(() => !!sessionUser.value?.id)
 
 // ─── Date ─────────────────────────────────────────────────────────────────────
 const formattedDate = computed(() => {
