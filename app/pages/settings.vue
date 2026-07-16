@@ -78,7 +78,18 @@ const saving = ref(false)
 const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
 
-const user = computed(() => sessionUser.value ?? { name: '', email: '', avatarUrl: null })
+// Fetch resolved avatar URL from /api/user/me (returns presigned blob URL)
+const { data: meData, refresh: refreshMe } = await useFetch('/api/user/me')
+
+const user = computed(() => {
+  const s = sessionUser.value
+  if (!s) return { name: '', email: '', avatarUrl: null }
+  return {
+    ...s,
+    // Use the presigned URL from /api/user/me if available, fall back to session
+    avatarUrl: meData.value?.avatarUrl ?? s.avatarUrl ?? null,
+  }
+})
 
 const accountState = reactive({
   name: user.value.name,
@@ -105,6 +116,7 @@ async function onAvatarChange(e: Event) {
 
     accountState.avatarUrl = avatarUrl
     await refreshSession()
+    await refreshMe()
     toast.add({ title: 'Avatar updated', color: 'success' })
   } catch (e: any) {
     toast.add({ title: 'Upload failed', description: e.data?.statusMessage ?? 'Something went wrong.', color: 'error' })
