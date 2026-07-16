@@ -91,9 +91,9 @@ async function upload() {
 </script>
 
 <template>
-  <UModal :open="props.open" @update:open="emit('update:open', $event)">
+  <UModal :open="props.open" @update:open="emit('update:open', $event)" :ui="{ content: 'flex flex-col h-full max-h-[100dvh] md:max-h-[85vh]' }">
     <template #content>
-      <div class="flex flex-col h-[100dvh] md:h-auto md:max-h-[85vh]">
+      <div class="flex flex-col h-full">
 
         <!-- Fixed header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
@@ -260,14 +260,37 @@ async function upload() {
 </template>
 
 <style scoped>
+:deep(.ui-modal-content) {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  max-height: 100dvh !important;
+}
+
+:deep(.ui-modal-body) {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+}
+
 @media (max-width: 768px) {
-  :deep(.ui-dialog) {
-    max-height: 100vh !important;
-    height: 100vh !important;
+  :deep(.ui-modal) {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    max-height: 100dvh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
   }
 
-  :deep(.ui-dialog__content) {
-    max-height: 100vh !important;
+  :deep(.ui-modal-content) {
+    max-height: 100dvh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
   }
 }
 
