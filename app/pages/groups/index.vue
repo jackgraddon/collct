@@ -94,7 +94,7 @@ async function createGroup() {
           <div
             class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg"
             :style="group.color ? { backgroundColor: group.color + '20', color: group.color } : undefined"
-            :class="!group.color ? 'bg-primary/10 text-primary' : undefined"
+            :class="!group.color ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400' : undefined"
           >
             <span v-if="group.icon">{{ group.icon }}</span>
             <UIcon v-else :name="group.isPublic ? 'i-solar-global-linear' : 'i-solar-users-group-rounded-linear'" class="w-5 h-5" />

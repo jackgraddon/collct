@@ -193,7 +193,7 @@ watchEffect(() => {
           <div
             class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
             :style="group.color ? { backgroundColor: group.color + '20', color: group.color } : undefined"
-            :class="!group.color ? 'bg-primary/10 text-primary' : undefined"
+            :class="!group.color ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400' : undefined"
           >
             <span v-if="group.icon">{{ group.icon }}</span>
             <UIcon v-else name="i-solar-users-group-rounded-linear" class="w-6 h-6" />
@@ -223,7 +223,7 @@ watchEffect(() => {
             <div
               class="w-14 h-14 rounded-full flex items-center justify-center text-3xl shrink-0"
               :style="editColor ? { backgroundColor: editColor + '20', color: editColor } : undefined"
-              :class="!editColor ? 'bg-primary/10 text-primary' : undefined"
+              :class="!editColor ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400' : undefined"
             >
               <span v-if="editIcon.trim() && !editIconError">{{ editIcon.trim() }}</span>
               <UIcon v-else name="i-solar-users-group-rounded-linear" class="w-7 h-7" />
