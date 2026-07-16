@@ -164,7 +164,7 @@ watchEffect(() => {
           >
             <NuxtLink :to="`/user/${member.userId}`" class="flex items-center gap-3 min-w-0 flex-1">
               <UAvatar
-                :src="member.avatarUrl ? `/api/avatar/${member.avatarUrl}` : undefined"
+                :src="member.avatarUrl || undefined"
                 :alt="member.name"
                 :text="member.name.slice(0, 2).toUpperCase()"
                 size="sm"

@@ -305,7 +305,7 @@ function totalReactions(counts: ReactionCounts) {
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-3 min-w-0">
           <UAvatar
-            :src="post.user.avatarUrl ? `/api/avatar/${post.user.avatarUrl}` : undefined"
+            :src="post.user.avatarUrl || undefined"
             :alt="post.user.name"
             :text="post.user.name.slice(0, 2).toUpperCase()"
           />
@@ -407,7 +407,7 @@ function totalReactions(counts: ReactionCounts) {
             class="flex gap-3"
           >
             <UAvatar
-              :src="comment.user.avatarUrl ? `/api/avatar/${comment.user.avatarUrl}` : undefined"
+              :src="comment.user.avatarUrl || undefined"
               :alt="comment.user.name"
               :text="comment.user.name.slice(0, 2).toUpperCase()"
               size="sm"
@@ -492,7 +492,7 @@ function totalReactions(counts: ReactionCounts) {
         <!-- New comment input -->
         <div v-if="isLoggedIn" class="flex gap-3 pt-2">
           <UAvatar
-            :src="user?.avatarUrl ? `/api/avatar/${user.avatarUrl}` : undefined"
+            :src="user?.avatarUrl || undefined"
             :alt="user?.name ?? ''"
             :text="(user?.name ?? '?').slice(0, 2).toUpperCase()"
             size="sm"

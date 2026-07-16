@@ -6,7 +6,7 @@
           <div class="flex items-center gap-4">
             <div class="relative group cursor-pointer" @click="triggerAvatarUpload">
               <UAvatar
-                :src="user.avatarUrl ? `/api/avatar/${user.avatarUrl}` : undefined"
+                :src="user.avatarUrl || undefined"
                 :alt="user.name"
                 size="xl"
               />
@@ -145,7 +145,7 @@ const tabs = computed(() => [
     slot: 'account',
     label: 'Account',
     avatar: {
-      src: user.value.avatarUrl ? `/api/avatar/${user.value.avatarUrl}` : undefined,
+      src: user.value.avatarUrl || undefined,
       alt: user.value.name,
     },
   },

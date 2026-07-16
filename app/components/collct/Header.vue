@@ -10,7 +10,7 @@
         <button class="flex items-center focus:outline-none group">
           <UAvatar
             v-if="user.avatarUrl"
-            :src="`/api/avatar/${user.avatarUrl}`"
+            :src="user.avatarUrl"
             :alt="user.name"
             size="sm"
             class="ring-2 ring-transparent group-hover:ring-primary-500 transition"

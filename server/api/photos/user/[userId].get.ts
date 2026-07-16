@@ -1,6 +1,5 @@
 import { db, schema } from '@nuxthub/db'
 import { eq, and, lt, desc, inArray } from 'drizzle-orm'
-import { presignUrl } from '@vercel/blob'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -51,21 +50,20 @@ export default defineEventHandler(async (event) => {
     return { photos: [], nextCursor: null }
   }
 
-  const token = await getDelegationToken()
-
   const photos = await Promise.all(
     rows.map(async (row) => {
-      const { presignedUrl: signedPhotoUrl } = await presignUrl(token, {
-        pathname: row.blobPathname,
-        access: 'private',
-        operation: 'get',
-        validUntil: Date.now() + 60 * 60 * 1000,
-      })
+      const url = await getBlobUrl(row.blobPathname)
+
+      let avatarUrl = row.user.avatarUrl
+      if (avatarUrl) {
+        avatarUrl = await getBlobUrl(avatarUrl)
+      }
 
       return {
         ...row,
-        url: signedPhotoUrl,
+        url,
         blobPathname: undefined,
+        user: { ...row.user, avatarUrl },
       }
     }),
   )

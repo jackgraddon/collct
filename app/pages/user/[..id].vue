@@ -79,7 +79,7 @@ const formattedDate = computed(() => {
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-3 min-w-0">
           <UAvatar
-            :src="post.user.avatarUrl ? `/api/avatar/${post.user.avatarUrl}` : undefined"
+            :src="post.user.avatarUrl || undefined"
             :alt="post.user.name"
             :text="post.user.name.slice(0, 2).toUpperCase()"
           />

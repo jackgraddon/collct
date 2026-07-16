@@ -49,5 +49,15 @@ export default defineEventHandler(async (event) => {
     .innerJoin(schema.users, eq(schema.users.id, schema.groupMembers.userId))
     .where(eq(schema.groupMembers.groupId, groupId))
 
-  return { ...group, members }
+  const resolvedMembers = await Promise.all(
+    members.map(async (m) => {
+      let avatarUrl = m.avatarUrl
+      if (avatarUrl) {
+        avatarUrl = await getBlobUrl(avatarUrl)
+      }
+      return { ...m, avatarUrl }
+    }),
+  )
+
+  return { ...group, members: resolvedMembers }
 })

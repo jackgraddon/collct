@@ -52,9 +52,15 @@ export default defineEventHandler(async (event) => {
   const url = await getBlobUrl(row.blobPathname)
   const groupsMap = await getVisiblePhotoGroups([id], userId)
 
+  let avatarUrl = row.user.avatarUrl
+  if (avatarUrl) {
+    avatarUrl = await getBlobUrl(avatarUrl)
+  }
+
   return {
     ...row,
     url,
     groups: groupsMap.get(id) ?? [],
+    user: { ...row.user, avatarUrl },
   }
 })

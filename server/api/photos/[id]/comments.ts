@@ -97,18 +97,29 @@ export default defineEventHandler(async (event) => {
       }),
     )
 
-    return rows.map((r) => ({
-      id: r.id,
-      body: r.body,
-      createdAt: r.createdAt,
-      user: {
-        id: r.userId,
-        name: r.userName,
-        username: r.username,
-        avatarUrl: r.userAvatarUrl,
-      },
-      reactions: reactionsByComment[r.id],
-    }))
+    // Resolve avatar URLs
+    const resolvedRows = await Promise.all(
+      rows.map(async (r) => {
+        let avatarUrl = r.userAvatarUrl
+        if (avatarUrl) {
+          avatarUrl = await getBlobUrl(avatarUrl)
+        }
+        return {
+          id: r.id,
+          body: r.body,
+          createdAt: r.createdAt,
+          user: {
+            id: r.userId,
+            name: r.userName,
+            username: r.username,
+            avatarUrl,
+          },
+          reactions: reactionsByComment[r.id],
+        }
+      }),
+    )
+
+    return resolvedRows
   }
 
   if (event.method === 'POST') {
@@ -152,11 +163,16 @@ export default defineEventHandler(async (event) => {
       .where(eq(schema.users.id, currentUserId))
       .limit(1)
 
+    let authorAvatarUrl = author?.avatarUrl ?? null
+    if (authorAvatarUrl) {
+      authorAvatarUrl = await getBlobUrl(authorAvatarUrl)
+    }
+
     return {
       id: comment.id,
       body: comment.body,
       createdAt: comment.createdAt,
-      user: { id: currentUserId, ...author },
+      user: { id: currentUserId, name: author?.name, username: author?.username, avatarUrl: authorAvatarUrl },
       reactions: {
         counts: { thumbs_up: 0, thumbs_down: 0, heart: 0, cry: 0 } as ReactionCounts,
         myReaction: null,
