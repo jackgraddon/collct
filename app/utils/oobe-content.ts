@@ -27,13 +27,13 @@ export const OOBE_SLIDES = [
     id: 'posting',
     title: 'Posting Photos',
     content:
-      'When you upload a photo, you\'ll see a list of groups. Check "Public" to share with everyone (default). Check any private groups to share with those members too. You choose the visibility.',
+      'When you upload a photo, you\'ll see a list of groups. Check any private groups to share with those members only, or leave them unchecked to share with everyone. You choose the visibility.',
   },
   {
     id: 'getting-started',
     title: 'Ready?',
     content:
-      'You can start by viewing the public feed and seeing what others are sharing. Or create your first group and invite friends to share privately.',
+      'You can start by viewing the public feed and seeing what others are sharing. Or create your first group and invite friends to share privately. You can view this again in Settings.',
   },
 ]
 
