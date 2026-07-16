@@ -52,18 +52,13 @@ export default defineEventHandler(async (event) => {
     rows.map(async (row) => {
       const url = await getBlobUrl(row.blobPathname)
 
-      let avatarUrl = row.user.avatarUrl
-      if (row.user.avatarUrl) {
-        avatarUrl = await getBlobUrl(row.user.avatarUrl)
-      }
-
       const groups = groupsMap.get(row.id) ?? []
 
       return {
         ...row,
         url,
         blobPathname: undefined,
-        user: { ...row.user, avatarUrl },
+        user: { ...row.user },
         groups,
       }
     }),

@@ -62,22 +62,10 @@ export default defineEventHandler(async (event) => {
         validUntil: Date.now() + 60 * 60 * 1000,
       })
 
-      let signedAvatarUrl = row.user.avatarUrl
-      if (row.user.avatarUrl) {
-        const { presignedUrl: avatarUrl } = await presignUrl(token, {
-          pathname: row.user.avatarUrl,
-          access: 'private',
-          operation: 'get',
-          validUntil: Date.now() + 60 * 60 * 1000,
-        })
-        signedAvatarUrl = avatarUrl
-      }
-
       return {
         ...row,
         url: signedPhotoUrl,
         blobPathname: undefined,
-        user: { ...row.user, avatarUrl: signedAvatarUrl },
       }
     }),
   )

@@ -8,13 +8,12 @@
       <!-- Freshly Signed User Avatar Dropdown -->
       <UDropdownMenu v-if="user" :items="userDropdownItems" :ui="{ content: 'w-48' }">
         <button class="flex items-center focus:outline-none group">
-          <NuxtImg
+          <UAvatar
             v-if="user.avatarUrl"
             :src="`/api/avatar/${user.avatarUrl}`"
-            width="32"
-            height="32"
-            class="w-8 h-8 rounded-full object-cover ring-2 ring-transparent group-hover:ring-primary-500 transition"
             :alt="user.name"
+            size="sm"
+            class="ring-2 ring-transparent group-hover:ring-primary-500 transition"
           />
           <UAvatar
             v-else
