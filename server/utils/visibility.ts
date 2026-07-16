@@ -92,7 +92,7 @@ export async function getVisiblePhotoIds(viewerId: number): Promise<number[]> {
 export async function getVisiblePhotoGroups(
   photoIds: number[],
   viewerId: number,
-): Promise<Map<number, { id: number; name: string }[]>> {
+): Promise<Map<number, { id: number; name: string; icon: string | null; color: string | null }[]>> {
   if (photoIds.length === 0) return new Map()
 
   const rows = await db
@@ -100,6 +100,8 @@ export async function getVisiblePhotoGroups(
       photoId: schema.photoGroups.photoId,
       groupId: schema.groups.id,
       groupName: schema.groups.name,
+      groupIcon: schema.groups.icon,
+      groupColor: schema.groups.color,
     })
     .from(schema.photoGroups)
     .innerJoin(
@@ -112,10 +114,10 @@ export async function getVisiblePhotoGroups(
     .innerJoin(schema.groups, eq(schema.groups.id, schema.photoGroups.groupId))
     .where(inArray(schema.photoGroups.photoId, photoIds))
 
-  const map = new Map<number, { id: number; name: string }[]>()
+  const map = new Map<number, { id: number; name: string; icon: string | null; color: string | null }[]>()
   for (const row of rows) {
     const groups = map.get(row.photoId) ?? []
-    groups.push({ id: row.groupId, name: row.groupName })
+    groups.push({ id: row.groupId, name: row.groupName, icon: row.groupIcon, color: row.groupColor })
     map.set(row.photoId, groups)
   }
   return map

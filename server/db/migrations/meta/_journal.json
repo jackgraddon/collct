@@ -43,6 +43,13 @@
       "when": 1784089473669,
       "tag": "0005_odd_microchip",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784175600000,
+      "tag": "0006_add_group_customization",
+      "breakpoints": true
     }
   ]
 }

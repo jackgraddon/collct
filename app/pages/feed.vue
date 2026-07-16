@@ -6,7 +6,7 @@
 
     <div ref="loadMoreTrigger" class="h-10 w-full flex items-center justify-center mt-4">
       <USkeleton v-if="status === 'pending'" class="h-8 w-32" />
-      <p v-else-if="exhausted" class="text-sm text-neutral-400">No more photos</p>
+      <p v-else-if="exhausted" class="text-sm text-neutral-400">You're all caught up!</p>
     </div>
   </div>
 </template>

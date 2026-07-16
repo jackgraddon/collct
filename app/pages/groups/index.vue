@@ -7,7 +7,28 @@ const { data, refresh } = await useFetch<{ groups: GroupData[] }>('/api/groups')
 
 const showCreateModal = ref(false)
 const newName = ref('')
+const newIcon = ref('')
+const newColor = ref('#6366f1')
 const creating = ref(false)
+
+const iconError = computed(() => {
+  const v = newIcon.value.trim()
+  if (!v) return ''
+  if (v.length > 16) return 'Emoji is too long'
+  for (const char of v) {
+    const cp = char.codePointAt(0)!
+    const isExtendedPictographic = cp >= 0x1F000 && cp <= 0x1FFFF
+    const isVariationSelector = cp === 0xFE0F || cp === 0xFE0E
+    const isZWJ = cp === 0x200D
+    const isSkinTone = cp >= 0x1F3FB && cp <= 0x1F3FF
+    const isRegionalIndicator = cp >= 0x1F1E6 && cp <= 0x1F1FF
+    if (!isExtendedPictographic && !isVariationSelector && !isZWJ && !isSkinTone && !isRegionalIndicator) {
+      return 'Please provide a single emoji character'
+    }
+  }
+  if (!/[\p{Extended_Pictographic}]/u.test(v)) return 'Please provide a single emoji character'
+  return ''
+})
 
 async function createGroup() {
   const name = newName.value.trim()
@@ -15,12 +36,19 @@ async function createGroup() {
 
   creating.value = true
   try {
+    const body: Record<string, string> = { name }
+    const icon = newIcon.value.trim()
+    if (icon && !iconError.value) body.icon = icon
+    if (newColor.value) body.color = newColor.value
+
     await $fetch('/api/groups', {
       method: 'POST',
-      body: { name },
+      body,
     })
     toast.add({ title: 'Group created', color: 'success', icon: 'i-lucide-circle-check' })
     newName.value = ''
+    newIcon.value = ''
+    newColor.value = '#6366f1'
     showCreateModal.value = false
     await refresh()
   } catch (e: any) {
@@ -63,11 +91,13 @@ async function createGroup() {
         :class="group.isPublic ? 'cursor-default' : 'cursor-pointer'"
       >
         <div class="flex items-center gap-3 min-w-0">
-          <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <UIcon
-              :name="group.isPublic ? 'i-solar-global-linear' : 'i-solar-users-group-rounded-linear'"
-              class="w-5 h-5 text-primary"
-            />
+          <div
+            class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-lg"
+            :style="group.color ? { backgroundColor: group.color + '20', color: group.color } : undefined"
+            :class="!group.color ? 'bg-primary/10 text-primary' : undefined"
+          >
+            <span v-if="group.icon">{{ group.icon }}</span>
+            <UIcon v-else :name="group.isPublic ? 'i-solar-global-linear' : 'i-solar-users-group-rounded-linear'" class="w-5 h-5" />
           </div>
           <div class="min-w-0">
             <p class="font-medium text-sm truncate">{{ group.name }}</p>
@@ -97,15 +127,47 @@ async function createGroup() {
             </div>
           </template>
 
-          <UFormField label="Group name">
-            <UInput
-              v-model="newName"
-              placeholder="e.g. Family, Close friends"
-              :maxlength="50"
-              autofocus
-              @keydown.enter.prevent="createGroup"
-            />
-          </UFormField>
+          <div class="space-y-4">
+            <UFormField label="Group name">
+              <UInput
+                v-model="newName"
+                placeholder="e.g. Family, Close friends"
+                :maxlength="50"
+                autofocus
+                @keydown.enter.prevent="createGroup"
+              />
+            </UFormField>
+
+            <UFormField label="Emoji icon (optional)">
+              <div class="flex items-center gap-2">
+                <UInput
+                  v-model="newIcon"
+                  placeholder="e.g. 👥, 🏠, 💼"
+                  :maxlength="16"
+                  class="flex-1"
+                />
+                <div
+                  v-if="newIcon.trim() && !iconError"
+                  class="w-10 h-10 rounded-full flex items-center justify-center text-xl shrink-0"
+                  :style="newColor ? { backgroundColor: newColor + '20', color: newColor } : { backgroundColor: '#6B728020', color: '#6B7280' }"
+                >
+                  {{ newIcon.trim() }}
+                </div>
+              </div>
+              <p v-if="iconError" class="text-xs text-error mt-1">{{ iconError }}</p>
+            </UFormField>
+
+            <UFormField label="Color (optional)">
+              <div class="flex items-center gap-2">
+                <input
+                  v-model="newColor"
+                  type="color"
+                  class="w-10 h-10 rounded-lg border border-default cursor-pointer shrink-0"
+                />
+                <span class="text-sm text-muted">{{ newColor }}</span>
+              </div>
+            </UFormField>
+          </div>
 
           <template #footer>
             <div class="flex justify-end gap-2">

@@ -134,6 +134,8 @@ export const groups = pgTable('groups', {
   id: serial('id').primaryKey(),
   name: text('name').notNull(),
   slug: text('slug').notNull().unique(),
+  icon: text('icon'),
+  color: text('color'),
   isPublic: boolean('is_public').notNull().default(false),
   ownerId: integer('owner_id').references(() => users.id),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),

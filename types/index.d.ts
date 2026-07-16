@@ -11,13 +11,15 @@ declare global {
       name: string
       avatarUrl: string | null
     }
-    groups?: { id: number; name: string }[]
+    groups?: { id: number; name: string; icon?: string | null; color?: string | null }[]
   }
 
   interface GroupData {
     id: number
     name: string
     slug: string
+    icon?: string | null
+    color?: string | null
     isPublic: boolean
     ownerId: number | null
     createdAt: string | Date

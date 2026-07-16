@@ -10,6 +10,8 @@ export default defineEventHandler(async (event) => {
       id: schema.groups.id,
       name: schema.groups.name,
       slug: schema.groups.slug,
+      icon: schema.groups.icon,
+      color: schema.groups.color,
       isPublic: schema.groups.isPublic,
       ownerId: schema.groups.ownerId,
       createdAt: schema.groups.createdAt,

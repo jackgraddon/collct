@@ -15,6 +15,65 @@ const isOwner = computed(() => group.value?.ownerId === currentUserId.value)
 const isAdmin = computed(() => isOwner.value || group.value?.role === 'admin')
 const isMember = computed(() => !!group.value?.role)
 
+// Group customization
+const editIcon = ref('')
+const editColor = ref('#6366f1')
+const savingCustomization = ref(false)
+
+watch(group, (g) => {
+  if (g) {
+    editIcon.value = g.icon || ''
+    editColor.value = g.color || '#6366f1'
+  }
+}, { immediate: true })
+
+const editIconError = computed(() => {
+  const v = editIcon.value.trim()
+  if (!v) return ''
+  if (v.length > 16) return 'Emoji is too long'
+  for (const char of v) {
+    const cp = char.codePointAt(0)!
+    const isExtendedPictographic = cp >= 0x1F000 && cp <= 0x1FFFF
+    const isVariationSelector = cp === 0xFE0F || cp === 0xFE0E
+    const isZWJ = cp === 0x200D
+    const isSkinTone = cp >= 0x1F3FB && cp <= 0x1F3FF
+    const isRegionalIndicator = cp >= 0x1F1E6 && cp <= 0x1F1FF
+    if (!isExtendedPictographic && !isVariationSelector && !isZWJ && !isSkinTone && !isRegionalIndicator) {
+      return 'Please provide a single emoji character'
+    }
+  }
+  if (!/[\p{Extended_Pictographic}]/u.test(v)) return 'Please provide a single emoji character'
+  return ''
+})
+
+async function saveCustomization() {
+  if (editIconError.value) return
+  savingCustomization.value = true
+  try {
+    const updated = await $fetch<GroupData>(`/api/groups/${groupId}`, {
+      method: 'PATCH',
+      body: {
+        icon: editIcon.value.trim() || '',
+        color: editColor.value,
+      },
+    })
+    if (group.value) {
+      group.value.icon = updated.icon
+      group.value.color = updated.color
+    }
+    toast.add({ title: 'Group updated', color: 'success', icon: 'i-lucide-circle-check' })
+  } catch (e: any) {
+    toast.add({
+      title: 'Failed to update group',
+      description: e.data?.statusMessage || 'Please try again.',
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
+  } finally {
+    savingCustomization.value = false
+  }
+}
+
 // Leave group
 const leaving = ref(false)
 async function leaveGroup() {
@@ -131,8 +190,13 @@ watchEffect(() => {
       <!-- Header -->
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <UIcon name="i-solar-users-group-rounded-linear" class="w-6 h-6 text-primary" />
+          <div
+            class="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+            :style="group.color ? { backgroundColor: group.color + '20', color: group.color } : undefined"
+            :class="!group.color ? 'bg-primary/10 text-primary' : undefined"
+          >
+            <span v-if="group.icon">{{ group.icon }}</span>
+            <UIcon v-else name="i-solar-users-group-rounded-linear" class="w-6 h-6" />
           </div>
           <div>
             <h1 class="text-xl font-semibold">{{ group.name }}</h1>
@@ -149,6 +213,50 @@ watchEffect(() => {
         >
           Leave group
         </UButton>
+      </div>
+
+      <!-- Customization (admin+ only) -->
+      <div v-if="isAdmin && !group.isPublic" class="space-y-3">
+        <h2 class="text-sm font-semibold text-muted uppercase tracking-wider">Appearance</h2>
+        <div class="p-4 rounded-xl border border-default space-y-4">
+          <div class="flex items-center gap-4">
+            <div
+              class="w-14 h-14 rounded-full flex items-center justify-center text-3xl shrink-0"
+              :style="editColor ? { backgroundColor: editColor + '20', color: editColor } : undefined"
+              :class="!editColor ? 'bg-primary/10 text-primary' : undefined"
+            >
+              <span v-if="editIcon.trim() && !editIconError">{{ editIcon.trim() }}</span>
+              <UIcon v-else name="i-solar-users-group-rounded-linear" class="w-7 h-7" />
+            </div>
+            <div class="flex-1 space-y-2">
+              <UInput
+                v-model="editIcon"
+                placeholder="Add an emoji (e.g., 👥, 🏠, 💼)"
+                :maxlength="16"
+              />
+              <p v-if="editIconError" class="text-xs text-error">{{ editIconError }}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <input
+                v-model="editColor"
+                type="color"
+                class="w-10 h-10 rounded-lg border border-default cursor-pointer"
+              />
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <UButton
+              color="primary"
+              variant="solid"
+              size="sm"
+              :loading="savingCustomization"
+              :disabled="!!editIconError"
+              @click="saveCustomization"
+            >
+              Save
+            </UButton>
+          </div>
+        </div>
       </div>
 
       <!-- Members -->
