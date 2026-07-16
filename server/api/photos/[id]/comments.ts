@@ -32,6 +32,8 @@ export default defineEventHandler(async (event) => {
       .select({
         id: schema.comments.id,
         body: schema.comments.body,
+        editedAt: schema.comments.editedAt,
+        editHistory: schema.comments.editHistory,
         createdAt: schema.comments.createdAt,
         userId: schema.comments.userId,
         userName: schema.users.name,
@@ -104,9 +106,14 @@ export default defineEventHandler(async (event) => {
         if (avatarUrl) {
           avatarUrl = await getBlobUrl(avatarUrl)
         }
+        const editHistory: { text: string; editedAt: string }[] | null = r.editedAt
+          ? (r.editHistory ? JSON.parse(r.editHistory) : null)
+          : null
         return {
           id: r.id,
           body: r.body,
+          editedAt: r.editedAt,
+          editHistory,
           createdAt: r.createdAt,
           user: {
             id: r.userId,
@@ -171,6 +178,8 @@ export default defineEventHandler(async (event) => {
     return {
       id: comment.id,
       body: comment.body,
+      editedAt: null,
+      editHistory: null,
       createdAt: comment.createdAt,
       user: { id: currentUserId, name: author?.name, username: author?.username, avatarUrl: authorAvatarUrl },
       reactions: {

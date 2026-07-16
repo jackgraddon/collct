@@ -4,6 +4,8 @@ declare global {
   interface PostData {
     id: number
     caption: string | null
+    captionEditedAt: string | null
+    captionHistory: Array<{ text: string | null; editedAt: string }> | null
     url: string
     createdAt: string | Date
     user: {

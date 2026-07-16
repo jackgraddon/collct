@@ -60,6 +60,8 @@ export const photos = pgTable('photos', {
     .references(() => users.id, { onDelete: 'cascade' }),
   blobPathname: text('blob_pathname').notNull(),
   caption: text('caption'),
+  captionHistory: text('caption_history').default('[]'),
+  captionEditedAt: timestamp('caption_edited_at', { mode: 'date' }),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 });
 
@@ -92,6 +94,8 @@ export const comments = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     body: text('body').notNull(),
+    editHistory: text('edit_history').default('[]'),
+    editedAt: timestamp('edited_at', { mode: 'date' }),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },
   (t) => [

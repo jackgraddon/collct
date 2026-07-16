@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
     .select({
       id: schema.photos.id,
       caption: schema.photos.caption,
+      captionEditedAt: schema.photos.captionEditedAt,
       blobPathname: schema.photos.blobPathname,
       createdAt: schema.photos.createdAt,
       user: {
@@ -57,9 +58,18 @@ export default defineEventHandler(async (event) => {
     avatarUrl = await getBlobUrl(avatarUrl)
   }
 
+  const captionHistory: { text: string | null; editedAt: string }[] | null = row.captionEditedAt
+    ? await db
+        .select({ captionHistory: schema.photos.captionHistory })
+        .from(schema.photos)
+        .where(eq(schema.photos.id, id))
+        .then((r) => (r[0]?.captionHistory ? JSON.parse(r[0].captionHistory) : null))
+    : null
+
   return {
     ...row,
     url,
+    captionHistory,
     groups: groupsMap.get(id) ?? [],
     user: { ...row.user, avatarUrl },
   }

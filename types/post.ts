@@ -8,6 +8,8 @@ export interface PostData {
   id: number
   url: string
   caption: string | null
+  captionEditedAt: string | null
+  captionHistory: Array<{ text: string | null; editedAt: string }> | null
   createdAt: string
   user: {
     id: number
@@ -36,6 +38,8 @@ export interface CommentUser {
 export interface CommentItem {
   id: number
   body: string
+  editedAt: string | null
+  editHistory: Array<{ text: string; editedAt: string }> | null
   createdAt: string
   user: CommentUser
   reactions: {

@@ -57,6 +57,13 @@
       "when": 1784176066341,
       "tag": "0007_add_oobe_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784177936001,
+      "tag": "0008_add_edit_history",
+      "breakpoints": true
     }
   ]
 }

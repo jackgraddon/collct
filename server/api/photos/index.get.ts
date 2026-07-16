@@ -21,6 +21,8 @@ export default defineEventHandler(async (event) => {
     .select({
       id: schema.photos.id,
       caption: schema.photos.caption,
+      captionEditedAt: schema.photos.captionEditedAt,
+      captionHistory: schema.photos.captionHistory,
       blobPathname: schema.photos.blobPathname,
       createdAt: schema.photos.createdAt,
       user: {
@@ -59,13 +61,18 @@ export default defineEventHandler(async (event) => {
 
       const groups = groupsMap.get(row.id) ?? []
 
-      return {
-        ...row,
-        url,
-        blobPathname: undefined,
-        user: { ...row.user, avatarUrl },
-        groups,
-      }
+    const captionHistory: { text: string | null; editedAt: string }[] | null = row.captionEditedAt
+      ? (row.captionHistory ? JSON.parse(row.captionHistory) : null)
+      : null
+
+    return {
+      ...row,
+      url,
+      captionHistory,
+      blobPathname: undefined,
+      user: { ...row.user, avatarUrl },
+      groups,
+    }
     }),
   )
 

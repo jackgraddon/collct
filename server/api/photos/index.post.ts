@@ -101,5 +101,10 @@ export default defineEventHandler(async (event) => {
     validUntil: Date.now() + 60 * 60 * 1000,
   })
 
-  return { ...result, url: presignedUrl }
+  return {
+    ...result,
+    url: presignedUrl,
+    captionEditedAt: null,
+    captionHistory: null,
+  }
 })

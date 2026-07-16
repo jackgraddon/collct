@@ -19,6 +19,25 @@ const formattedDate = computed(() => {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(post.value.createdAt))
 })
 
+function formatRelative(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 1) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(dateStr))
+}
+
+function formatEditDate(isoString: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(isoString))
+}
+
 // ─── Delete ───────────────────────────────────────────────────────────────────
 const deleteModal = ref(false)
 const deleting = ref(false)
@@ -98,6 +117,41 @@ async function toggleLike() {
   }
 }
 
+// ─── Caption editing ──────────────────────────────────────────────────────────
+const editingCaption = ref(false)
+const editedCaption = ref('')
+const savingCaption = ref(false)
+const captionHistoryModal = ref(false)
+
+function startEditCaption() {
+  editedCaption.value = post.value?.caption ?? ''
+  editingCaption.value = true
+}
+
+function cancelEditCaption() {
+  editingCaption.value = false
+  editedCaption.value = ''
+}
+
+async function saveCaption() {
+  if (!post.value) return
+  savingCaption.value = true
+  try {
+    const updated = await $fetch<PostData>(`/api/photos/${id}`, {
+      method: 'PATCH',
+      body: { caption: editedCaption.value || null },
+    })
+    // Update local post data
+    post.value = { ...post.value, ...updated }
+    editingCaption.value = false
+    toast.add({ title: 'Caption updated', color: 'success', icon: 'i-lucide-circle-check' })
+  } catch {
+    toast.add({ title: 'Could not update caption', color: 'error', icon: 'i-lucide-triangle-alert' })
+  } finally {
+    savingCaption.value = false
+  }
+}
+
 // ─── Comments ─────────────────────────────────────────────────────────────────
 const commentList = ref<CommentItem[]>([])
 const newComment = ref('')
@@ -117,10 +171,12 @@ async function fetchComments() {
   for (const freshComment of fresh) {
     const idx = commentList.value.findIndex((c) => c.id === freshComment.id)
     if (idx !== -1) {
-      // Update reactions from server but preserve body/user (they don't change)
+      // Update reactions and edit state from server but preserve body/user for optimistic state
       const updated: CommentItem = {
         id: commentList.value[idx].id,
         body: commentList.value[idx].body,
+        editedAt: freshComment.editedAt,
+        editHistory: freshComment.editHistory,
         createdAt: commentList.value[idx].createdAt,
         user: commentList.value[idx].user,
         reactions: freshComment.reactions,
@@ -148,6 +204,47 @@ async function submitComment() {
     toast.add({ title: 'Could not post comment', color: 'error', icon: 'i-lucide-triangle-alert' })
   } finally {
     submittingComment.value = false
+  }
+}
+
+// ─── Comment editing ──────────────────────────────────────────────────────────
+const editingCommentId = ref<number | null>(null)
+const editedCommentBody = ref('')
+const savingCommentId = ref<number | null>(null)
+const commentHistoryModal = ref<CommentItem | null>(null)
+
+function startEditComment(comment: CommentItem) {
+  editingCommentId.value = comment.id
+  editedCommentBody.value = comment.body
+}
+
+function cancelEditComment() {
+  editingCommentId.value = null
+  editedCommentBody.value = ''
+}
+
+async function saveComment(commentId: number) {
+  savingCommentId.value = commentId
+  try {
+    const updated = await $fetch<CommentItem>(`/api/comments/${commentId}`, {
+      method: 'PATCH',
+      body: { body: editedCommentBody.value },
+    })
+    const idx = commentList.value.findIndex((c) => c.id === commentId)
+    if (idx !== -1) {
+      commentList.value[idx] = {
+        ...commentList.value[idx],
+        body: updated.body,
+        editedAt: updated.editedAt,
+        editHistory: updated.editHistory,
+      }
+    }
+    editingCommentId.value = null
+    toast.add({ title: 'Comment updated', color: 'success', icon: 'i-lucide-circle-check' })
+  } catch {
+    toast.add({ title: 'Could not update comment', color: 'error', icon: 'i-lucide-triangle-alert' })
+  } finally {
+    savingCommentId.value = null
   }
 }
 
@@ -183,6 +280,8 @@ async function react(comment: CommentItem, type: ReactionType) {
     const updated: CommentItem = {
       id: commentList.value[idx].id,
       body: commentList.value[idx].body,
+      editedAt: commentList.value[idx].editedAt,
+      editHistory: commentList.value[idx].editHistory,
       createdAt: commentList.value[idx].createdAt,
       user: commentList.value[idx].user,
       reactions: {
@@ -203,6 +302,8 @@ async function react(comment: CommentItem, type: ReactionType) {
       const settled: CommentItem = {
         id: commentList.value[idx].id,
         body: commentList.value[idx].body,
+        editedAt: commentList.value[idx].editedAt,
+        editHistory: commentList.value[idx].editHistory,
         createdAt: commentList.value[idx].createdAt,
         user: commentList.value[idx].user,
         reactions: result,
@@ -215,6 +316,8 @@ async function react(comment: CommentItem, type: ReactionType) {
       const reverted: CommentItem = {
         id: commentList.value[idx].id,
         body: commentList.value[idx].body,
+        editedAt: commentList.value[idx].editedAt,
+        editHistory: commentList.value[idx].editHistory,
         createdAt: commentList.value[idx].createdAt,
         user: commentList.value[idx].user,
         reactions: prev,
@@ -251,18 +354,6 @@ onUnmounted(() => {
 })
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function formatRelative(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60_000)
-  if (mins < 1) return 'just now'
-  if (mins < 60) return `${mins}m ago`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium' }).format(new Date(dateStr))
-}
-
 function totalReactions(counts: ReactionCounts) {
   return Object.values(counts).reduce((a, b) => a + b, 0)
 }
@@ -356,10 +447,60 @@ function totalReactions(counts: ReactionCounts) {
 
       <!-- Caption + Like row -->
       <div class="flex items-start justify-between gap-4">
-        <p v-if="post.caption" class="text-base text-default flex-1">
-          {{ post.caption }}
-        </p>
-        <div v-else class="flex-1" />
+        <div class="flex-1 min-w-0 space-y-1">
+          <!-- Caption display -->
+          <template v-if="!editingCaption">
+            <p v-if="post.caption" class="text-base text-default whitespace-pre-wrap">{{ post.caption }}</p>
+            <p v-else class="text-sm text-muted italic">No caption</p>
+
+            <!-- Edited indicator -->
+            <button
+              v-if="post.captionEditedAt"
+              class="text-xs text-muted hover:text-default transition-colors"
+              @click="captionHistoryModal = true"
+            >
+              (edited)
+            </button>
+
+            <!-- Edit button (owner only) -->
+            <button
+              v-if="isOwner"
+              class="text-xs text-primary hover:text-primary/80 transition-colors"
+              @click="startEditCaption"
+            >
+              Edit caption
+            </button>
+          </template>
+
+          <!-- Caption edit mode -->
+          <template v-else>
+            <UTextarea
+              v-model="editedCaption"
+              placeholder="Write a caption…"
+              :rows="3"
+              :maxlength="500"
+              class="w-full"
+            />
+            <div class="flex items-center gap-2">
+              <UButton
+                size="xs"
+                :loading="savingCaption"
+                @click="saveCaption"
+              >
+                Save
+              </UButton>
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                :disabled="savingCaption"
+                @click="cancelEditCaption"
+              >
+                Cancel
+              </UButton>
+            </div>
+          </template>
+        </div>
 
         <!-- Like button -->
         <div class="flex items-center gap-2 shrink-0">
@@ -422,9 +563,58 @@ function totalReactions(counts: ReactionCounts) {
                   {{ comment.user.name }}
                 </ULink>
                 <span class="text-muted text-xs">{{ formatRelative(comment.createdAt) }}</span>
+
+                <!-- Edited indicator -->
+                <button
+                  v-if="comment.editedAt"
+                  class="text-xs text-muted hover:text-default transition-colors"
+                  @click="commentHistoryModal = comment"
+                >
+                  (edited)
+                </button>
               </div>
 
-              <p class="text-sm text-default mt-0.5 break-words">{{ comment.body }}</p>
+              <!-- Comment body display -->
+              <template v-if="editingCommentId !== comment.id">
+                <p class="text-sm text-default mt-0.5 break-words">{{ comment.body }}</p>
+
+                <!-- Edit button (author only) -->
+                <button
+                  v-if="sessionUser?.id === comment.user.id"
+                  class="text-xs text-primary hover:text-primary/80 transition-colors mt-0.5"
+                  @click="startEditComment(comment)"
+                >
+                  Edit
+                </button>
+              </template>
+
+              <!-- Comment edit mode -->
+              <template v-else>
+                <UTextarea
+                  v-model="editedCommentBody"
+                  :rows="2"
+                  :maxlength="1000"
+                  class="w-full mt-0.5"
+                />
+                <div class="flex items-center gap-2 mt-1">
+                  <UButton
+                    size="xs"
+                    :loading="savingCommentId === comment.id"
+                    @click="saveComment(comment.id)"
+                  >
+                    Save
+                  </UButton>
+                  <UButton
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    :disabled="savingCommentId === comment.id"
+                    @click="cancelEditComment"
+                  >
+                    Cancel
+                  </UButton>
+                </div>
+              </template>
 
               <!-- Reaction bar -->
               <div class="flex items-center gap-1 mt-1.5 flex-wrap relative">
@@ -547,6 +737,80 @@ function totalReactions(counts: ReactionCounts) {
               </UButton>
               <UButton color="error" variant="solid" :loading="deleting" @click="confirmDelete">
                 Delete
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </template>
+    </UModal>
+
+    <!-- Caption history modal -->
+    <UModal v-model:open="captionHistoryModal">
+      <template #content>
+        <UCard>
+          <template #header>
+            <span class="font-semibold">Caption History</span>
+          </template>
+
+          <div v-if="post?.captionHistory?.length" class="space-y-3 max-h-64 overflow-y-auto">
+            <div
+              v-for="(version, idx) in post.captionHistory"
+              :key="idx"
+              class="border-l-2 border-default pl-3 py-2"
+            >
+              <p class="text-xs text-muted">
+                {{ formatEditDate(version.editedAt) }}
+                <span v-if="idx === post.captionHistory!.length - 1" class="ml-2 text-primary">
+                  (current)
+                </span>
+              </p>
+              <p class="text-sm text-default whitespace-pre-wrap mt-1">
+                {{ version.text ?? '(no caption)' }}
+              </p>
+            </div>
+          </div>
+
+          <template #footer>
+            <div class="flex justify-end">
+              <UButton color="neutral" variant="ghost" @click="captionHistoryModal = false">
+                Close
+              </UButton>
+            </div>
+          </template>
+        </UCard>
+      </template>
+    </UModal>
+
+    <!-- Comment history modal -->
+    <UModal v-model:open="commentHistoryModal">
+      <template #content>
+        <UCard>
+          <template #header>
+            <span class="font-semibold">Comment History</span>
+          </template>
+
+          <div v-if="commentHistoryModal?.editHistory?.length" class="space-y-3 max-h-64 overflow-y-auto">
+            <div
+              v-for="(version, idx) in commentHistoryModal.editHistory"
+              :key="idx"
+              class="border-l-2 border-default pl-3 py-2"
+            >
+              <p class="text-xs text-muted">
+                {{ formatEditDate(version.editedAt) }}
+                <span v-if="idx === commentHistoryModal.editHistory!.length - 1" class="ml-2 text-primary">
+                  (current)
+                </span>
+              </p>
+              <p class="text-sm text-default whitespace-pre-wrap mt-1">
+                {{ version.text }}
+              </p>
+            </div>
+          </div>
+
+          <template #footer>
+            <div class="flex justify-end">
+              <UButton color="neutral" variant="ghost" @click="commentHistoryModal = null">
+                Close
               </UButton>
             </div>
           </template>
