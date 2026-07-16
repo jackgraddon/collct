@@ -29,7 +29,7 @@ function textColor(hex: string | null | undefined): string {
       <span
         class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
         :style="{
-          backgroundColor: (displayGroups[0]!.color || DEFAULT_COLOR) + '20',
+          backgroundColor: (displayGroups[0]!.color || DEFAULT_COLOR) + 'E6',
           color: displayGroups[0]!.color || DEFAULT_COLOR,
         }"
       >
@@ -46,7 +46,7 @@ function textColor(hex: string | null | undefined): string {
         class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px]"
         :title="group.name"
         :style="{
-          backgroundColor: (group.color || DEFAULT_COLOR) + '20',
+          backgroundColor: (group.color || DEFAULT_COLOR) + 'E6',
           color: group.color || DEFAULT_COLOR,
         }"
       >
