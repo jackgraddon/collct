@@ -9,6 +9,7 @@ declare global {
     user: {
       id: number
       name: string
+      username: string
       avatarUrl: string | null
     }
     groups?: { id: number; name: string; icon?: string | null; color?: string | null }[]

@@ -19,6 +19,17 @@
         @load="isLoaded = true"
       />
 
+      <!-- Avatar badge (top-left) -->
+      <div class="absolute top-2 left-2 z-10">
+        <UAvatar
+          :src="postData.user?.avatarUrl ?? undefined"
+          :alt="postData.user?.name"
+          :text="postData.user?.name?.slice(0, 2).toUpperCase() || '?'"
+          size="md"
+          class="ring-2 ring-white dark:ring-gray-900"
+        />
+      </div>
+
       <!-- Group chips overlay -->
       <CollctPostGroupChips
         :groups="postData.groups"
