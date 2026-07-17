@@ -244,14 +244,14 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Photo — use cached thumbnail for instant render, swap to full-res when fresh data arrives -->
+      <!-- Photo — constrained to remaining viewport so header + photo never overflow -->
       <NuxtImg
         v-if="post"
         :src="freshPost ? post.url : (thumbnailUrl || post.url)"
         :alt="post.caption || `Photo by ${post.user.name}`"
         sizes="sm:100vw md:800px"
         format="webp"
-        class="w-full h-auto rounded-xl"
+        class="max-h-[calc(100dvh-12rem)] w-auto max-w-full object-contain rounded-xl mx-auto block"
         :style="{ viewTransitionName: `photo-${post.id}` }"
       />
       <USkeleton v-else class="w-full rounded-xl" style="aspect-ratio: 4/3" />
