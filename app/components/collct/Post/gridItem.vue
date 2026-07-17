@@ -60,10 +60,17 @@ const activeBorder = computed(() => {
 
 function navigateToPost() {
   const el = imgEl.value?.$el as HTMLElement | undefined
+  const thumbnailUrl = (el as HTMLImageElement | undefined)?.currentSrc || props.postData.url
   if (el && document.startViewTransition) {
     el.style.viewTransitionName = `photo-${props.postData.id}`
     document.startViewTransition(() => {
-      router.push(`/post/${props.postData.id}`)
+      router.push({
+        path: `/post/${props.postData.id}`,
+        state: {
+          preloadedPost: props.postData,
+          thumbnailUrl,
+        },
+      })
     })
   } else {
     router.push(`/post/${props.postData.id}`)

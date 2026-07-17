@@ -2,7 +2,15 @@
 const route = useRoute()
 const id = Number(route.params.id)
 
-const { data: post, status } = useFetch<PostData>(`/api/photos/${id}`, { lazy: true })
+// Instant — read preloaded data passed via route state from the grid
+const preloaded = ref<PostData | null>((history.state as any).preloadedPost ?? null)
+const thumbnailUrl = ref<string>((history.state as any).thumbnailUrl ?? preloaded.value?.url ?? null)
+
+// Background — fetch fresh/full data (comments, likes, edit history)
+const { data: freshPost, status } = useFetch<PostData>(`/api/photos/${id}`, { lazy: true })
+
+// Prefer fresh data once it arrives, fall back to preloaded for instant render
+const post = computed(() => freshPost.value ?? preloaded.value)
 
 const toast = useToast()
 const router = useRouter()
@@ -362,8 +370,8 @@ function totalReactions(counts: ReactionCounts) {
 <template>
   <UContainer class="py-10 max-w-4xl">
 
-    <!-- Loading -->
-    <div v-if="status === 'pending'" class="space-y-6">
+    <!-- Loading (only when no preloaded data) -->
+    <div v-if="!post && status === 'pending'" class="space-y-6">
       <div class="flex items-center gap-3">
         <USkeleton class="w-10 h-10 rounded-full" />
         <div class="space-y-2">
@@ -433,15 +441,15 @@ function totalReactions(counts: ReactionCounts) {
         </div>
       </div>
 
-      <!-- Photo -->
+      <!-- Photo — use cached thumbnail for instant render, swap to full-res when fresh data arrives -->
       <NuxtImg
         v-if="post"
-        :src="post.url"
+        :src="freshPost ? post.url : (thumbnailUrl || post.url)"
         :alt="post.caption || `Photo by ${post.user.name}`"
         sizes="sm:100vw md:800px"
         format="webp"
         class="w-full h-auto rounded-xl"
-        :style="post ? { viewTransitionName: `photo-${post.id}` } : undefined"
+        :style="{ viewTransitionName: `photo-${post.id}` }"
       />
       <USkeleton v-else class="w-full rounded-xl" style="aspect-ratio: 4/3" />
 
