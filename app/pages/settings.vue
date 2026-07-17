@@ -6,8 +6,8 @@
           <div class="flex items-center gap-4">
             <div class="relative group cursor-pointer" @click="triggerAvatarUpload">
               <UAvatar
-                :src="user.avatarUrl || undefined"
-                :alt="user.name"
+                :src="user?.avatarUrl || undefined"
+                :alt="user?.name"
                 size="xl"
               />
               <div class="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -22,8 +22,8 @@
               />
             </div>
             <div>
-              <p class="font-semibold text-lg">{{ user.name }}</p>
-              <p class="text-sm text-muted">{{ user.email }}</p>
+              <p class="font-semibold text-lg">{{ user?.name }}</p>
+              <p class="text-sm text-muted">{{ user?.email }}</p>
             </div>
           </div>
 
@@ -68,7 +68,7 @@
         <div class="my-4 space-y-4">
           <p class="text-sm text-muted">Revisit the app walkthrough to refresh your memory on how Collct works.</p>
           <UButton
-            @click="showOobe = true"
+            @click="() => { showOobe = true }"
             color="neutral"
             variant="outline"
             icon="solar:info-circle-linear"
@@ -96,8 +96,9 @@ const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
 
 const accountState = reactive({
-  name: user.value.name,
-  email: user.value.email,
+  name: user.value?.name ?? '',
+  email: user.value?.email ?? '',
+  avatarUrl: user.value?.avatarUrl ?? '',
 })
 
 function triggerAvatarUpload() {
@@ -131,9 +132,9 @@ async function onAvatarChange(e: Event) {
 }
 
 function onResetAccount() {
-  accountState.name = user.value.name
-  accountState.email = user.value.email
-  accountState.avatarUrl = user.value.avatarUrl ?? ''
+  accountState.name = user.value?.name ?? ''
+  accountState.email = user.value?.email ?? ''
+  accountState.avatarUrl = user.value?.avatarUrl ?? ''
 }
 
 async function onSaveAccount() {
@@ -161,8 +162,8 @@ const tabs = computed(() => [
     slot: 'account',
     label: 'Account',
     avatar: {
-      src: user.value.avatarUrl || undefined,
-      alt: user.value.name,
+      src: user.value?.avatarUrl || undefined,
+      alt: user.value?.name,
     },
   },
   {

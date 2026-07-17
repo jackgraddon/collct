@@ -37,7 +37,7 @@
         </p>
         
         <div v-if="isLogin" class="text-center">
-          <UButton variant="link" color="neutral" size="sm" @click="showRecovery = true">
+          <UButton variant="link" color="neutral" size="sm" @click="() => { showRecovery = true }">
             Lost your passkey?
           </UButton>
         </div>
@@ -84,7 +84,7 @@
         
         <UButton :loading="loading" block @click="onRedeemRecovery">Redeem Code</UButton>
         
-        <UButton variant="link" color="neutral" block @click="showRecovery = false">
+        <UButton variant="link" color="neutral" block @click="() => { showRecovery = false }">
           Back to login
         </UButton>
       </div>

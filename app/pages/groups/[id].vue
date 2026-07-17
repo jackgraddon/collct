@@ -301,7 +301,7 @@ watchEffect(() => {
             variant="soft"
             size="xs"
             icon="i-solar-add-circle-linear"
-            @click="showInviteModal = true"
+            @click="() => { showInviteModal = true }"
           >
             New invite
           </UButton>
@@ -381,7 +381,7 @@ watchEffect(() => {
 
           <template #footer>
             <div class="flex justify-end gap-2">
-              <UButton color="neutral" variant="ghost" @click="showInviteModal = false">
+              <UButton color="neutral" variant="ghost" @click="() => { showInviteModal = false }">
                 Cancel
               </UButton>
               <UButton

@@ -120,7 +120,8 @@ async function saveCaption() {
       method: 'PATCH',
       body: { caption: editedCaption.value || null },
     })
-    post.value = { ...post.value, ...updated }
+    const merged = { ...post.value, ...updated }
+    preloaded.value = merged
     editingCaption.value = false
     toast.add({ title: 'Caption updated', color: 'success', icon: 'i-lucide-circle-check' })
   } catch {
@@ -248,14 +249,14 @@ onUnmounted(() => {
             >
               Share
             </UButton>
-            <UButton
-              v-if="isOwner"
-              color="error"
-              variant="ghost"
-              icon="i-solar-trash-bin-2-linear"
-              size="sm"
-              @click="deleteModal = true"
-            >
+              <UButton
+                v-if="isOwner"
+                color="error"
+                variant="ghost"
+                icon="i-solar-trash-bin-2-linear"
+                size="sm"
+                @click="() => { deleteModal = true }"
+              >
               Delete
             </UButton>
           </div>
@@ -276,7 +277,7 @@ onUnmounted(() => {
               <button
                 v-if="post.captionEditedAt"
                 class="text-xs text-muted hover:text-default transition-colors"
-                @click="captionHistoryModal = true"
+                @click="() => { captionHistoryModal = true }"
               >
                 (edited)
               </button>
@@ -378,7 +379,7 @@ onUnmounted(() => {
 
           <template #footer>
             <div class="flex justify-end gap-2">
-              <UButton color="neutral" variant="ghost" @click="deleteModal = false">
+              <UButton color="neutral" variant="ghost" @click="() => { deleteModal = false }">
                 Cancel
               </UButton>
               <UButton color="error" variant="solid" :loading="deleting" @click="confirmDelete">
@@ -418,7 +419,7 @@ onUnmounted(() => {
 
           <template #footer>
             <div class="flex justify-end">
-              <UButton color="neutral" variant="ghost" @click="captionHistoryModal = false">
+              <UButton color="neutral" variant="ghost" @click="() => { captionHistoryModal = false }">
                 Close
               </UButton>
             </div>

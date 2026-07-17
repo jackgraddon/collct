@@ -92,7 +92,8 @@ export default defineWebAuthnAuthenticateEventHandler({
         name: row.user.name,
         email: row.user.email,
         avatarUrl: row.user.avatarUrl,
-        totpEnabled: false
+        totpEnabled: false,
+        hasSeenOobe: row.user.toursCompleted ? JSON.parse(row.user.toursCompleted).includes('oobe-v1') : false,
       },
       loggedInAt: Date.now()
     })

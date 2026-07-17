@@ -10,12 +10,6 @@ export default defineNuxtConfig({
     }
   },
 
-  typescript: {
-    tsConfig: {
-      include: ['types/**/*.d.ts']
-    }
-  },
-
   site: {
     url: "https://collct.vercel.app/",
     name: 'Collct',
@@ -28,7 +22,7 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   hub: {
-    blob: { access: 'private' },
+    blob: { driver: 'vercel-blob', access: 'private' },
     db: 'postgresql',
     kv: false,
   },
@@ -56,7 +50,6 @@ export default defineNuxtConfig({
 
   experimental: {
     viewTransition: true,
-    treeshakeComposables: true,
   },
 
   app: {

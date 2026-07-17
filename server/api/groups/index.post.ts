@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const result = await db.transaction(async (tx) => {
-    const insertData: Record<string, string | null> = { name: body.name, slug, ownerId: userId }
+    const insertData: { name: string; slug: string; ownerId: number; icon?: string; color?: string } = { name: body.name, slug, ownerId: userId }
     if (body.icon) insertData.icon = body.icon
     if (body.color) insertData.color = body.color
 

@@ -1,5 +1,17 @@
 export {}
 
+declare module '#auth-utils' {
+  interface User {
+    id: number
+    name: string
+    username: string
+    email: string
+    avatarUrl: string | null
+    totpEnabled: boolean
+    hasSeenOobe: boolean
+  }
+}
+
 declare global {
   type ReactionType = 'thumbs_up' | 'thumbs_down' | 'heart' | 'cry'
 

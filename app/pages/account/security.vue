@@ -90,6 +90,14 @@ function copyCodes() {
   navigator.clipboard.writeText(codes.value.join('\n'))
   toast.add({ title: 'Copied', description: 'Recovery codes copied to clipboard' })
 }
+
+function downloadCodes() {
+  const blob = new Blob([codes.value.join('\n')], { type: 'text/plain' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'collct-recovery-codes.txt'
+  a.click()
+}
 </script>
 
 <template>
@@ -147,7 +155,7 @@ function copyCodes() {
             </div>
 
             <div class="pt-4 border-t flex justify-end">
-              <UButton variant="ghost" color="neutral" @click="showTotpSetup = false">Cancel</UButton>
+              <UButton variant="ghost" color="neutral" @click="() => { showTotpSetup = false }">Cancel</UButton>
             </div>
           </div>
 
@@ -188,9 +196,9 @@ function copyCodes() {
             <div class="flex justify-between items-center pt-4 border-t">
               <div class="flex gap-2">
                 <UButton icon="i-solar-copy-bold" variant="ghost" @click="copyCodes">Copy</UButton>
-                <UButton icon="i-solar-download-bold" variant="ghost" @click="() => { const blob = new Blob([codes.join('\n')], { type: 'text/plain' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'collct-recovery-codes.txt'; a.click() }">Download</UButton>
+                <UButton icon="i-solar-download-bold" variant="ghost" @click="downloadCodes">Download</UButton>
               </div>
-              <UButton color="neutral" @click="showRecoveryCodes = false">Done</UButton>
+              <UButton color="neutral" @click="() => { showRecoveryCodes = false }">Done</UButton>
             </div>
           </div>
         </div>
@@ -224,7 +232,7 @@ function copyCodes() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="outline" color="neutral" @click="showDisableDialog = false">Cancel</UButton>
+          <UButton variant="outline" color="neutral" @click="() => { showDisableDialog = false }">Cancel</UButton>
           <UButton color="error" :loading="disableLoading" :disabled="disableMode === 'totp' ? !disableToken : !disableRecoveryCode" @click="onDisableTotp">
             Disable 2FA
           </UButton>
@@ -241,7 +249,7 @@ function copyCodes() {
       </template>
       <template #footer>
         <div class="flex justify-end gap-2">
-          <UButton variant="outline" color="neutral" @click="showRegenWarning = false">Cancel</UButton>
+          <UButton variant="outline" color="neutral" @click="() => { showRegenWarning = false }">Cancel</UButton>
           <UButton color="warning" @click="doGenerateRecoveryCodes">Yes, Regenerate</UButton>
         </div>
       </template>

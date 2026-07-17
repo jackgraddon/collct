@@ -74,7 +74,8 @@ async function submitComment() {
 const editingCommentId = ref<number | null>(null)
 const editedCommentBody = ref('')
 const savingCommentId = ref<number | null>(null)
-const commentHistoryModal = ref<CommentItem | null>(null)
+const commentHistoryOpen = ref(false)
+const commentHistoryItem = ref<CommentItem | null>(null)
 
 function startEditComment(comment: CommentItem) {
   editingCommentId.value = comment.id
@@ -95,8 +96,9 @@ async function saveComment(commentId: number) {
     })
     const idx = commentList.value.findIndex((c) => c.id === commentId)
     if (idx !== -1) {
+      const existing = commentList.value[idx]!
       commentList.value[idx] = {
-        ...commentList.value[idx],
+        ...existing,
         body: updated.body,
         editedAt: updated.editedAt,
         editHistory: updated.editHistory,
@@ -130,6 +132,7 @@ async function react(comment: CommentItem, type: ReactionType) {
   const prev = { ...comment.reactions }
   const idx = commentList.value.findIndex((c) => c.id === comment.id)
   if (idx !== -1) {
+    const cur = commentList.value[idx]!
     const counts: ReactionCounts = { ...comment.reactions.counts }
     if (comment.reactions.myReaction) {
       counts[comment.reactions.myReaction] = Math.max(0, counts[comment.reactions.myReaction] - 1)
@@ -139,12 +142,12 @@ async function react(comment: CommentItem, type: ReactionType) {
       counts[type] = (counts[type] ?? 0) + 1
     }
     const updated: CommentItem = {
-      id: commentList.value[idx].id,
-      body: commentList.value[idx].body,
-      editedAt: commentList.value[idx].editedAt,
-      editHistory: commentList.value[idx].editHistory,
-      createdAt: commentList.value[idx].createdAt,
-      user: commentList.value[idx].user,
+      id: cur.id,
+      body: cur.body,
+      editedAt: cur.editedAt,
+      editHistory: cur.editHistory,
+      createdAt: cur.createdAt,
+      user: cur.user,
       reactions: {
         counts,
         myReaction: isToggleOff ? null : type,
@@ -159,26 +162,28 @@ async function react(comment: CommentItem, type: ReactionType) {
       { method: 'POST', body: { type } },
     )
     if (idx !== -1) {
+      const cur = commentList.value[idx]!
       const settled: CommentItem = {
-        id: commentList.value[idx].id,
-        body: commentList.value[idx].body,
-        editedAt: commentList.value[idx].editedAt,
-        editHistory: commentList.value[idx].editHistory,
-        createdAt: commentList.value[idx].createdAt,
-        user: commentList.value[idx].user,
+        id: cur.id,
+        body: cur.body,
+        editedAt: cur.editedAt,
+        editHistory: cur.editHistory,
+        createdAt: cur.createdAt,
+        user: cur.user,
         reactions: result,
       }
       commentList.value[idx] = settled
     }
   } catch {
     if (idx !== -1) {
+      const cur = commentList.value[idx]!
       const reverted: CommentItem = {
-        id: commentList.value[idx].id,
-        body: commentList.value[idx].body,
-        editedAt: commentList.value[idx].editedAt,
-        editHistory: commentList.value[idx].editHistory,
-        createdAt: commentList.value[idx].createdAt,
-        user: commentList.value[idx].user,
+        id: cur.id,
+        body: cur.body,
+        editedAt: cur.editedAt,
+        editHistory: cur.editHistory,
+        createdAt: cur.createdAt,
+        user: cur.user,
         reactions: prev,
       }
       commentList.value[idx] = reverted
@@ -282,7 +287,7 @@ function totalReactions(counts: ReactionCounts) {
             <button
               v-if="comment.editedAt"
               class="text-xs text-muted hover:text-default transition-colors"
-              @click="commentHistoryModal = comment"
+              @click="() => { commentHistoryItem = comment; commentHistoryOpen = true }"
             >
               (edited)
             </button>
@@ -428,22 +433,22 @@ function totalReactions(counts: ReactionCounts) {
   </div>
 
   <!-- Comment history modal -->
-  <UModal v-if="commentHistoryModal" v-model:open="commentHistoryModal">
+  <UModal v-if="commentHistoryOpen" v-model:open="commentHistoryOpen">
     <template #content>
       <UCard>
         <template #header>
           <span class="font-semibold">Comment History</span>
         </template>
 
-        <div v-if="commentHistoryModal?.editHistory?.length" class="space-y-3 max-h-64 overflow-y-auto">
+        <div v-if="commentHistoryItem?.editHistory?.length" class="space-y-3 max-h-64 overflow-y-auto">
           <div
-            v-for="(version, idx) in commentHistoryModal.editHistory"
+              v-for="(version, idx) in commentHistoryItem!.editHistory"
             :key="idx"
             class="border-l-2 border-default pl-3 py-2"
           >
             <p class="text-xs text-muted">
               {{ formatEditDate(version.editedAt) }}
-              <span v-if="idx === commentHistoryModal.editHistory!.length - 1" class="ml-2 text-primary">
+                <span v-if="idx === commentHistoryItem!.editHistory!.length - 1" class="ml-2 text-primary">
                 (current)
               </span>
             </p>
@@ -455,7 +460,7 @@ function totalReactions(counts: ReactionCounts) {
 
         <template #footer>
           <div class="flex justify-end">
-            <UButton color="neutral" variant="ghost" @click="commentHistoryModal = null">
+            <UButton color="neutral" variant="ghost" @click="() => { commentHistoryOpen = false }">
               Close
             </UButton>
           </div>

@@ -75,7 +75,7 @@ async function createGroup() {
         color="primary"
         variant="solid"
         icon="i-solar-add-circle-linear"
-        @click="showCreateModal = true"
+        @click="() => { showCreateModal = true }"
       >
         New group
       </UButton>
@@ -171,7 +171,7 @@ async function createGroup() {
 
           <template #footer>
             <div class="flex justify-end gap-2">
-              <UButton color="neutral" variant="ghost" @click="showCreateModal = false">
+              <UButton color="neutral" variant="ghost" @click="() => { showCreateModal = false }">
                 Cancel
               </UButton>
               <UButton

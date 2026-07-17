@@ -110,7 +110,7 @@ const formattedDate = computed(() => {
             variant="ghost"
             icon="i-solar-trash-bin-2-linear"
             size="sm"
-            @click="deleteModal = true"
+            @click="() => { deleteModal = true }"
           >
             Delete
           </UButton>
@@ -148,7 +148,7 @@ const formattedDate = computed(() => {
 
           <template #footer>
             <div class="flex justify-end gap-2">
-              <UButton color="neutral" variant="ghost" @click="deleteModal = false">
+              <UButton color="neutral" variant="ghost" @click="() => { deleteModal = false }">
                 Cancel
               </UButton>
               <UButton color="error" variant="solid" :loading="deleting" @click="confirmDelete">

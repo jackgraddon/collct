@@ -3,7 +3,7 @@
     <UNavigationMenu :items="items" variant="link" />
     <template #right>
       <UColorModeButton />
-      <UButton label="Post" icon="solar:add-circle-linear" @click="uploadModal = true" />
+      <UButton label="Post" icon="solar:add-circle-linear" @click="() => { uploadModal = true }" />
 
       <!-- Freshly Signed User Avatar Dropdown -->
       <UDropdownMenu v-if="user" :items="userDropdownItems" :ui="{ content: 'w-48' }">
@@ -17,7 +17,7 @@
           />
           <UAvatar
             v-else
-            :text="user.name?.[0].toUpperCase()"
+            :text="user?.name?.[0]?.toUpperCase()"
             size="sm"
             class="ring-2 ring-transparent group-hover:ring-primary-500 transition"
           />

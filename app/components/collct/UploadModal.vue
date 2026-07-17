@@ -275,7 +275,7 @@ async function upload() {
 
         <template #footer>
           <div class="flex justify-end gap-2">
-            <UButton color="neutral" variant="ghost" @click="showCreateGroupDialog = false">
+            <UButton color="neutral" variant="ghost" @click="() => { showCreateGroupDialog = false }">
               Stay here
             </UButton>
             <UButton color="primary" variant="solid" @click="goToGroups">

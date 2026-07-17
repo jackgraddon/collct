@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     token: z.string().length(6).regex(/^\d+$/),
   }).parse)
 
-  const user = await db.select().from(schema.users).where(eq(schema.users.id, session.unverifiedUserId)).then(r => r[0])
+  const user = await db.select().from(schema.users).where(eq(schema.users.id, session.unverifiedUserId as unknown as number)).then(r => r[0])
   if (!user) throw createError({ statusCode: 401 })
 
   const totpRow = await db.select().from(schema.totpSecrets)
@@ -36,7 +36,8 @@ export default defineEventHandler(async (event) => {
       name: user.name,
       email: user.email,
       avatarUrl: user.avatarUrl,
-      totpEnabled: user.totpEnabled
+      totpEnabled: user.totpEnabled,
+      hasSeenOobe: user.toursCompleted ? JSON.parse(user.toursCompleted).includes('oobe-v1') : false,
     },
     loggedInAt: Date.now(),
   })

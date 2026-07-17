@@ -38,7 +38,7 @@ export default defineWebAuthnRegisterEventHandler({
       }
     } else if (session.recoveryUserId && session.recoveryScope === 'passkey_registration') {
        // Recovery flow: ensure username matches the recovery user's email/username
-       const dbUser = await db.select().from(schema.users).where(eq(schema.users.id, session.recoveryUserId)).then(r => r[0])
+       const dbUser = await db.select().from(schema.users).where(eq(schema.users.id, session.recoveryUserId as number)).then(r => r[0])
        if (!dbUser || dbUser.username !== userBody.userName) {
          throw createError({ statusCode: 400, message: 'Username does not match recovery session' })
        }
@@ -66,21 +66,20 @@ export default defineWebAuthnRegisterEventHandler({
       let username = baseUsername
       let counter = 1
       while (true) {
-        const taken = await db.select().from(schema.users).where(eq(schema.users.username, username)).then(r => r[0])
+         const taken = await db.select().from(schema.users).where(eq(schema.users.username, username as string)).then(r => r[0])
         if (!taken) break
         username = `${baseUsername}${counter}`
         counter++
       }
 
       const [newRow] = await db.insert(schema.users).values({
-        username,
+        username: username as string,
         name: user.displayName || baseUsername,
-        username: user.userName,
         email,
         createdAt: new Date(),
         lastLoginAt: new Date(),
         totpEnabled: false
-      }).returning()
+      } as any).returning()
       dbUser = newRow
     }
 
@@ -110,7 +109,8 @@ export default defineWebAuthnRegisterEventHandler({
         name: dbUser.name,
         email: dbUser.email,
         avatarUrl: dbUser.avatarUrl,
-        totpEnabled: dbUser.totpEnabled
+        totpEnabled: dbUser.totpEnabled,
+        hasSeenOobe: dbUser.toursCompleted ? JSON.parse(dbUser.toursCompleted).includes('oobe-v1') : false,
       },
       loggedInAt: Date.now()
     })

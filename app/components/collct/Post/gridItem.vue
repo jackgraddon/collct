@@ -49,7 +49,7 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
-const imgEl = ref<InstanceType<typeof NuxtImg> | null>(null)
+const imgEl = ref<any>(null)
 const isLoaded = ref(false)
 const colorMode = useColorMode()
 
@@ -73,7 +73,7 @@ function navigateToPost() {
         state: {
           preloadedPost: props.postData,
           thumbnailUrl,
-        },
+        } as any,
       })
     })
   } else {
