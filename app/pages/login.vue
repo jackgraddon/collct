@@ -103,7 +103,7 @@ const { register, authenticate } = useWebAuthn()
 const { challenge: verifyMfa } = useTotp()
 const { redeem } = useRecoveryCodes()
 
-const redirectTo = (route.query.redirect as string) || '/feed'
+const redirectTo = (route.query.redirect as string) || '/'
 
 const showMfa = ref(false)
 const mfaToken = ref('')

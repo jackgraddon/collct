@@ -93,7 +93,7 @@ export default defineNuxtConfig({
       display: 'standalone',
       display_override: ['standalone', 'minimal-ui'],
       orientation: 'portrait-primary',
-      start_url: '/feed',
+      start_url: '/',
       scope: '/',
       lang: 'en',
       dir: 'ltr',
@@ -145,7 +145,7 @@ export default defineNuxtConfig({
           name: 'Upload Photo',
           short_name: 'Upload',
           description: 'Upload a new photo',
-          url: '/feed?upload=true',
+          url: '/?upload=true',
           icons: [{ src: '/icon-192x192.png', sizes: '192x192' }],
         },
         {

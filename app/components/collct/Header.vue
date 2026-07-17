@@ -46,8 +46,8 @@ const items = computed<NavigationMenuItem[]>(() => [
   {
     label: 'Feed',
     icon: 'solar:home-smile-angle-linear',
-    to: '/feed',
-    active: route.path.startsWith('/feed'),
+    to: '/',
+    active: route.path === '/',
   },
   {
     label: 'Groups',

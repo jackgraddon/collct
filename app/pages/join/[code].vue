@@ -42,7 +42,7 @@ async function redeemInvite() {
       <h1 class="text-xl font-semibold">You're in!</h1>
       <p class="text-muted text-sm">You've joined the group. Your future photos can now be shared with them.</p>
       <div class="flex justify-center gap-3">
-        <UButton to="/feed" color="primary" variant="solid">Go to feed</UButton>
+        <UButton to="/" color="primary" variant="solid">Go to feed</UButton>
         <UButton to="/groups" color="neutral" variant="ghost">View groups</UButton>
       </div>
     </template>
@@ -61,7 +61,7 @@ async function redeemInvite() {
       </p>
 
       <div class="flex justify-center gap-3 pt-2">
-        <UButton to="/feed" color="neutral" variant="ghost">Cancel</UButton>
+        <UButton to="/" color="neutral" variant="ghost">Cancel</UButton>
         <UButton
           color="primary"
           variant="solid"

@@ -45,7 +45,7 @@ function handleOobeCta(action: string) {
   if (action === 'create-group') {
     router.push('/groups')
   } else if (action === 'view-feed') {
-    router.push('/feed')
+    router.push('/')
   }
 }
 </script>

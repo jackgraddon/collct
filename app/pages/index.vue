@@ -1,72 +1,56 @@
 <template>
-  <UPageHero
-    title="Welcome to Collct"
-    description="A new kind of social media designed to connect you to your friends, and that's it."
-    :links
-    class="my-[15vh]"
-    />
-  <UPageSection
-    id="about"
-    headline="What is Collct?"
-    title="Friends-First Social Media"
-    description="Collct is a new kind of social media that puts you and your friends at the center of the show. Gone are annoying ads, suggested content, 'people you may know', and all of the annoyances the other guys shove in your face. Collct only shows you, your friends, and their photos. That's it."
-  />
-  <UPageSection
-    id="private"
-    headline="Completely Private"
-    title="Connect with Collct"
-    :features
-  />
+  <div>
+    <CollctPostGrid :posts="allPosts" v-slot="{ post }">
+      <CollctPostGridItem :post-data="post" />
+    </CollctPostGrid>
+
+    <div ref="loadMoreTrigger" class="h-10 w-full flex items-center justify-center mt-4">
+      <USkeleton v-if="status === 'pending'" class="h-8 w-32" />
+      <p v-else-if="exhausted" class="text-sm text-neutral-400">You're all caught up!</p>
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
-definePageMeta({
-  middleware: ['user-logged-in'], 
+import { useIntersectionObserver } from '@vueuse/core'
+
+const { on } = useUploadBus()
+// Keep a buffer for manually appended items (like via the Upload modal)
+const appendedPosts = ref<PostData[]>([]) 
+const cursor = ref<number | null>(null)
+const loadMoreTrigger = ref(null)
+
+const { data, status, error } = await useFetch('/api/photos', {
+  key: 'feed-photos', // Essential for SSR/Client hydration
+  query: computed(() => ({
+    limit: 20,
+    ...(cursor.value !== null ? { before: cursor.value } : {}),
+  })),
+  watch: [cursor],
+  lazy: true,
 })
 
-import type { ButtonProps, PageFeatureProps } from '@nuxt/ui'
+// Fix: Derive the grid data directly from the fetch result
+const allPosts = computed(() => {
+  const fetched = data.value?.photos || []
+  return [...appendedPosts.value, ...fetched]
+})
 
-const links = ref<ButtonProps[]>([
-  {
-    label: 'See Your Feed',
-    to: '/feed',
-  },
-  {
-    label: 'Learn More',
-    to: '#about',
-    color: 'neutral',
-    variant: 'subtle',
-  }
-])
+const exhausted = computed(() => data.value?.nextCursor === null)
 
-const aboutProps = ref<PageFeatureProps[]>  ([
-  {
-    title : ''
-  },
-  {
-    title: ''
-  }
-])
+// Handle manual uploads
+on((post) => appendedPosts.value.unshift(post))
 
-const features = ref<PageFeatureProps[]>([
-  {
-    title: 'No Algorithm',
-    description: 'You create what you see, no algorithm pulling the strings behind the scenes.' ,
-    icon: 'solar:chef-hat-heart-linear',
+// Intersection Observer stays the same, but update cursor based on data
+useIntersectionObserver(
+  loadMoreTrigger,
+  (entries) => {
+    const isIntersecting = entries[0]?.isIntersecting
+    if (isIntersecting && status.value !== 'pending' && !exhausted.value) {
+      const last = allPosts.value.at(-1)
+      if (last) cursor.value = new Date(last.createdAt).getTime()
+    }
   },
-  {
-    title: 'No Tracking',
-    description: "We save the bare minimum. No habits, no preferences, no targeting, nothing.",
-    icon: 'solar:eye-closed-linear',
-  },
-  {
-    title: 'No Strangers',
-    description: 'Only your friends can see each others photos. You control who sees your posts.',
-    icon: 'solar:users-group-two-rounded-linear',
-  }
-])
+  { threshold: 0.5 }
+)
 </script>
-
-<style scoped>
-
-</style>
