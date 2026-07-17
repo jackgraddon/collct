@@ -402,6 +402,13 @@ function totalReactions(counts: ReactionCounts) {
       <!-- Header row -->
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-3 min-w-0">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-arrow-left"
+            size="sm"
+            @click="router.back()"
+          />
           <UAvatar
             :src="post.user.avatarUrl || undefined"
             :alt="post.user.name"
