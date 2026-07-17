@@ -54,6 +54,18 @@ export default defineNuxtConfig({
     },
   },
 
+  app: {
+    head: {
+      title: 'Collct',
+      htmlAttrs: {
+        lang: 'en',
+      },
+      link: [
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      ],
+    },
+  },
+
   pwa: {
     manifest: {
       name: 'collct',
