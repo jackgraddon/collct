@@ -1,5 +1,5 @@
 import { db, schema } from '@nuxthub/db'
-import { desc, lt, eq, and, inArray } from 'drizzle-orm'
+import { desc, lt, gt, eq, and, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const limit = Math.min(Number(query.limit) || 20, 50)
   const before = query.before ? Number(query.before) : null
+  const after = query.after ? Number(query.after) : null
 
   // Get IDs of photos visible to this viewer
   const visibleIds = await getVisiblePhotoIds(userId)
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event) => {
       and(
         inArray(schema.photos.id, visibleIds),
         before ? lt(schema.photos.createdAt, new Date(before)) : undefined,
+        after ? gt(schema.photos.createdAt, new Date(after)) : undefined,
       ),
     )
     .orderBy(desc(schema.photos.createdAt))
