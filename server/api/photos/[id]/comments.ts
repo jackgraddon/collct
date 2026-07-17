@@ -99,32 +99,41 @@ export default defineEventHandler(async (event) => {
       }),
     )
 
-    // Resolve avatar URLs
-    const resolvedRows = await Promise.all(
-      rows.map(async (r) => {
-        let avatarUrl = r.userAvatarUrl
-        if (avatarUrl) {
-          avatarUrl = await getBlobUrl(avatarUrl)
-        }
-        const editHistory: { text: string; editedAt: string }[] | null = r.editedAt
-          ? (r.editHistory ? JSON.parse(r.editHistory) : null)
-          : null
-        return {
-          id: r.id,
-          body: r.body,
-          editedAt: r.editedAt,
-          editHistory,
-          createdAt: r.createdAt,
-          user: {
-            id: r.userId,
-            name: r.userName,
-            username: r.username,
-            avatarUrl,
-          },
-          reactions: reactionsByComment[r.id],
-        }
+    // Deduplicate avatar presigning — same user may have commented multiple times
+    const uniqueAvatarPaths = new Set<string>()
+    for (const r of rows) {
+      if (r.userAvatarUrl) uniqueAvatarPaths.add(r.userAvatarUrl)
+    }
+    const avatarUrlMap = new Map<string, string>()
+    await Promise.all(
+      [...uniqueAvatarPaths].map(async (pathname) => {
+        avatarUrlMap.set(pathname, await getBlobUrl(pathname))
       }),
     )
+
+    // Resolve avatar URLs from the deduped map
+    const resolvedRows = rows.map((r) => {
+      const avatarUrl = r.userAvatarUrl
+        ? avatarUrlMap.get(r.userAvatarUrl) ?? r.userAvatarUrl
+        : null
+      const editHistory: { text: string; editedAt: string }[] | null = r.editedAt
+        ? (r.editHistory ? JSON.parse(r.editHistory) : null)
+        : null
+      return {
+        id: r.id,
+        body: r.body,
+        editedAt: r.editedAt,
+        editHistory,
+        createdAt: r.createdAt,
+        user: {
+          id: r.userId,
+          name: r.userName,
+          username: r.username,
+          avatarUrl,
+        },
+        reactions: reactionsByComment[r.id],
+      }
+    })
 
     return resolvedRows
   }

@@ -59,7 +59,9 @@ function handleOobeCta(action: string) {
     <UMain>
       <UContainer>
         <NuxtLayout>
-          <NuxtPage />
+          <KeepAlive :max="3">
+            <NuxtPage />
+          </KeepAlive>
         </NuxtLayout>
       </UContainer>
     </UMain>

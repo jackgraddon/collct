@@ -19,9 +19,10 @@ const preview = ref<string | null>(null)
 const caption = ref('')
 const uploading = ref(false)
 
-// Groups
-const { data: groupsData } = await useFetch<{ groups: GroupData[] }>('/api/groups', {
+// Groups — only fetch when the modal opens, not on component mount
+const { data: groupsData } = useFetch<{ groups: GroupData[] }>('/api/groups', {
   watch: [() => props.open],
+  immediate: false,
 })
 
 const selectedGroupIds = ref<number[]>([])

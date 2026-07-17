@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: process.dev },
 
   devServer: {
     https: {
@@ -56,6 +56,7 @@ export default defineNuxtConfig({
 
   experimental: {
     viewTransition: true,
+    treeshakeComposables: true,
   },
 
   app: {
@@ -162,6 +163,23 @@ export default defineNuxtConfig({
       globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       runtimeCaching: [
         {
+          // All images served through NuxtImg / Vercel Image proxy
+          // (photos, thumbnails, avatars — covers everything)
+          urlPattern: /\/_vercel\/image\?url=.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'collct-images-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        {
+          // Raw blob URLs (direct access, e.g. from API or fallback)
           urlPattern: /^https:\/\/.*\.blob\.vercel-storage\.com\/.*/i,
           handler: 'CacheFirst',
           options: {
@@ -176,26 +194,16 @@ export default defineNuxtConfig({
           },
         },
         {
+          // Feed API responses — serve cached data when offline
           urlPattern: /^\/api\/photos(\?.*)?$/,
           handler: 'NetworkFirst',
           options: {
             cacheName: 'collct-feed-cache',
             expiration: {
-              maxEntries: 5,
+              maxEntries: 10,
               maxAgeSeconds: 60 * 60 * 24,
             },
             networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /\/_vercel\/image\?url=.*avatar.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'collct-avatars-cache',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 60 * 60 * 24 * 7,
-            },
           },
         },
       ],

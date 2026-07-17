@@ -1,6 +1,19 @@
 let cachedToken: any = null
 let tokenExpiresAt = 0
 
+// Import presignUrl once at module level — Node.js caches this,
+// but the dynamic `await import()` still has per-call overhead.
+// With 40+ calls per feed page, this matters.
+let presignUrlFn: typeof import('@vercel/blob').presignUrl | null = null
+
+async function getPresignUrl() {
+  if (!presignUrlFn) {
+    const blob = await import('@vercel/blob')
+    presignUrlFn = blob.presignUrl
+  }
+  return presignUrlFn
+}
+
 export async function getDelegationToken() {
   if (process.dev) return null
 
@@ -21,7 +34,7 @@ export async function getBlobUrl(pathname: string): Promise<string> {
     return `/api/blob/${pathname}`
   }
 
-  const { presignUrl } = await import('@vercel/blob')
+  const presignUrl = await getPresignUrl()
   const token = await getDelegationToken()
   const { presignedUrl } = await presignUrl(token, {
     pathname,

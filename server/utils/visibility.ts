@@ -78,9 +78,11 @@ export type VisiblePhotoIdRow = { photoId: number }
 
 /**
  * Returns the set of photo IDs visible to the viewer.
+ * Capped at 500 to avoid massive IN clauses — the feed endpoint
+ * paginates to 50 anyway, so this is more than sufficient.
  */
 export async function getVisiblePhotoIds(viewerId: number): Promise<number[]> {
-  const rows = await visiblePhotoIdsQuery(viewerId)
+  const rows = await visiblePhotoIdsQuery(viewerId).limit(500)
   return rows.map((r) => r.photoId)
 }
 

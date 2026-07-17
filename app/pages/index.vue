@@ -27,7 +27,6 @@ const { data, status, error } = await useFetch('/api/photos', {
     ...(cursor.value !== null ? { before: cursor.value } : {}),
   })),
   watch: [cursor],
-  lazy: true,
 })
 
 // Fix: Derive the grid data directly from the fetch result

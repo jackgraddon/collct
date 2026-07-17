@@ -1,6 +1,35 @@
 export {}
 
 declare global {
+  type ReactionType = 'thumbs_up' | 'thumbs_down' | 'heart' | 'cry'
+
+  interface ReactionCounts {
+    thumbs_up: number
+    thumbs_down: number
+    heart: number
+    cry: number
+  }
+
+  interface CommentUser {
+    id: number
+    name: string
+    username: string
+    avatarUrl: string | null
+  }
+
+  interface CommentItem {
+    id: number
+    body: string
+    editedAt: string | null
+    editHistory: Array<{ text: string; editedAt: string }> | null
+    createdAt: string
+    user: CommentUser
+    reactions: {
+      counts: ReactionCounts
+      myReaction: ReactionType | null
+    }
+  }
+
   interface PostData {
     id: number
     caption: string | null

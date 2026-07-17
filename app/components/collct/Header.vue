@@ -38,9 +38,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 const route = useRoute()
 const router = useRouter()
 const { emit } = useUploadBus()
-const { user, clear, refresh: refreshUser } = useUser()
-
-watch(() => route.fullPath, () => refreshUser())
+const { user, clear } = useUser()
 
 const items = computed<NavigationMenuItem[]>(() => [
   {

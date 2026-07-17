@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
       id: schema.photos.id,
       caption: schema.photos.caption,
       captionEditedAt: schema.photos.captionEditedAt,
-      captionHistory: schema.photos.captionHistory,
       blobPathname: schema.photos.blobPathname,
       createdAt: schema.photos.createdAt,
       user: {
@@ -50,29 +49,34 @@ export default defineEventHandler(async (event) => {
   const photoIds = rows.map((r) => r.id)
   const groupsMap = await getVisiblePhotoGroups(photoIds, userId)
 
+  // Deduplicate avatar presigning — same user may appear multiple times
+  const uniqueAvatarPaths = new Set<string>()
+  for (const row of rows) {
+    if (row.user.avatarUrl) uniqueAvatarPaths.add(row.user.avatarUrl)
+  }
+  const avatarUrlMap = new Map<string, string>()
+  await Promise.all(
+    [...uniqueAvatarPaths].map(async (pathname) => {
+      avatarUrlMap.set(pathname, await getBlobUrl(pathname))
+    }),
+  )
+
+  // Presign photo URLs and resolve avatars from the deduped map
   const photos = await Promise.all(
     rows.map(async (row) => {
       const url = await getBlobUrl(row.blobPathname)
-
-      let avatarUrl = row.user.avatarUrl
-      if (avatarUrl) {
-        avatarUrl = await getBlobUrl(avatarUrl)
-      }
-
+      const avatarUrl = row.user.avatarUrl
+        ? avatarUrlMap.get(row.user.avatarUrl) ?? row.user.avatarUrl
+        : null
       const groups = groupsMap.get(row.id) ?? []
 
-    const captionHistory: { text: string | null; editedAt: string }[] | null = row.captionEditedAt
-      ? (row.captionHistory ? JSON.parse(row.captionHistory) : null)
-      : null
-
-    return {
-      ...row,
-      url,
-      captionHistory,
-      blobPathname: undefined,
-      user: { ...row.user, avatarUrl },
-      groups,
-    }
+      return {
+        ...row,
+        url,
+        blobPathname: undefined,
+        user: { ...row.user, avatarUrl },
+        groups,
+      }
     }),
   )
 
