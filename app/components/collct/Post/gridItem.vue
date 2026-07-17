@@ -16,6 +16,7 @@
         format="webp"
         class="w-full h-auto block hover:scale-[1.05] transition-[300ms]"
         :class="isLoaded ? 'opacity-100' : 'opacity-0'"
+        :style="{ viewTransitionName: `photo-${postData.id}` }"
         @load="isLoaded = true"
       />
 

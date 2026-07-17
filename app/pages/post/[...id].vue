@@ -440,6 +440,7 @@ function totalReactions(counts: ReactionCounts) {
         sizes="sm:100vw md:800px"
         format="webp"
         class="w-full h-auto rounded-xl"
+        :style="{ viewTransitionName: `photo-${post.id}` }"
       />
 
       <!-- Group chips -->
