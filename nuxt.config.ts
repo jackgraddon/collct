@@ -54,26 +54,50 @@ export default defineNuxtConfig({
     },
   },
 
+  experimental: {
+    viewTransition: true,
+  },
+
   app: {
     head: {
-      title: 'Collct',
       htmlAttrs: {
         lang: 'en',
       },
+      meta: [
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'apple-mobile-web-app-title', content: 'Collct' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'theme-color', content: '#fba903' },
+      ],
       link: [
         { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'apple-touch-icon', sizes: '512x512', href: '/icon-512x512.png' },
       ],
     },
   },
 
   pwa: {
+    registerType: 'autoUpdate',
+    client: {
+      installPrompt: true,
+    },
     manifest: {
-      name: 'collct',
+      id: '/',
+      name: 'Collct',
       short_name: 'Collct',
-      description: 'A Progressive Web App',
+      description: 'A friends-first photo sharing app. No algorithm. No tracking. No strangers.',
       theme_color: '#fba903',
       background_color: '#fba903',
       display: 'standalone',
+      display_override: ['standalone', 'minimal-ui'],
+      orientation: 'portrait-primary',
+      start_url: '/feed',
+      scope: '/',
+      lang: 'en',
+      dir: 'ltr',
+      categories: ['social', 'photo'],
       icons: [
         {
           src: '/icon-192x192.png',
@@ -98,6 +122,80 @@ export default defineNuxtConfig({
           sizes: '512x512',
           type: 'image/png',
           purpose: 'maskable',
+        },
+      ],
+      screenshots: [
+        {
+          src: '/screenshots/feed-mobile.png',
+          sizes: '1080x2340',
+          type: 'image/png',
+          form_factor: 'narrow',
+          label: 'Photo feed',
+        },
+        {
+          src: '/screenshots/feed-desktop.png',
+          sizes: '1920x1080',
+          type: 'image/png',
+          form_factor: 'wide',
+          label: 'Photo feed on desktop',
+        },
+      ],
+      shortcuts: [
+        {
+          name: 'Upload Photo',
+          short_name: 'Upload',
+          description: 'Upload a new photo',
+          url: '/feed?upload=true',
+          icons: [{ src: '/icon-192x192.png', sizes: '192x192' }],
+        },
+        {
+          name: 'Groups',
+          short_name: 'Groups',
+          description: 'View your groups',
+          url: '/groups',
+          icons: [{ src: '/icon-192x192.png', sizes: '192x192' }],
+        },
+      ],
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/.*\.blob\.vercel-storage\.com\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'collct-photos-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 * 7,
+            },
+            cacheableResponse: {
+              statuses: [0, 200],
+            },
+          },
+        },
+        {
+          urlPattern: /^\/api\/photos(\?.*)?$/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'collct-feed-cache',
+            expiration: {
+              maxEntries: 5,
+              maxAgeSeconds: 60 * 60 * 24,
+            },
+            networkTimeoutSeconds: 3,
+          },
+        },
+        {
+          urlPattern: /\/_vercel\/image\?url=.*avatar.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'collct-avatars-cache',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 7,
+            },
+          },
         },
       ],
     },

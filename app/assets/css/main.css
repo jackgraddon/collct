@@ -18,3 +18,9 @@
 }
 
 /* @custom-variant dark (&:where(.dark, .dark *)); */
+
+/* View Transitions API — smooth native route transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.25s;
+}

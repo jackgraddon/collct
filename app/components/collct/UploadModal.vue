@@ -11,8 +11,9 @@ const emit = defineEmits<{
 const toast = useToast()
 const router = useRouter()
 
-// File input
-const fileInput = ref<HTMLInputElement | null>(null)
+// File inputs
+const cameraInput = ref<HTMLInputElement | null>(null)
+const libraryInput = ref<HTMLInputElement | null>(null)
 const file = ref<File | null>(null)
 const preview = ref<string | null>(null)
 const caption = ref('')
@@ -39,6 +40,14 @@ const canSubmit = computed(() => !!file.value)
 // Create group confirmation
 const showCreateGroupDialog = ref(false)
 
+function triggerCameraCapture() {
+  cameraInput.value?.click()
+}
+
+function triggerLibraryPicker() {
+  libraryInput.value?.click()
+}
+
 function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement
   const selected = input.files?.[0]
@@ -53,7 +62,8 @@ function clear() {
   caption.value = ''
   if (preview.value) URL.revokeObjectURL(preview.value)
   preview.value = null
-  if (fileInput.value) fileInput.value.value = ''
+  if (cameraInput.value) cameraInput.value.value = ''
+  if (libraryInput.value) libraryInput.value.value = ''
 }
 
 function close() {
@@ -107,37 +117,55 @@ async function upload() {
         <!-- Scrollable content -->
         <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
 
-          <!-- Drop zone / preview -->
-          <div
-            class="relative rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 overflow-hidden cursor-pointer transition-colors hover:border-primary"
-            :class="preview ? 'border-solid border-primary' : ''"
-            @click="fileInput?.click()"
-          >
-            <!-- Preview -->
+          <!-- Preview (shown after file selected) -->
+          <div v-if="preview" class="relative rounded-xl border-2 border-solid border-primary overflow-hidden">
             <img
-              v-if="preview"
               :src="preview"
               alt="Preview"
               class="w-full h-auto max-h-80 object-cover"
             />
-
-            <!-- Placeholder -->
-            <div v-else class="flex flex-col items-center justify-center gap-3 py-12 text-center px-4">
-              <UIcon name="i-solar-camera-add-linear" class="w-10 h-10 text-muted" />
-              <div>
-                <p class="font-medium text-sm">Click to select a photo</p>
-                <p class="text-muted text-xs mt-1">JPEG, PNG, WebP or GIF — max 10 MB</p>
-              </div>
-            </div>
-
-            <input
-              ref="fileInput"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              class="hidden"
-              @change="onFileChange"
-            />
           </div>
+
+          <!-- Source buttons (shown when no file selected) -->
+          <div v-else class="grid grid-cols-2 gap-3">
+            <button
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 py-10 text-center transition-colors hover:border-primary hover:bg-primary/5"
+              @click="triggerCameraCapture"
+            >
+              <UIcon name="i-lucide-camera" class="w-8 h-8 text-muted" />
+              <div>
+                <p class="font-medium text-sm">Take Photo</p>
+                <p class="text-muted text-xs mt-1">Open camera</p>
+              </div>
+            </button>
+            <button
+              class="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-neutral-300 dark:border-neutral-700 py-10 text-center transition-colors hover:border-primary hover:bg-primary/5"
+              @click="triggerLibraryPicker"
+            >
+              <UIcon name="i-lucide-image" class="w-8 h-8 text-muted" />
+              <div>
+                <p class="font-medium text-sm">Choose from Library</p>
+                <p class="text-muted text-xs mt-1">JPEG, PNG, WebP, GIF</p>
+              </div>
+            </button>
+          </div>
+
+          <!-- Hidden file inputs -->
+          <input
+            ref="cameraInput"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            class="hidden"
+            @change="onFileChange"
+          />
+          <input
+            ref="libraryInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            class="hidden"
+            @change="onFileChange"
+          />
 
           <!-- Change file -->
           <div v-if="preview" class="flex justify-end">
@@ -146,7 +174,7 @@ async function upload() {
               variant="ghost"
               size="xs"
               icon="i-lucide-refresh-cw"
-              @click="fileInput?.click()"
+              @click="triggerLibraryPicker"
             >
               Change photo
             </UButton>
