@@ -54,6 +54,43 @@ export default defineNuxtConfig({
     },
   },
 
+  pwa: {
+    manifest: {
+      name: 'collct',
+      short_name: 'Collct',
+      description: 'A Progressive Web App',
+      theme_color: '#fba903',
+      background_color: '#fba903',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/icon-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/icon-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/icon-192x192-maskable.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+        {
+          src: '/icon-512x512-maskable.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+      ],
+    },
+  },
+
   modules: [
     '@nuxt/fonts',
     '@vite-pwa/nuxt',
