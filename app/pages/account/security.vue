@@ -10,9 +10,6 @@ const token = ref('')
 const showTotpSetup = ref(false)
 const showRecoveryCodes = ref(false)
 
-// Lazy-load the QR code component (only needed when TOTP setup is active)
-const LazyQrcode = defineAsyncComponent(() => import('nuxt-qrcode/dist/runtime/app/components/qrcode.vue'))
-
 // Disable dialog state
 const showDisableDialog = ref(false)
 const disableToken = ref('')
@@ -125,7 +122,7 @@ function copyCodes() {
           <div v-if="showTotpSetup" class="space-y-6 p-4 border rounded-lg bg-muted/50">
             <div class="flex flex-col md:flex-row gap-8 items-center">
               <div v-if="uri" class="bg-white p-4 rounded-lg">
-                <LazyQrcode :value="uri" :size="200" />
+                <Qrcode :value="uri" :size="200" />
               </div>
 
               <div class="flex-1 space-y-4">
