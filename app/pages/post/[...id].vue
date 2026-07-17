@@ -2,7 +2,7 @@
 const route = useRoute()
 const id = Number(route.params.id)
 
-const { data: post, status } = await useFetch<PostData>(`/api/photos/${id}`)
+const { data: post, status } = useFetch<PostData>(`/api/photos/${id}`, { lazy: true })
 
 const toast = useToast()
 const router = useRouter()
@@ -435,13 +435,15 @@ function totalReactions(counts: ReactionCounts) {
 
       <!-- Photo -->
       <NuxtImg
+        v-if="post"
         :src="post.url"
         :alt="post.caption || `Photo by ${post.user.name}`"
         sizes="sm:100vw md:800px"
         format="webp"
         class="w-full h-auto rounded-xl"
-        :style="{ viewTransitionName: `photo-${post.id}` }"
+        :style="post ? { viewTransitionName: `photo-${post.id}` } : undefined"
       />
+      <USkeleton v-else class="w-full rounded-xl" style="aspect-ratio: 4/3" />
 
       <!-- Group chips -->
       <CollctPostGroupChips :groups="post.groups" />

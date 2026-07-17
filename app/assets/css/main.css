@@ -21,12 +21,12 @@
 
 /* View Transitions API — shared element "enlarging" animation for photos */
 ::view-transition-group(*) {
-  animation-duration: 350ms;
+  animation-duration: 200ms;
   animation-timing-function: cubic-bezier(0.2, 0, 0.2, 1);
 }
 
 ::view-transition-new(root) {
-  animation: fade-in 200ms ease-out;
+  animation: fade-in 150ms ease-out;
 }
 
 @keyframes fade-in {
