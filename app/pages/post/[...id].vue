@@ -193,165 +193,172 @@ onUnmounted(() => {
     </UAlert>
 
     <!-- Post -->
-    <div v-else class="space-y-6">
+    <div v-else class="space-y-6 lg:space-y-0 lg:flex lg:gap-8 lg:min-h-[calc(100dvh-8rem)]">
 
-      <!-- Header row -->
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3 min-w-0">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-arrow-left"
-            size="sm"
-            @click="router.back()"
-          />
-          <UAvatar
-            :src="post.user.avatarUrl || undefined"
-            :alt="post.user.name"
-            :text="post.user.name.slice(0, 2).toUpperCase()"
-          />
-          <div class="min-w-0">
-            <ULink
-              :to="`/user/${post.user.id}`"
-              class="font-semibold text-sm hover:text-primary transition-colors truncate block"
+      <!-- Photo column -->
+      <div class="lg:flex-1 lg:min-w-0 order-2 lg:order-1 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100dvh-8rem)]">
+        <NuxtImg
+          v-if="post"
+          :src="freshPost ? post.url : (thumbnailUrl || post.url)"
+          :alt="post.caption || `Photo by ${post.user.name}`"
+          sizes="sm:100vw md:800px lg:50vw"
+          format="webp"
+          class="max-h-[calc(100dvh-12rem)] lg:max-h-full w-auto max-w-full object-contain rounded-xl mx-auto block"
+          :style="{ viewTransitionName: `photo-${post.id}` }"
+        />
+        <USkeleton v-else class="w-full rounded-xl" style="aspect-ratio: 4/3" />
+      </div>
+
+      <!-- Info column -->
+      <div class="lg:flex-1 lg:min-w-0 space-y-6 order-1 lg:order-2">
+
+        <!-- Header row -->
+        <div class="flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3 min-w-0">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-arrow-left"
+              size="sm"
+              @click="router.back()"
+            />
+            <UAvatar
+              :src="post.user.avatarUrl || undefined"
+              :alt="post.user.name"
+              :text="post.user.name.slice(0, 2).toUpperCase()"
+            />
+            <div class="min-w-0">
+              <ULink
+                :to="`/user/${post.user.id}`"
+                class="font-semibold text-sm hover:text-primary transition-colors truncate block"
+              >
+                {{ post.user.name }}
+              </ULink>
+              <p class="text-muted text-xs">{{ formattedDate }}</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 shrink-0">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-link"
+              size="sm"
+              @click="share"
             >
-              {{ post.user.name }}
-            </ULink>
-            <p class="text-muted text-xs">{{ formattedDate }}</p>
+              Share
+            </UButton>
+            <UButton
+              v-if="isOwner"
+              color="error"
+              variant="ghost"
+              icon="i-solar-trash-bin-2-linear"
+              size="sm"
+              @click="deleteModal = true"
+            >
+              Delete
+            </UButton>
           </div>
         </div>
 
-        <div class="flex items-center gap-2 shrink-0">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-link"
-            size="sm"
-            @click="share"
-          >
-            Share
-          </UButton>
-          <UButton
-            v-if="isOwner"
-            color="error"
-            variant="ghost"
-            icon="i-solar-trash-bin-2-linear"
-            size="sm"
-            @click="deleteModal = true"
-          >
-            Delete
-          </UButton>
-        </div>
-      </div>
+        <!-- Group chips -->
+        <CollctPostGroupChips :groups="post.groups" />
 
-      <!-- Photo — constrained to remaining viewport so header + photo never overflow -->
-      <NuxtImg
-        v-if="post"
-        :src="freshPost ? post.url : (thumbnailUrl || post.url)"
-        :alt="post.caption || `Photo by ${post.user.name}`"
-        sizes="sm:100vw md:800px"
-        format="webp"
-        class="max-h-[calc(100dvh-12rem)] w-auto max-w-full object-contain rounded-xl mx-auto block"
-        :style="{ viewTransitionName: `photo-${post.id}` }"
-      />
-      <USkeleton v-else class="w-full rounded-xl" style="aspect-ratio: 4/3" />
+        <!-- Caption + Like row -->
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1 min-w-0 space-y-1">
+            <!-- Caption display -->
+            <template v-if="!editingCaption">
+              <p v-if="post.caption" class="text-base text-default whitespace-pre-wrap">{{ post.caption }}</p>
+              <p v-else class="text-sm text-muted italic">No caption</p>
 
-      <!-- Group chips -->
-      <CollctPostGroupChips :groups="post.groups" />
-
-      <!-- Caption + Like row -->
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex-1 min-w-0 space-y-1">
-          <!-- Caption display -->
-          <template v-if="!editingCaption">
-            <p v-if="post.caption" class="text-base text-default whitespace-pre-wrap">{{ post.caption }}</p>
-            <p v-else class="text-sm text-muted italic">No caption</p>
-
-            <!-- Edited indicator -->
-            <button
-              v-if="post.captionEditedAt"
-              class="text-xs text-muted hover:text-default transition-colors"
-              @click="captionHistoryModal = true"
-            >
-              (edited)
-            </button>
-
-            <!-- Edit button (owner only) -->
-            <button
-              v-if="isOwner"
-              class="text-xs text-primary hover:text-primary/80 transition-colors"
-              @click="startEditCaption"
-            >
-              Edit caption
-            </button>
-          </template>
-
-          <!-- Caption edit mode -->
-          <template v-else>
-            <UTextarea
-              v-model="editedCaption"
-              placeholder="Write a caption…"
-              :rows="3"
-              :maxlength="500"
-              class="w-full"
-            />
-            <div class="flex items-center gap-2">
-              <UButton
-                size="xs"
-                :loading="savingCaption"
-                @click="saveCaption"
+              <!-- Edited indicator -->
+              <button
+                v-if="post.captionEditedAt"
+                class="text-xs text-muted hover:text-default transition-colors"
+                @click="captionHistoryModal = true"
               >
-                Save
-              </UButton>
-              <UButton
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                :disabled="savingCaption"
-                @click="cancelEditCaption"
+                (edited)
+              </button>
+
+              <!-- Edit button (owner only) -->
+              <button
+                v-if="isOwner"
+                class="text-xs text-primary hover:text-primary/80 transition-colors"
+                @click="startEditCaption"
               >
-                Cancel
-              </UButton>
-            </div>
-          </template>
-        </div>
-
-        <!-- Like button -->
-        <div class="flex items-center gap-2 shrink-0">
-          <span
-            v-if="isOwner && likeCount !== null"
-            class="text-sm text-muted tabular-nums"
-          >
-            {{ likeCount }} {{ likeCount === 1 ? 'like' : 'likes' }}
-          </span>
-
-          <UButton
-            :color="liked ? 'error' : 'neutral'"
-            :variant="liked ? 'soft' : 'ghost'"
-            size="sm"
-            :loading="liking"
-            :disabled="!isLoggedIn"
-            :title="isLoggedIn ? (liked ? 'Unlike' : 'Like') : 'Sign in to like'"
-            @click="toggleLike"
-          >
-            <template #leading>
-              <UIcon
-                name="i-lucide-heart"
-                :class="liked ? 'fill-current text-error' : 'text-muted'"
-                class="w-4 h-4"
-              />
+                Edit caption
+              </button>
             </template>
-          </UButton>
-        </div>
-      </div>
 
-      <!-- Comments (lazy-loaded sub-component) -->
-      <CollctPostComments
-        :photo-id="id"
-        :is-logged-in="isLoggedIn"
-        :session-user-id="sessionUser?.id ?? null"
-        :user="user"
-      />
+            <!-- Caption edit mode -->
+            <template v-else>
+              <UTextarea
+                v-model="editedCaption"
+                placeholder="Write a caption…"
+                :rows="3"
+                :maxlength="500"
+                class="w-full"
+              />
+              <div class="flex items-center gap-2">
+                <UButton
+                  size="xs"
+                  :loading="savingCaption"
+                  @click="saveCaption"
+                >
+                  Save
+                </UButton>
+                <UButton
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  :disabled="savingCaption"
+                  @click="cancelEditCaption"
+                >
+                  Cancel
+                </UButton>
+              </div>
+            </template>
+          </div>
+
+          <!-- Like button -->
+          <div class="flex items-center gap-2 shrink-0">
+            <span
+              v-if="isOwner && likeCount !== null"
+              class="text-sm text-muted tabular-nums"
+            >
+              {{ likeCount }} {{ likeCount === 1 ? 'like' : 'likes' }}
+            </span>
+
+            <UButton
+              :color="liked ? 'error' : 'neutral'"
+              :variant="liked ? 'soft' : 'ghost'"
+              size="sm"
+              :loading="liking"
+              :disabled="!isLoggedIn"
+              :title="isLoggedIn ? (liked ? 'Unlike' : 'Like') : 'Sign in to like'"
+              @click="toggleLike"
+            >
+              <template #leading>
+                <UIcon
+                  name="i-lucide-heart"
+                  :class="liked ? 'fill-current text-error' : 'text-muted'"
+                  class="w-4 h-4"
+                />
+              </template>
+            </UButton>
+          </div>
+        </div>
+
+        <!-- Comments (lazy-loaded sub-component) -->
+        <CollctPostComments
+          :photo-id="id"
+          :is-logged-in="isLoggedIn"
+          :session-user-id="sessionUser?.id ?? null"
+          :user="user"
+        />
+
+      </div>
     </div>
 
     <!-- Delete confirmation modal -->
