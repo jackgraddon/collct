@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: process.dev },
+  devtools: { enabled: import.meta.dev },
 
   devServer: {
     https: {
@@ -192,7 +192,7 @@ export default defineNuxtConfig({
         },
         {
           // Feed API responses — serve cached data when offline
-          urlPattern: /^\/api\/photos(\?.*)?$/,
+          urlPattern: /\/api\/photos(\?.*)?$/,
           handler: 'NetworkFirst',
           options: {
             cacheName: 'collct-feed-cache',
