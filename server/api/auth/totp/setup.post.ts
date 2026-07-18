@@ -8,6 +8,13 @@ export default defineEventHandler(async (event) => {
   const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).then(r => r[0])
   if (!user) throw createError({ statusCode: 401 })
 
+  if (user.totpEnabled) {
+    throw createError({
+      statusCode: 400,
+      message: 'TOTP is already enabled. Disable it first before setting up a new one.',
+    })
+  }
+
   const { secret, uri } = createTotpSecret(user.email)
 
   // Store as unverified — replaces any previous pending setup

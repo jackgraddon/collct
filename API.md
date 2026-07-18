@@ -90,7 +90,7 @@ The session cookie is set in both cases — but the MFA response only contains `
 
 **Endpoint:** `POST /auth/totp/setup`
 
-**Description:** Begin TOTP two-factor authentication setup. Generates a new TOTP secret and returns the `otpauth://` URI for the client to render as a QR code. Replaces any previously pending (unverified) setup.
+**Description:** Begin TOTP two-factor authentication setup. Generates a new TOTP secret and returns the `otpauth://` URI for the client to render as a QR code. Replaces any previously pending (unverified) setup. Rejects the request if TOTP is already enabled — disable it first.
 
 **Authentication:** Required
 
@@ -107,6 +107,7 @@ The session cookie is set in both cases — but the MFA response only contains `
 
 **Status codes:**
 - `200` — success
+- `400` — TOTP is already enabled (must disable first)
 - `401` — not authenticated
 
 ---
