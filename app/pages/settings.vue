@@ -55,6 +55,50 @@
         </div>
       </template>
 
+      <template #notifications>
+        <div class="my-4 space-y-4">
+          <p class="text-sm text-muted">Control whether you receive push notifications when friends interact with your photos.</p>
+
+          <div class="flex items-center gap-3 p-3 rounded-lg border border-(--ui-border)">
+            <UIcon
+              :name="isPushGranted ? 'i-lucide-bell-ring' : 'i-lucide-bell-off'"
+              class="w-5 h-5 shrink-0"
+              :class="isPushGranted ? 'text-green-500' : 'text-muted'"
+            />
+            <div class="flex-1">
+              <p class="text-sm font-medium">
+                {{ isPushGranted ? 'Notifications enabled' : isPushDenied ? 'Notifications blocked' : 'Notifications not enabled' }}
+              </p>
+              <p class="text-xs text-muted mt-0.5">
+                {{ isPushDenied
+                  ? 'You\'ll need to enable notifications in your browser settings.'
+                  : isPushGranted
+                    ? 'You\'ll receive push notifications for new likes, comments, and group joins.'
+                    : 'Enable notifications to get alerted when friends interact with your photos.'
+                }}
+              </p>
+            </div>
+            <UButton
+              v-if="!isPushGranted && !isPushDenied"
+              color="primary"
+              size="xs"
+              @click="enableNotifications"
+            >
+              Enable
+            </UButton>
+            <UButton
+              v-else-if="isPushGranted"
+              color="neutral"
+              variant="outline"
+              size="xs"
+              @click="disableNotifications"
+            >
+              Disable
+            </UButton>
+          </div>
+        </div>
+      </template>
+
       <template #security>
         <div class="my-4 space-y-4">
           <p class="text-sm text-muted">Manage your two-factor authentication, recovery codes, and other security settings.</p>
@@ -88,9 +132,27 @@
 definePageMeta({ title: 'Settings', description: 'Manage your settings', layout: 'page' })
 
 const { user, refresh: refreshMe, refreshSession } = useUser()
+const { isSubscribed, permission, requestPermission, subscribe, unsubscribe } = usePushNotifications()
 const toast = useToast()
 const saving = ref(false)
 const showOobe = ref(false)
+
+const isPushGranted = computed(() => permission.value === 'granted' && isSubscribed.value)
+const isPushDenied = computed(() => permission.value === 'denied')
+
+async function enableNotifications() {
+  const granted = await requestPermission()
+  if (granted) {
+    toast.add({ title: 'Notifications enabled', color: 'success' })
+  } else {
+    toast.add({ title: 'Permission denied', description: 'You can enable notifications in your browser settings.', color: 'warning' })
+  }
+}
+
+async function disableNotifications() {
+  await unsubscribe()
+  toast.add({ title: 'Notifications disabled', color: 'success' })
+}
 
 const avatarInput = ref<HTMLInputElement | null>(null)
 const uploadingAvatar = ref(false)
@@ -165,6 +227,11 @@ const tabs = computed(() => [
       src: user.value?.avatarUrl || undefined,
       alt: user.value?.name,
     },
+  },
+  {
+    slot: 'notifications',
+    label: 'Notifications',
+    icon: 'i-lucide-bell',
   },
   {
     slot: 'security',
