@@ -54,7 +54,7 @@ function lighten(hex: string | null | undefined, amount = 0.85): string {
       <span
         v-for="group in displayGroups"
         :key="group.id"
-        class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px]"
+        class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] text-nowrap text-ellipsis"
         :title="group.name"
         :style="{
           backgroundColor: lighten(group.color),
