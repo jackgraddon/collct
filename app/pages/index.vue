@@ -76,7 +76,7 @@ async function checkForNewPosts() {
     const newest = feedState.value.photos[0]
     if (!newest) return
     const newer = await $fetch<FeedState>('/api/photos', {
-      query: { limit: 50, after: new Date(newest.createdAt).getTime() },
+      query: { limit: 50, after: new Date(newest.createdAt).getTime() + 1 },
     })
     if (newer.photos.length) {
       pendingNewPosts.value = newer.photos
