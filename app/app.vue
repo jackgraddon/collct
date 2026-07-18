@@ -30,6 +30,7 @@ onMounted(() => {
   if (user.value && !user.value.hasSeenOobe) {
     showOobe.value = true
   }
+  // Auto-subscribe if permission already granted (no prompt needed)
   subscribe()
 })
 

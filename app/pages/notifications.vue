@@ -22,6 +22,20 @@
       </UButton>
     </div>
 
+    <!-- Push notification prompt -->
+    <div v-if="showPrompt" class="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20 mb-4">
+      <div class="w-2 h-2 rounded-full shrink-0 bg-primary" />
+      <UIcon name="i-lucide-bell-ring" class="w-10 h-10 text-primary shrink-0" />
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-medium">Enable notifications?</p>
+        <p class="text-xs text-muted mt-0.5">Get notified when friends like or comment on your photos.</p>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <UButton color="neutral" variant="ghost" size="xs" @click="dismissPrompt">Later</UButton>
+        <UButton color="primary" size="xs" @click="enableNotifications">Enable</UButton>
+      </div>
+    </div>
+
     <div v-if="loading && !notifications.length" class="space-y-4">
       <div v-for="i in 5" :key="i" class="flex items-center gap-3 p-3">
         <USkeleton class="w-10 h-10 rounded-full shrink-0" />
@@ -116,6 +130,13 @@ interface NotificationItem {
 definePageMeta({ layout: 'default' })
 
 const router = useRouter()
+const { shouldPrompt, requestPermission, dismissPrompt } = usePushNotifications()
+
+const showPrompt = computed(() => shouldPrompt.value)
+
+async function enableNotifications() {
+  await requestPermission()
+}
 
 const { refresh: refreshUnread } = await useFetch<{ count: number }>('/api/notifications/unread-count', {
   key: 'notifications-unread',

@@ -29,6 +29,19 @@
         class="fixed left-4 right-4 top-14 sm:absolute sm:right-0 sm:left-auto sm:mt-2 sm:w-80 bg-(--ui-bg) rounded-lg shadow-lg border border-(--ui-border) z-50 overflow-hidden"
       >
         <div class="max-h-96 overflow-y-auto">
+          <div v-if="showPrompt" class="flex items-center gap-3 p-3 bg-primary/5 border-b border-(--ui-border)">
+            <div class="w-2 h-2 rounded-full shrink-0 bg-primary" />
+            <UIcon name="i-lucide-bell-ring" class="w-8 h-8 text-primary shrink-0" />
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium">Enable notifications?</p>
+              <p class="text-xs text-muted mt-0.5">Get notified about likes and comments.</p>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <UButton color="neutral" variant="ghost" size="xs" @click="dismissPrompt">Later</UButton>
+              <UButton color="primary" size="xs" @click="enableNotifications">Enable</UButton>
+            </div>
+          </div>
+
           <div v-if="notifications.length" class="divide-y divide-(--ui-border)">
             <NuxtLink
               v-for="n in notifications"
@@ -87,6 +100,13 @@ import { onClickOutside } from '@vueuse/core'
 const isOpen = ref(false)
 const container = ref<HTMLElement | null>(null)
 const { unreadCount, notifications } = useNotificationPolling()
+const { shouldPrompt, requestPermission, dismissPrompt } = usePushNotifications()
+
+const showPrompt = computed(() => shouldPrompt.value)
+
+async function enableNotifications() {
+  await requestPermission()
+}
 
 function toggle() {
   isOpen.value = !isOpen.value
