@@ -22,16 +22,26 @@ const isOwner = computed(() => sessionUser.value?.id === post.value?.user.id)
 const isLoggedIn = computed(() => !!sessionUser.value?.id)
 
 // ─── Date ─────────────────────────────────────────────────────────────────────
+const parseSafeDate = (dateVal: string | Date | null | undefined): Date => {
+  if (!dateVal) return new Date()
+  if (dateVal instanceof Date) return dateVal
+  if (typeof dateVal === 'string') {
+    const normalized = dateVal.includes('T') ? dateVal : dateVal.replace(' ', 'T')
+    return new Date(normalized)
+  }
+  return new Date(dateVal)
+}
+
 const formattedDate = computed(() => {
   if (!post.value?.createdAt) return ''
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(post.value.createdAt))
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(parseSafeDate(post.value.createdAt))
 })
 
 function formatEditDate(isoString: string) {
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(new Date(isoString))
+  }).format(parseSafeDate(isoString))
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────

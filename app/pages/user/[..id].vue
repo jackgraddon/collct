@@ -36,10 +36,20 @@ function share() {
 const { user } = useUserSession()
 const isOwner = computed(() => user.value?.id === post.value?.user.id)
 
+const parseSafeDate = (dateVal: string | Date | null | undefined): Date => {
+  if (!dateVal) return new Date()
+  if (dateVal instanceof Date) return dateVal
+  if (typeof dateVal === 'string') {
+    const normalized = dateVal.includes('T') ? dateVal : dateVal.replace(' ', 'T')
+    return new Date(normalized)
+  }
+  return new Date(dateVal)
+}
+
 // Format date
 const formattedDate = computed(() => {
   if (!post.value?.createdAt) return ''
-  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(new Date(post.value.createdAt))
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(parseSafeDate(post.value.createdAt))
 })
 </script>
 

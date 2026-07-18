@@ -117,6 +117,16 @@ onMounted(async () => {
   await checkForNewPosts()
 })
 
+const parseSafeDate = (dateVal: string | Date | null | undefined): Date => {
+  if (!dateVal) return new Date()
+  if (dateVal instanceof Date) return dateVal
+  if (typeof dateVal === 'string') {
+    const normalized = dateVal.includes('T') ? dateVal : dateVal.replace(' ', 'T')
+    return new Date(normalized)
+  }
+  return new Date(dateVal)
+}
+
 async function checkForNewPosts() {
   if (!feedState.value?.photos.length || checkingForNew.value) return
   checkingForNew.value = true
@@ -124,7 +134,7 @@ async function checkForNewPosts() {
     const newest = feedState.value.photos[0]
     if (!newest) return
     const newer = await $fetch<FeedState>('/api/photos', {
-      query: { limit: 50, after: new Date(newest.createdAt).getTime() + 1 },
+      query: { limit: 50, after: parseSafeDate(newest.createdAt).getTime() + 1 },
     })
     if (newer.photos.length) {
       pendingNewPosts.value = newer.photos
