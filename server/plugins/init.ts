@@ -3,6 +3,8 @@ import { eq } from 'drizzle-orm'
 import { getAdminConfig } from '../utils/config'
 
 export default defineNitroPlugin(async () => {
+  if (process.env.NITRO_PRERENDER) return
+
   const config = getAdminConfig()
 
   // Create Public group if enabled
