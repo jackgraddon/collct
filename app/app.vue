@@ -22,6 +22,7 @@ useHead({
 
 const { user } = useUser()
 const router = useRouter()
+const { subscribe } = usePushNotifications()
 
 const showOobe = ref(false)
 
@@ -29,6 +30,7 @@ onMounted(() => {
   if (user.value && !user.value.hasSeenOobe) {
     showOobe.value = true
   }
+  subscribe()
 })
 
 // Watch for user data loading after mount

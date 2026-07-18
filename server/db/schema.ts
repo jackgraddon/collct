@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, index, unique, serial, text, timestamp, integer, boolean, uuid } from 'drizzle-orm/pg-core'
+import { pgTable, pgEnum, index, unique, uniqueIndex, serial, text, timestamp, integer, boolean, uuid } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 export const users = pgTable('users', {
@@ -228,5 +228,25 @@ export const photoGroups = pgTable(
     unique('photo_groups_photo_group_unique').on(t.photoId, t.groupId),
     index('photo_groups_group_photo_idx').on(t.groupId, t.photoId),
     index('photo_groups_photo_idx').on(t.photoId),
+  ],
+)
+
+// Push Subscriptions
+
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull(),
+    authKey: text('auth_key').notNull(),
+    p256dhKey: text('p256dh_key').notNull(),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('idx_push_subscription_unique').on(t.userId, t.endpoint),
   ],
 )

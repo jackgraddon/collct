@@ -30,8 +30,13 @@ export default defineNuxtConfig({
   image: { provider: 'vercel' },
 
   runtimeConfig: {
+    vapidPublicKey: '',
+    vapidPrivateKey: '',
     session: {
       maxAge: 60 * 60 * 24 * 30, // 30 days
+    },
+    public: {
+      vapidPublicKey: '',
     },
   },
 
@@ -152,6 +157,7 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+      importScripts: ['/push-handler.js'],
       runtimeCaching: [
         {
           // All images served through NuxtImg / Vercel Image proxy

@@ -88,8 +88,25 @@ declare global {
     createdBy: number
     maxUses: number | null
     useCount: number
-    expiresAt: string | Date | null
-    revokedAt: string | Date | null
-    createdAt: string | Date
+    expiresAt: Date | string | null
+    revokedAt: Date | string | null
+    createdAt: Date | string
+  }
+
+  interface Notification {
+    id: number
+    type: 'like' | 'comment' | 'group_join'
+    isRead: boolean
+    photoId: number | null
+    commentId: number | null
+    groupId: number | null
+    createdAt: string
+    photoUrl: string | null
+    actor: {
+      id: number
+      name: string
+      username: string
+      avatarUrl: string | null
+    }
   }
 }
