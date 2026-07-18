@@ -40,8 +40,7 @@ On success (after the browser completes the passkey ceremony), the session is se
 
 **Status codes:**
 - `200` — success
-- `400` — invalid request, challenge expired, or username mismatch with existing session
-- `409` — username already taken (during new user registration)
+- `400` — invalid request, challenge expired, username mismatch with existing session, or username already taken
 
 ---
 
@@ -497,6 +496,7 @@ Returns the stored blob pathname (not a presigned URL). The client can resolve i
       "editedAt": "2026-07-15T12:00:00Z"
     }
   ],
+  "blobPathname": "photos/1/1720000000000-abc123.jpg",
   "createdAt": "2026-07-15T12:00:00.000Z",
   "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
   "user": {
@@ -1326,6 +1326,39 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
 
 ## Utility Endpoints
 
+### Get Lorem Posts
+
+**Endpoint:** `GET /lorem/posts`
+
+**Description:** Generate mock post data with random images from Picsum. Intended for development and testing.
+
+**Authentication:** None
+
+**Query Parameters:**
+
+| Parameter | Default | Max | Description |
+|-----------|---------|-----|-------------|
+| `count` | 10 | 50 | Number of mock posts to generate |
+
+**Response:**
+
+```json
+[
+  {
+    "id": "0001",
+    "author": "Jeff Goldblum",
+    "img": "https://picsum.photos/seed/abc123/800/450",
+    "width": 800,
+    "height": 450
+  }
+]
+```
+
+**Status codes:**
+- `200` — success
+
+---
+
 ### Get Blob File
 
 **Endpoint:** `GET /blob/*`
@@ -1376,7 +1409,7 @@ Common status codes:
 - `401` — Unauthorized (not authenticated or invalid session)
 - `403` — Forbidden (authenticated but lacks permission)
 - `404` — Not Found (resource does not exist or is not visible to requester)
-- `409` — Conflict (resource already exists, e.g. username taken, already a member)
+- `409` — Conflict (resource already exists, e.g. already a member)
 - `410` — Gone (invite revoked, expired, or exhausted)
 - `413` — Payload Too Large (file exceeds size limit)
 - `415` — Unsupported Media Type (invalid file type)

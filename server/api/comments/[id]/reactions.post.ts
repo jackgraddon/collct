@@ -14,8 +14,6 @@ interface ReactionCounts {
 const REACTION_TYPES: ReactionType[] = ['thumbs_up', 'thumbs_down', 'heart', 'cry']
 
 export default defineEventHandler(async (event) => {
-  if (event.method !== 'POST') throw createError({ statusCode: 405 })
-
   const session = await requireUserSession(event)
   const currentUserId: number = session.user.id
 
