@@ -100,11 +100,93 @@
       </template>
 
       <template #security>
-        <div class="my-4 space-y-4">
-          <p class="text-sm text-muted">Manage your two-factor authentication, recovery codes, and other security settings.</p>
-          <UButton to="/account/security" icon="solar:shield-check-linear">
-            Open Security Settings
-          </UButton>
+        <div class="my-4 space-y-6">
+          <!-- TOTP Section -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-sm font-medium">Two-Factor Authentication</h3>
+              <UBadge :color="sessionUser?.totpEnabled ? 'success' : 'neutral'" size="sm">
+                {{ sessionUser?.totpEnabled ? 'Enabled' : 'Disabled' }}
+              </UBadge>
+            </div>
+            <p class="text-sm text-muted mb-3">
+              Use an authenticator app (Google Authenticator, Authy, 1Password, etc.) to get a verification code each time you sign in.
+            </p>
+
+            <!-- Enable flow -->
+            <div v-if="!sessionUser?.totpEnabled && !showTotpSetup">
+              <UButton @click="onEnableTotp" :loading="totpLoading" size="sm">Enable Authenticator App</UButton>
+            </div>
+
+            <!-- Setup panel -->
+            <div v-if="showTotpSetup" class="space-y-4 p-4 border rounded-lg bg-muted/50">
+              <div class="flex flex-col md:flex-row gap-6 items-center">
+                <div v-if="uri" class="bg-white p-3 rounded-lg">
+                  <Qrcode :value="uri" :size="160" />
+                </div>
+                <div class="flex-1 space-y-3">
+                  <div>
+                    <p class="text-sm font-medium">1. Scan this QR code</p>
+                    <p class="text-xs text-muted">Open your authenticator app and scan the image.</p>
+                  </div>
+                  <div v-if="secret">
+                    <p class="text-sm font-medium">Or enter this code manually</p>
+                    <p class="font-mono text-xs bg-muted p-2 rounded select-all">{{ secret }}</p>
+                  </div>
+                  <div class="space-y-1">
+                    <p class="text-sm font-medium">2. Enter verification code</p>
+                    <div class="flex gap-2">
+                      <UInput v-model="token" placeholder="000000" maxlength="6" class="w-28" size="sm" />
+                      <UButton @click="onVerifyTotp" :loading="totpLoading" size="sm">Verify & Enable</UButton>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="pt-3 border-t flex justify-end">
+                <UButton variant="ghost" color="neutral" size="xs" @click="() => { showTotpSetup = false }">Cancel</UButton>
+              </div>
+            </div>
+
+            <!-- Disable -->
+            <div v-if="sessionUser?.totpEnabled">
+              <UButton color="error" variant="outline" size="sm" @click="openDisableDialog">Disable 2FA</UButton>
+            </div>
+          </div>
+
+          <USeparator />
+
+          <!-- Recovery Codes Section -->
+          <div>
+            <h3 class="text-sm font-medium mb-2">Recovery Codes</h3>
+            <p class="text-sm text-muted mb-3">
+              Recovery codes can be used to access your account if you lose your passkey or authenticator device.
+              <strong>Keep them in a safe place.</strong>
+            </p>
+
+            <div v-if="!showRecoveryCodes">
+              <UButton variant="outline" size="sm" @click="onGenerateRecoveryCodes" :loading="recoveryLoading">
+                {{ codes.length > 0 ? 'Regenerate' : 'Generate' }} Recovery Codes
+              </UButton>
+            </div>
+
+            <div v-else class="space-y-3 p-4 border rounded-lg bg-muted/50">
+              <UAlert v-if="codes.length > 0" color="warning" variant="subtle" title="Save these codes now!" description="You won't be able to see them again after you leave this page." />
+
+              <div class="grid grid-cols-2 gap-2 font-mono">
+                <div v-for="code in codes" :key="code" class="p-2 bg-muted rounded text-center text-sm">
+                  {{ code }}
+                </div>
+              </div>
+
+              <div class="flex justify-between items-center pt-3 border-t">
+                <div class="flex gap-1">
+                  <UButton icon="i-solar-copy-bold" variant="ghost" size="xs" @click="copyCodes">Copy</UButton>
+                  <UButton icon="i-solar-download-bold" variant="ghost" size="xs" @click="downloadCodes">Download</UButton>
+                </div>
+                <UButton color="neutral" size="xs" @click="() => { showRecoveryCodes = false }">Done</UButton>
+              </div>
+            </div>
+          </div>
         </div>
       </template>
 
@@ -125,6 +207,52 @@
     </UTabs>
   <!-- </UPageCard> -->
 
+  <!-- Disable 2FA Dialog -->
+  <UModal v-model:open="showDisableDialog" title="Disable Two-Factor Authentication">
+    <template #body>
+      <div class="space-y-4">
+        <p class="text-sm text-muted">
+          Enter your current authenticator code or a recovery code to confirm.
+        </p>
+        <URadioGroup v-model="disableMode" :items="[{ label: 'Authenticator code', value: 'totp' }, { label: 'Recovery code', value: 'recovery' }]" />
+        <div v-if="disableMode === 'totp'">
+          <UFormField label="Verification Code">
+            <UInput v-model="disableToken" placeholder="000000" maxlength="6" class="w-full" @keyup.enter="onDisableTotp" />
+          </UFormField>
+        </div>
+        <div v-else>
+          <UFormField label="Recovery Code">
+            <UInput v-model="disableRecoveryCode" placeholder="XXXX-XXXX-XXXX" class="w-full" @keyup.enter="onDisableTotp" />
+          </UFormField>
+        </div>
+        <UAlert v-if="disableError" color="error" variant="subtle" :description="disableError" />
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton variant="outline" color="neutral" @click="() => { showDisableDialog = false }">Cancel</UButton>
+        <UButton color="error" :loading="disableLoading" :disabled="disableMode === 'totp' ? !disableToken : !disableRecoveryCode" @click="onDisableTotp">
+          Disable 2FA
+        </UButton>
+      </div>
+    </template>
+  </UModal>
+
+  <!-- Regeneration Warning Dialog -->
+  <UModal v-model:open="showRegenWarning" title="Regenerate Recovery Codes?">
+    <template #body>
+      <p class="text-sm text-muted">
+        This will invalidate all your existing recovery codes. Any codes you've saved will stop working.
+      </p>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton variant="outline" color="neutral" @click="() => { showRegenWarning = false }">Cancel</UButton>
+        <UButton color="warning" @click="doGenerateRecoveryCodes">Yes, Regenerate</UButton>
+      </div>
+    </template>
+  </UModal>
+
   <CollctOobeModal v-model:open="showOobe" />
 </template>
 
@@ -132,7 +260,10 @@
 definePageMeta({ title: 'Settings', description: 'Manage your settings', layout: 'page' })
 
 const { user, refresh: refreshMe, refreshSession } = useUser()
+const { user: sessionUser, fetch: refreshSessionAuth } = useUserSession()
 const { isSubscribed, permission, requestPermission, subscribe, unsubscribe } = usePushNotifications()
+const { uri, secret, setup, verify, disable, loading: totpLoading } = useTotp()
+const { codes, generate, loading: recoveryLoading } = useRecoveryCodes()
 const toast = useToast()
 const saving = ref(false)
 const showOobe = ref(false)
@@ -152,6 +283,97 @@ async function enableNotifications() {
 async function disableNotifications() {
   await unsubscribe()
   toast.add({ title: 'Notifications disabled', color: 'success' })
+}
+
+// TOTP
+const token = ref('')
+const showTotpSetup = ref(false)
+const showRecoveryCodes = ref(false)
+const showDisableDialog = ref(false)
+const disableToken = ref('')
+const disableRecoveryCode = ref('')
+const disableMode = ref<'totp' | 'recovery'>('totp')
+const disableLoading = ref(false)
+const disableError = ref('')
+const showRegenWarning = ref(false)
+
+async function onEnableTotp() {
+  try {
+    await setup()
+    showTotpSetup.value = true
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.message, color: 'error' })
+  }
+}
+
+async function onVerifyTotp() {
+  try {
+    await verify(token.value)
+    toast.add({ title: 'Success', description: '2FA enabled successfully', color: 'success' })
+    showTotpSetup.value = false
+    token.value = ''
+    await refreshSessionAuth()
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: 'Invalid code. Please try again.', color: 'error' })
+  }
+}
+
+function openDisableDialog() {
+  disableToken.value = ''
+  disableRecoveryCode.value = ''
+  disableMode.value = 'totp'
+  disableError.value = ''
+  showDisableDialog.value = true
+}
+
+async function onDisableTotp() {
+  disableLoading.value = true
+  disableError.value = ''
+  try {
+    const body = disableMode.value === 'totp'
+      ? { token: disableToken.value }
+      : { recoveryCode: disableRecoveryCode.value }
+    await disable(body)
+    toast.add({ title: 'Success', description: '2FA has been disabled.', color: 'success' })
+    showDisableDialog.value = false
+    await refreshSessionAuth()
+  } catch (e: any) {
+    disableError.value = e.data?.message ?? 'Invalid code. Please try again.'
+  } finally {
+    disableLoading.value = false
+  }
+}
+
+async function onGenerateRecoveryCodes() {
+  if (codes.value.length > 0) {
+    showRegenWarning.value = true
+    return
+  }
+  await doGenerateRecoveryCodes()
+}
+
+async function doGenerateRecoveryCodes() {
+  showRegenWarning.value = false
+  try {
+    await generate()
+    showRecoveryCodes.value = true
+    toast.add({ title: 'Codes generated', description: 'Save these codes somewhere safe.', color: 'success' })
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.message, color: 'error' })
+  }
+}
+
+function copyCodes() {
+  navigator.clipboard.writeText(codes.value.join('\n'))
+  toast.add({ title: 'Copied', description: 'Recovery codes copied to clipboard' })
+}
+
+function downloadCodes() {
+  const blob = new Blob([codes.value.join('\n')], { type: 'text/plain' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = 'collct-recovery-codes.txt'
+  a.click()
 }
 
 const avatarInput = ref<HTMLInputElement | null>(null)
