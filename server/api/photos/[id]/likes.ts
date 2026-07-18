@@ -8,16 +8,14 @@ export default defineEventHandler(async (event) => {
   const session = await getUserSession(event)
   const viewerId: number | null = session?.user?.id ?? null
 
-  // Resolve photo owner once
+  // Verify photo exists
   const [photo] = await db
-    .select({ userId: schema.photos.userId })
+    .select({ id: schema.photos.id })
     .from(schema.photos)
     .where(eq(schema.photos.id, photoId))
     .limit(1)
 
   if (!photo) throw createError({ statusCode: 404, message: 'Photo not found' })
-
-  const isOwner = viewerId !== null && viewerId === photo.userId
 
   if (event.method === 'GET') {
     // Check if viewer can see likes on this photo
@@ -80,7 +78,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       liked: !!viewerLike,
-      count: isOwner ? totalCount : null,
+      count: totalCount,
     }
   }
 
@@ -155,7 +153,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       liked: !existing,
-      count: isOwner ? postTotalCount : null,
+      count: postTotalCount,
     }
   }
 
