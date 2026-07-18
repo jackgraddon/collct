@@ -26,7 +26,7 @@
     >
       <div
         v-if="isOpen"
-        class="absolute right-0 mt-2 w-80 bg-(--ui-bg) rounded-lg shadow-lg border border-(--ui-border) z-50 overflow-hidden"
+        class="fixed left-4 right-4 top-14 sm:absolute sm:right-0 sm:left-auto sm:mt-2 sm:w-80 bg-(--ui-bg) rounded-lg shadow-lg border border-(--ui-border) z-50 overflow-hidden"
       >
         <div class="max-h-96 overflow-y-auto">
           <div v-if="notifications.length" class="divide-y divide-(--ui-border)">
