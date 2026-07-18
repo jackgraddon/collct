@@ -40,7 +40,9 @@ interface FeedState {
   nextCursor: number | null
 }
 
-const feedState = useState<FeedState | null>('feed-data', () => null)
+const { data: feedState } = await useAsyncData<FeedState>('feed', () =>
+  $fetch('/api/photos', { query: { limit: 20 } }),
+)
 
 // Buffer for manually appended items (uploads)
 const appendedPosts = ref<PostData[]>([])
@@ -60,14 +62,6 @@ const visiblePosts = computed(() => [
 ])
 
 const exhausted = computed(() => feedState.value?.nextCursor === null)
-
-// ─── Initial load ────────────────────────────────────────────────────────────
-if (!feedState.value) {
-  const result = await $fetch<FeedState>('/api/photos', {
-    query: { limit: 20 },
-  })
-  feedState.value = result
-}
 
 // ─── Check for new posts on every mount (including back-navigation) ──────────
 onMounted(async () => {
