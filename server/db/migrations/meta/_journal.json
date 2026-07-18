@@ -64,6 +64,13 @@
       "when": 1784177936001,
       "tag": "0008_add_edit_history",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784386884149,
+      "tag": "0009_add_notifications",
+      "breakpoints": true
     }
   ]
 }
