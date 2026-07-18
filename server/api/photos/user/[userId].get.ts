@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
       createdAt: schema.photos.createdAt,
       user: {
         id: schema.users.id,
+        username: schema.users.username,
         name: schema.users.name,
         avatarUrl: schema.users.avatarUrl,
       },
