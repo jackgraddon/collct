@@ -57,7 +57,32 @@ interface FeedState {
 const { data: feedState } = await useFetch<FeedState>('/api/photos', {
   query: { limit: 20 },
   key: 'feed',
+  getCachedData(key, nuxtApp) {
+    if (import.meta.server) return
+
+    const cached = nuxtApp.payload.data[key] || nuxtApp.static.data[key]
+    if (cached) return cached
+
+    try {
+      const local = localStorage.getItem(key)
+      if (local) {
+        return JSON.parse(local)
+      }
+    } catch (e) {
+      console.error('Error reading feed from localStorage:', e)
+    }
+  },
 })
+
+watch(feedState, (newVal) => {
+  if (import.meta.client && newVal) {
+    try {
+      localStorage.setItem('feed', JSON.stringify(newVal))
+    } catch (e) {
+      console.error('Error writing feed to localStorage:', e)
+    }
+  }
+}, { deep: true, immediate: true })
 
 // Buffer for manually appended items (uploads)
 const appendedPosts = ref<PostData[]>([])
