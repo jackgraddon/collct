@@ -64,5 +64,20 @@ export default defineEventHandler(async (event) => {
   // Ensure user is also in Public
   await joinUserToPublic(userId)
 
+  // Notify group owner
+  const [group] = await db
+    .select({ ownerId: schema.groups.ownerId })
+    .from(schema.groups)
+    .where(eq(schema.groups.id, invite.groupId))
+    .limit(1)
+  if (group?.ownerId) {
+    await createNotification({
+      userId: group.ownerId,
+      actorId: userId,
+      type: 'group_join',
+      groupId: invite.groupId,
+    })
+  }
+
   return { ok: true, groupId: invite.groupId }
 })

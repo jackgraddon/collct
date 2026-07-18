@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
 
   // Verify photo exists
   const [photo] = await db
-    .select({ id: schema.photos.id })
+    .select({ id: schema.photos.id, userId: schema.photos.userId })
     .from(schema.photos)
     .where(eq(schema.photos.id, photoId))
     .limit(1)
@@ -117,8 +117,10 @@ export default defineEventHandler(async (event) => {
 
     if (existing) {
       await db.delete(schema.likes).where(eq(schema.likes.id, existing.id))
+      await deleteNotification({ userId: photo.userId, actorId: viewerId, type: 'like', photoId })
     } else {
       await db.insert(schema.likes).values({ userId: viewerId, photoId })
+      await createNotification({ userId: photo.userId, actorId: viewerId, type: 'like', photoId })
     }
 
     // Re-fetch viewer-scoped count

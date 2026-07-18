@@ -131,6 +131,37 @@ export const commentReactions = pgTable(
   ],
 )
 
+// Notifications
+
+export const notificationTypeEnum = pgEnum('notification_type', [
+  'like',
+  'comment',
+  'group_join',
+])
+
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    actorId: integer('actor_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: notificationTypeEnum('type').notNull(),
+    photoId: integer('photo_id').references(() => photos.id, { onDelete: 'cascade' }),
+    commentId: integer('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
+    groupId: integer('group_id').references(() => groups.id, { onDelete: 'cascade' }),
+    isRead: boolean('is_read').notNull().default(false),
+    createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('notifications_user_id_idx').on(t.userId),
+    index('notifications_user_read_idx').on(t.userId, t.isRead),
+  ],
+)
+
 // Groups & Visibility
 
 export const groupRoleEnum = pgEnum('group_role', ['owner', 'admin', 'member'])

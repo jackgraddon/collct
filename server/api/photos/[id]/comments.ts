@@ -172,6 +172,22 @@ export default defineEventHandler(async (event) => {
 
     if (!comment) throw createError({ statusCode: 500, message: 'Failed to create comment' })
 
+    // Notify photo owner
+    const [photoOwner] = await db
+      .select({ userId: schema.photos.userId })
+      .from(schema.photos)
+      .where(eq(schema.photos.id, photoId))
+      .limit(1)
+    if (photoOwner) {
+      await createNotification({
+        userId: photoOwner.userId,
+        actorId: currentUserId,
+        type: 'comment',
+        photoId,
+        commentId: comment.id,
+      })
+    }
+
     // Return in the same shape as GET rows so the client can push it into the list
     const [author] = await db
       .select({ name: schema.users.name, username: schema.users.username, avatarUrl: schema.users.avatarUrl })

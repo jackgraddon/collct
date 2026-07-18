@@ -2,6 +2,7 @@
   <UHeader title="Collct" class="border-b-0" mode="slideover">
     <UNavigationMenu :items="items" variant="link" />
     <template #right>
+      <CollctNotificationBell />
       <UColorModeButton />
       <UButton label="Post" icon="solar:add-circle-linear" @click="() => { uploadModal = true }" />
 
