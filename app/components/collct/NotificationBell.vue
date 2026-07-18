@@ -17,9 +17,14 @@
 </template>
 
 <script lang="ts" setup>
-const { data } = await useFetch<{ count: number }>('/api/notifications/unread-count', {
+const route = useRoute()
+const { data, refresh } = await useFetch<{ count: number }>('/api/notifications/unread-count', {
   key: 'notifications-unread',
 })
 
 const unreadCount = computed(() => data.value?.count ?? 0)
+
+watch(() => route.fullPath, () => {
+  refresh()
+})
 </script>

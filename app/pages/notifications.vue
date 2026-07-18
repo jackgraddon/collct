@@ -1,7 +1,16 @@
 <template>
   <div>
     <div class="flex items-center justify-between mb-6">
-      <h1 class="text-xl font-semibold">Notifications</h1>
+      <div class="flex items-center gap-3">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-arrow-left"
+          size="sm"
+          @click="router.back()"
+        />
+        <h1 class="text-xl font-semibold">Notifications</h1>
+      </div>
       <UButton
         v-if="unreadCount > 0"
         color="neutral"
@@ -105,6 +114,8 @@ interface NotificationItem {
 }
 
 definePageMeta({ layout: 'default' })
+
+const router = useRouter()
 
 const { refresh: refreshUnread } = await useFetch<{ count: number }>('/api/notifications/unread-count', {
   key: 'notifications-unread',
