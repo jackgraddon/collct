@@ -43,6 +43,22 @@ export default defineWebAuthnRegisterEventHandler({
          throw createError({ statusCode: 400, message: 'Username does not match recovery session' })
        }
     } else {
+      const config = getAdminConfig()
+      if (config.allowRegistration === 'no') {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'Registration is disabled on this instance',
+          message: 'Registration is disabled on this instance'
+        })
+      }
+      if (config.allowRegistration === 'invite-only') {
+        throw createError({
+          statusCode: 403,
+          statusMessage: 'This instance requires an invite code to register',
+          message: 'This instance requires an invite code to register'
+        })
+      }
+
       // No session: check if user already exists (prevent account takeover)
       const existingUser = await db.select().from(schema.users).where(eq(schema.users.username, userBody.userName)).then(r => r[0])
       if (existingUser) {
@@ -88,7 +104,8 @@ export default defineWebAuthnRegisterEventHandler({
     }
 
     // Auto-join new users to the Public group
-    if (isNewUser) {
+    const config = getAdminConfig()
+    if (isNewUser && config.publicGroupEnabled) {
       await joinUserToPublic(dbUser.id)
     }
 

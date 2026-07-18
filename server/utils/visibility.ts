@@ -1,5 +1,6 @@
 import { db, schema } from '@nuxthub/db'
 import { eq, and, sql, inArray, type SQL } from 'drizzle-orm'
+import { getAdminConfig } from './config'
 
 /**
  * Ensure the Public group exists and return it.
@@ -13,6 +14,9 @@ export async function ensurePublicGroup() {
     .limit(1)
 
   if (existing) return existing
+
+  const config = getAdminConfig()
+  if (!config.publicGroupEnabled) return null
 
   const [created] = await db
     .insert(schema.groups)
@@ -28,7 +32,12 @@ export async function ensurePublicGroup() {
  * Idempotent — safe to call multiple times.
  */
 export async function joinUserToPublic(userId: number) {
+  const config = getAdminConfig()
+  if (!config.publicGroupEnabled) return
+
   const pub = await ensurePublicGroup()
+  if (!pub) return
+
   await db
     .insert(schema.groupMembers)
     .values({ groupId: pub.id, userId, role: 'member' })
@@ -41,7 +50,12 @@ export async function joinUserToPublic(userId: number) {
  * Handles users who registered before the auto-join code was deployed.
  */
 export async function ensureUserInPublicGroup(userId: number) {
+  const config = getAdminConfig()
+  if (!config.publicGroupEnabled) return
+
   const pub = await ensurePublicGroup()
+  if (!pub) return
+
   const [existing] = await db
     .select({ id: schema.groupMembers.id })
     .from(schema.groupMembers)
@@ -160,7 +174,10 @@ export async function canViewerSeePhotoActivity(
   photoId: number,
   viewerId: number,
 ): Promise<boolean> {
-  const pub = await ensurePublicGroup()
+  const config = getAdminConfig()
+  if (config.publicGroupEnabled) {
+    await ensurePublicGroup()
+  }
 
   const [row] = await db
     .select({ allowed: sql<boolean>`1` })

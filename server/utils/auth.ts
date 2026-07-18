@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import * as OTPAuth from 'otpauth'
+import { getAdminConfig } from './config'
 
 // ------- Recovery codes -------
 
@@ -23,10 +24,11 @@ export function normaliseCode(raw: string): string {
 
 // ------- TOTP -------
 
-export function createTotpSecret(email: string, issuer = 'Collct') {
+export function createTotpSecret(email: string, issuer?: string) {
+  const finalIssuer = issuer || getAdminConfig().instanceName || 'Collct'
   const secret = new OTPAuth.Secret({ size: 20 })
   const totp = new OTPAuth.TOTP({
-    issuer,
+    issuer: finalIssuer,
     label: email,
     algorithm: 'SHA1',
     digits: 6,

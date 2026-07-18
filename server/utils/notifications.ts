@@ -1,5 +1,6 @@
 import { db, schema } from '@nuxthub/db'
 import { eq, and } from 'drizzle-orm'
+import { getAdminConfig } from './config'
 
 interface CreateNotificationData {
   userId: number
@@ -62,7 +63,7 @@ async function sendPushForNotification(data: CreateNotificationData) {
   }
 
   await sendPushNotification(data.userId, {
-    title: 'Collct',
+    title: getAdminConfig().instanceName || 'Collct',
     body,
     icon: '/icon-192x192.png',
     tag,

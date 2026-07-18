@@ -4,12 +4,6 @@ import { z } from 'zod'
 
 type ReactionType = 'thumbs_up' | 'thumbs_down' | 'heart' | 'cry'
 
-interface ReactionRow {
-  commentId: number
-  type: ReactionType
-  userId: number
-}
-
 interface ReactionCounts {
   thumbs_up: number
   thumbs_down: number
@@ -18,6 +12,15 @@ interface ReactionCounts {
 }
 
 export default defineEventHandler(async (event) => {
+  const config = getAdminConfig()
+  if (!config.commentsEnabled) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Comments are disabled on this instance',
+      message: 'Comments are disabled on this instance'
+    })
+  }
+
   const photoId = Number(getRouterParam(event, 'id'))
   if (isNaN(photoId)) throw createError({ statusCode: 400, message: 'Invalid photo ID' })
 
