@@ -1,4 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+const instanceName = process.env.COLLCT_INSTANCE_NAME || 'Collct'
+const instanceDescription = process.env.COLLCT_INSTANCE_DESCRIPTION || 'A friends-first photo sharing app. No algorithm. No tracking. No strangers.'
+
+const sessionMaxAge = process.env.COLLCT_SESSION_MAX_AGE ? parseInt(process.env.COLLCT_SESSION_MAX_AGE, 10) : 60 * 60 * 24 * 30
+const sessionSecure = process.env.COLLCT_SESSION_SECURE !== undefined
+  ? process.env.COLLCT_SESSION_SECURE === 'true'
+  : process.env.NODE_ENV === 'production'
+const sessionSameSite = (process.env.COLLCT_SESSION_SAME_SITE || 'lax') as 'lax' | 'strict' | 'none'
+
+const offlineModeEnabled = process.env.COLLCT_OFFLINE_MODE_ENABLED !== 'false'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: import.meta.dev },
@@ -12,7 +23,7 @@ export default defineNuxtConfig({
 
   site: {
     url: "https://collct.vercel.app/",
-    name: 'Collct',
+    name: instanceName,
   },
 
   sitemap: {
@@ -29,14 +40,27 @@ export default defineNuxtConfig({
 
   image: { provider: 'vercel' },
 
+  session: {
+    maxAge: sessionMaxAge,
+    cookie: {
+      secure: sessionSecure,
+      sameSite: sessionSameSite,
+    }
+  },
+
   runtimeConfig: {
     vapidPublicKey: '',
     vapidPrivateKey: '',
     session: {
-      maxAge: 60 * 60 * 24 * 30, // 30 days
+      maxAge: sessionMaxAge,
+      cookie: {
+        secure: sessionSecure,
+        sameSite: sessionSameSite,
+      }
     },
     public: {
       vapidPublicKey: '',
+      instanceName,
     },
   },
 
@@ -63,7 +87,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'apple-mobile-web-app-title', content: 'Collct' },
+        { name: 'apple-mobile-web-app-title', content: instanceName },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'theme-color', content: '#fba903' },
       ],
@@ -83,9 +107,9 @@ export default defineNuxtConfig({
     },
     manifest: {
       id: '/',
-      name: 'Collct',
-      short_name: 'Collct',
-      description: 'A friends-first photo sharing app. No algorithm. No tracking. No strangers.',
+      name: instanceName,
+      short_name: instanceName,
+      description: instanceDescription,
       theme_color: '#fba903',
       background_color: '#fba903',
       display: 'standalone',
@@ -158,7 +182,7 @@ export default defineNuxtConfig({
     workbox: {
       globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
       importScripts: ['/push-handler.js'],
-      runtimeCaching: [
+      runtimeCaching: offlineModeEnabled ? [
         {
           // All images served through NuxtImg / Vercel Image proxy
           // (photos, thumbnails, avatars — covers everything)
@@ -203,7 +227,7 @@ export default defineNuxtConfig({
             networkTimeoutSeconds: 3,
           },
         },
-      ],
+      ] : [],
     },
   },
 

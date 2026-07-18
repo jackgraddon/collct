@@ -1,5 +1,5 @@
 <template>
-  <UHeader title="Collct" class="border-b-0" mode="slideover">
+  <UHeader :title="instanceName" class="border-b-0" mode="slideover">
     <UNavigationMenu :items="items" variant="link" />
     <template #right>
       <CollctNotificationsDropdown />
@@ -36,6 +36,7 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui'
 
+const { public: { instanceName = 'Collct' } } = useRuntimeConfig()
 const route = useRoute()
 const router = useRouter()
 const { emit } = useUploadBus()

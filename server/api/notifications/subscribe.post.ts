@@ -1,7 +1,15 @@
 import { db, schema } from '@nuxthub/db'
-import { eq, and } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
+  const config = getAdminConfig()
+  if (!config.notificationsEnabled) {
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Notifications are disabled on this instance',
+      message: 'Notifications are disabled on this instance'
+    })
+  }
+
   const session = await requireUserSession(event)
   const userId: number = session.user.id
   const body = await readBody(event)
