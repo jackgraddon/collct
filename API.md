@@ -58,15 +58,7 @@ The client initiates the ceremony by calling this endpoint, which returns a chal
 
 ```json
 {
-  "user": {
-    "id": 1,
-    "username": "jack",
-    "name": "Jack",
-    "email": "jack@example.com",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?...",
-    "totpEnabled": false,
-    "hasSeenOobe": false
-  }
+  "verified": true
 }
 ```
 
@@ -78,7 +70,7 @@ The client initiates the ceremony by calling this endpoint, which returns a chal
 }
 ```
 
-The session cookie is set in both cases — but the MFA response only contains `unverifiedUserId`, not a full user object.
+In both cases, the session cookie is set. For the MFA response, the session only contains `unverifiedUserId`, not a full user object. The client should then call `POST /auth/totp/challenge` to complete login.
 
 **Status codes:**
 - `200` — success
@@ -418,6 +410,113 @@ Returns the stored blob pathname (not a presigned URL). The client can resolve i
 
 ---
 
+### Get User Profile by Username
+
+**Endpoint:** `GET /users/:username`
+
+**Description:** Retrieve a user's public profile by username. Includes viewer-scoped stats (photo count, comment count) and groups in common with the authenticated user.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "user": {
+    "id": 1,
+    "username": "jack",
+    "name": "Jack",
+    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?...",
+    "createdAt": "2026-01-15T10:00:00.000Z"
+  },
+  "stats": {
+    "photoCount": 42,
+    "commentCount": 128,
+    "joinedDate": "2026-01-15T10:00:00.000Z"
+  },
+  "groupsInCommon": [
+    {
+      "id": 10,
+      "name": "The Boys",
+      "slug": "the-boys",
+      "icon": "👥",
+      "color": "#ef4444"
+    }
+  ]
+}
+```
+
+- `stats.photoCount` — number of photos by this user that the authenticated user can see (visibility-scoped).
+- `stats.commentCount` — total comments by this user (not visibility-scoped).
+- `groupsInCommon` — groups both users are members of.
+
+**Status codes:**
+- `200` — success
+- `400` — missing username
+- `401` — not authenticated
+- `404` — user not found
+
+---
+
+### Get Photos by User (by Username)
+
+**Endpoint:** `GET /users/:username/photos`
+
+**Description:** Retrieve paginated photos by a specific user (looked up by username). Visibility-filtered — only photos in groups the authenticated user shares with the target user are returned.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+| Parameter | Default | Max | Description |
+|-----------|---------|-----|-------------|
+| `limit` | 20 | 50 | Number of photos per page |
+| `before` | — | — | Cursor (Unix timestamp in milliseconds) |
+
+**Response:**
+
+```json
+{
+  "photos": [
+    {
+      "id": 42,
+      "caption": "so hot, and respectful.",
+      "captionEditedAt": null,
+      "captionHistory": [
+        {
+          "text": "so hot, and respectful.",
+          "editedAt": "2026-07-15T12:00:00Z"
+        }
+      ],
+      "createdAt": "2026-07-15T12:00:00.000Z",
+      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "user": {
+        "id": 1,
+        "name": "Jack",
+        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+      },
+      "groups": [
+        {
+          "id": 10,
+          "name": "The Boys",
+          "icon": "👥",
+          "color": "#ef4444"
+        }
+      ]
+    }
+  ],
+  "nextCursor": 1721040000000
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — missing username
+- `401` — not authenticated
+- `404` — user not found
+
+---
+
 ## Photos
 
 ### Get Photo Feed
@@ -640,11 +739,11 @@ Returns the stored blob pathname (not a presigned URL). The client can resolve i
 
 ---
 
-### Get Photos by User
+### Get Photos by User (by ID)
 
 **Endpoint:** `GET /photos/user/:userId`
 
-**Description:** Retrieve paginated photos by a specific user. Visibility-filtered — only photos in groups the authenticated user shares with the target user are returned.
+**Description:** Retrieve paginated photos by a specific user (looked up by numeric ID). Visibility-filtered — only photos in groups the authenticated user shares with the target user are returned.
 
 **Authentication:** Required
 
@@ -1325,6 +1424,193 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
 
 ---
 
+## Notifications
+
+### Get Notifications
+
+**Endpoint:** `GET /notifications`
+
+**Description:** Retrieve a paginated feed of notifications for the authenticated user. Includes actor info (who triggered the notification), photo thumbnails for photo-related notifications, and read/unread status.
+
+**Authentication:** Required
+
+**Query Parameters:**
+
+| Parameter | Default | Max | Description |
+|-----------|---------|-----|-------------|
+| `limit` | 20 | 50 | Number of notifications per page |
+| `before` | — | — | Cursor for backward pagination (notification ID) |
+
+**Response:**
+
+```json
+{
+  "notifications": [
+    {
+      "id": 1001,
+      "type": "like",
+      "isRead": false,
+      "photoId": 42,
+      "commentId": null,
+      "groupId": 10,
+      "createdAt": "2026-07-15T12:00:00.000Z",
+      "actor": {
+        "id": 2,
+        "name": "Friend",
+        "username": "friend",
+        "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+      },
+      "photoUrl": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+    }
+  ],
+  "nextCursor": 1001
+}
+```
+
+- `type` — notification type (e.g. `"like"`, `"comment"`, `"group_invite"`).
+- `photoUrl` — presigned thumbnail URL for the associated photo, if applicable.
+- `nextCursor` — notification ID to pass as `before` for the next page. `null` when there are no more results.
+
+**Status codes:**
+- `200` — success
+- `401` — not authenticated
+
+---
+
+### Get Unread Notification Count
+
+**Endpoint:** `GET /notifications/unread-count`
+
+**Description:** Returns the count of unread notifications for the authenticated user. Useful for badge indicators.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "count": 5
+}
+```
+
+**Status codes:**
+- `200` — success
+- `401` — not authenticated
+
+---
+
+### Mark Notifications Read
+
+**Endpoint:** `PATCH /notifications/read`
+
+**Description:** Mark one or more notifications as read. Can mark specific notifications by ID or mark all unread notifications as read.
+
+**Authentication:** Required
+
+**Request:**
+
+Mark specific notifications:
+
+```json
+{
+  "ids": [1001, 1002, 1003]
+}
+```
+
+Or mark all as read:
+
+```json
+{
+  "all": true
+}
+```
+
+Exactly one of `ids` or `all: true` must be provided.
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success
+- `400` — neither `ids` nor `all` provided
+- `401` — not authenticated
+
+---
+
+### Subscribe to Push Notifications
+
+**Endpoint:** `POST /notifications/subscribe`
+
+**Description:** Register a push notification subscription. The server stores the subscription and uses it to send push notifications via Web Push (VAPID). If the subscription endpoint already exists for this user, it is updated.
+
+**Note:** This endpoint is gated by the `COLLCT_NOTIFICATIONS_ENABLED` config variable. Returns `403` when notifications are disabled on the instance.
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/...",
+  "keys": {
+    "auth": "abc123...",
+    "p256dh": "def456..."
+  }
+}
+```
+
+- `endpoint` (required) — the push service endpoint URL.
+- `keys.auth` (required) — authentication secret.
+- `keys.p256dh` (required) — client public key.
+
+**Response:**
+
+```json
+{ "success": true }
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid subscription object
+- `401` — not authenticated
+- `403` — notifications disabled on this instance
+
+---
+
+### Unsubscribe from Push Notifications
+
+**Endpoint:** `POST /notifications/unsubscribe`
+
+**Description:** Remove a push notification subscription by endpoint URL.
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "endpoint": "https://fcm.googleapis.com/fcm/send/..."
+}
+```
+
+- `endpoint` (required) — the push service endpoint URL to remove.
+
+**Response:**
+
+```json
+{ "success": true }
+```
+
+**Status codes:**
+- `200` — success
+- `400` — missing endpoint
+- `401` — not authenticated
+
+---
+
 ## Utility Endpoints
 
 ### Get Lorem Posts
@@ -1424,8 +1710,7 @@ Common status codes:
 ### Session Management
 
 - After a successful WebAuthn registration or authentication, the server sets an encrypted session cookie (`nuxt-session`). Clients using the browser rely on this cookie automatically.
-- For native clients, the session token can also be sent via the `Authorization: Bearer <token>` header.
-- Sessions expire after 30 days of inactivity.
+- Sessions expire after 30 days of inactivity (configurable via `COLLCT_SESSION_MAX_AGE`).
 - If TOTP is enabled, the authentication flow is two-step: WebAuthn → TOTP challenge.
 
 ### Visibility & Group Membership
