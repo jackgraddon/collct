@@ -40,9 +40,10 @@ interface FeedState {
   nextCursor: number | null
 }
 
-const { data: feedState } = await useAsyncData<FeedState>('feed', () =>
-  $fetch('/api/photos', { query: { limit: 20 } }),
-)
+const { data: feedState } = await useFetch<FeedState>('/api/photos', {
+  query: { limit: 20 },
+  key: 'feed',
+})
 
 // Buffer for manually appended items (uploads)
 const appendedPosts = ref<PostData[]>([])
