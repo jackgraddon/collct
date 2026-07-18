@@ -131,7 +131,7 @@ export const usePushNotifications = () => {
   }
 
   // Check on init
-  if (import.meta.client) {
+  if (import.meta.client && 'Notification' in window) {
     permission.value = Notification.permission
     checkSubscription()
   }
