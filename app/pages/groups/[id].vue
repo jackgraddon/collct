@@ -270,7 +270,7 @@ watchEffect(() => {
             :key="member.id"
             class="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/30 transition-colors"
           >
-            <NuxtLink :to="`/user/${member.userId}`" class="flex items-center gap-3 min-w-0 flex-1">
+            <NuxtLink :to="`/user/${member.username}`" class="flex items-center gap-3 min-w-0 flex-1">
               <UAvatar
                 :src="member.avatarUrl || undefined"
                 :alt="member.name"

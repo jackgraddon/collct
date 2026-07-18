@@ -277,7 +277,7 @@ function totalReactions(counts: ReactionCounts) {
         <div class="flex-1 min-w-0">
           <div class="flex items-baseline gap-2 flex-wrap">
             <ULink
-              :to="`/user/${comment.user.id}`"
+              :to="`/user/${comment.user.username}`"
               class="font-semibold text-sm hover:text-primary transition-colors"
             >
               {{ comment.user.name }}

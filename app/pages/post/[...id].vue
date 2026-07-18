@@ -240,7 +240,7 @@ onUnmounted(() => {
             />
             <div class="min-w-0">
               <ULink
-                :to="`/user/${post.user.id}`"
+                :to="`/user/${post.user.username}`"
                 class="font-semibold text-sm hover:text-primary transition-colors truncate block"
               >
                 {{ post.user.name }}
