@@ -19,8 +19,9 @@ function configureVapid() {
     console.error('[push] VAPID keys not configured')
     return
   }
+  const adminConfig = getAdminConfig()
   webpush.setVapidDetails(
-    'mailto:hello@collct.app',
+    `mailto:${adminConfig.adminEmail}`,
     config.vapidPublicKey,
     config.vapidPrivateKey,
   )

@@ -50,6 +50,10 @@ Collct is configured via environment variables. All variables are optional and h
 - `COLLCT_SESSION_SECURE` — Whether session cookies are marked Secure (default: `"true"` in production, `"false"` in development)
 - `COLLCT_SESSION_SAME_SITE` — SameSite cookie attribute (default: `"lax"`, can be `"lax" | "strict" | "none"`)
 
+### Authentication
+
+- `COLLCT_REQUIRE_EMAIL_VERIFICATION` — Require email verification before login (default: `"false"`, requires email service integration — not yet implemented)
+
 ### Features
 
 - `COLLCT_NOTIFICATIONS_ENABLED` — Enable push notifications (default: `"true"`)

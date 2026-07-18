@@ -61,6 +61,7 @@ export default defineNuxtConfig({
     public: {
       vapidPublicKey: '',
       instanceName,
+      adminEmail: process.env.COLLCT_ADMIN_EMAIL || 'admin@example.com',
     },
   },
 
