@@ -1,5 +1,19 @@
 <template>
   <div>
+    <!-- Pull to refresh indicator -->
+    <div
+      class="flex justify-center overflow-hidden transition-all duration-200"
+      :style="{ height: pullDistance ? `${pullDistance}px` : ptrRefreshing ? '40px' : '0px' }"
+    >
+      <div class="flex items-center justify-center py-2">
+        <UIcon
+          name="i-lucide-refresh-cw"
+          :class="{ 'animate-spin': ptrRefreshing }"
+          class="w-5 h-5 text-muted transition-opacity"
+          :style="{ opacity: Math.min((pullDistance || (ptrRefreshing ? 40 : 0)) / 40, 1) }"
+        />
+      </div>
+    </div>
     <!-- New posts banner -->
     <Transition
       enter-active-class="transition ease-out duration-200"
@@ -54,6 +68,15 @@ const checkingForNew = ref(false)
 // New posts that arrived since the last visible state
 const pendingNewPosts = ref<PostData[]>([])
 const newPostCount = computed(() => pendingNewPosts.value.length)
+
+// ─── Pull to refresh ────────────────────────────────────────────────────────
+const { pullDistance, refreshing: ptrRefreshing } = usePullToRefresh(async () => {
+  pendingNewPosts.value = []
+  const fresh = await $fetch<FeedState>('/api/photos', { query: { limit: 20 } })
+  if (feedState.value) {
+    feedState.value = fresh
+  }
+})
 
 // Visible posts = pending new + existing feed + appended uploads
 const visiblePosts = computed(() => [
