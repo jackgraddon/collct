@@ -3,8 +3,8 @@ const route = useRoute()
 const id = Number(route.params.id)
 
 // Instant — read preloaded data passed via route state from the grid
-const preloaded = ref<PostData | null>((history.state as any).preloadedPost ?? null)
-const thumbnailUrl = ref<string>((history.state as any).thumbnailUrl ?? preloaded.value?.url ?? null)
+const preloaded = ref<PostData | null>(import.meta.client ? (history.state as any).preloadedPost ?? null : null)
+const thumbnailUrl = ref<string>(import.meta.client ? (history.state as any).thumbnailUrl ?? preloaded.value?.url ?? null : preloaded.value?.url ?? null)
 
 // Background — fetch fresh/full data (comments, likes, edit history)
 const { data: freshPost, status } = useFetch<PostData>(`/api/photos/${id}`, { lazy: true })
