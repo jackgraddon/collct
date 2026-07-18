@@ -12,13 +12,17 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
   function onTouchStart(e: TouchEvent) {
     if (refreshing.value) return
     if (window.scrollY > 5) return
-    startY = e.touches[0].clientY
+    const touch = e.touches[0]
+    if (!touch) return
+    startY = touch.clientY
     active = true
   }
 
   function onTouchMove(e: TouchEvent) {
     if (!active || refreshing.value) return
-    const dy = e.touches[0].clientY - startY
+    const touch = e.touches[0]
+    if (!touch) return
+    const dy = touch.clientY - startY
     if (dy <= 0 || window.scrollY > 0) {
       pullDistance.value = 0
       active = false
