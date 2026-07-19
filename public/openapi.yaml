@@ -1,0 +1,1214 @@
+openapi: 3.1.0
+info:
+  title: Collct API
+  version: "1"
+  description: |
+    REST API for Collct — a self-hosted, friends-first photo-sharing platform.
+
+    ## Authentication
+
+    Collct supports two authentication methods:
+
+    1. **Session cookies** — used by the built-in web client. After WebAuthn login, an encrypted `nuxt-session` cookie is set automatically.
+    2. **Bearer tokens** — used by third-party clients. Generate a token via `POST /api/auth/tokens` (requires an existing session), then send it as `Authorization: Bearer <token>` on every request.
+
+    ## Rate Limiting
+
+    Auth-sensitive endpoints are rate-limited:
+    - TOTP verify/challenge: 5 attempts per 15 minutes (per IP)
+    - Recovery code redeem: 5 attempts per 15 minutes (per IP)
+    - WebAuthn authenticate: 10 attempts per 5 minutes (per IP)
+    - Token generation: 5 per hour (per user)
+    - Photo upload: 30 per hour (per user)
+
+    Rate-limited requests return `429 Too Many Requests` with a `retryAfter` field.
+
+    ## CORS
+
+    Cross-origin requests are only allowed when `COLLCT_APP_URL` is configured on the server.
+
+    ## Versioning
+
+    All API responses include an `X-API-Version: 1` header.
+
+    ## Error Format
+
+    All errors return:
+    ```json
+    { "statusCode": 400, "statusMessage": "Invalid input" }
+    ```
+  contact:
+    name: Collct
+    url: https://github.com/jackgraddon/collct
+
+servers:
+  - url: /api
+    description: Relative to instance base URL
+
+security:
+  - bearerAuth: []
+  - sessionCookie: []
+
+paths:
+  /webauthn/register:
+    post:
+      summary: Register a new passkey
+      tags: [Auth]
+      security:
+        - sessionCookie: []
+        - bearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userName]
+              properties:
+                userName:
+                  type: string
+                displayName:
+                  type: string
+      responses:
+        "200":
+          description: Passkey registration options
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /webauthn/authenticate:
+    post:
+      summary: Log in with a passkey
+      tags: [Auth]
+      security: [{}]
+      responses:
+        "200":
+          description: Auth result (or mfaRequired: true)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/totp/setup:
+    post:
+      summary: Begin TOTP setup
+      tags: [Auth]
+      responses:
+        "200":
+          description: TOTP URI and secret
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  uri: { type: string }
+                  secret: { type: string }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/totp/verify:
+    post:
+      summary: Complete TOTP setup
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, pattern: "^[0-9]{6}$" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/totp/challenge:
+    post:
+      summary: Complete MFA login
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, pattern: "^[0-9]{6}$" }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/totp/disable:
+    post:
+      summary: Disable TOTP
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+                recoveryCode: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/recovery/generate:
+    post:
+      summary: Generate recovery codes
+      tags: [Auth]
+      responses:
+        "200":
+          description: 10 recovery codes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  codes: { type: array, items: { type: string } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/recovery/redeem:
+    post:
+      summary: Redeem a recovery code
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email: { type: string, format: email }
+                code: { type: string, minLength: 10 }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/logout:
+    post:
+      summary: Log out
+      tags: [Auth]
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+
+  /auth/tokens:
+    get:
+      summary: List API tokens
+      tags: [Auth, Tokens]
+      responses:
+        "200":
+          description: Token list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ApiToken" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Generate an API token
+      tags: [Auth, Tokens]
+      description: Returns the raw token once. Store it securely.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        "200":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  token: { type: string, description: "Raw token (shown once)" }
+                  createdAt: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/tokens/{id}:
+    delete:
+      summary: Revoke an API token
+      tags: [Auth, Tokens]
+      parameters:
+        - $ref: "#/components/parameters/TokenId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /user/me:
+    get:
+      summary: Get current user
+      tags: [User]
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CurrentUser" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /user/update:
+    patch:
+      summary: Update user profile
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+                email: { type: string, format: email, maxLength: 255 }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /user/avatar:
+    patch:
+      summary: Upload avatar
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: "Image (JPEG, PNG, WebP, GIF). Max 2 MB."
+      responses:
+        "200":
+          description: Avatar updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  avatarUrl: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+
+  /user/oobe/complete:
+    post:
+      summary: Complete onboarding tour
+      tags: [User]
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /users/{username}:
+    get:
+      summary: Get user profile by username
+      tags: [User]
+      parameters:
+        - $ref: "#/components/parameters/Username"
+      responses:
+        "200":
+          description: Profile with stats and groups in common
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: "#/components/schemas/UserPublic" }
+                  stats:
+                    type: object
+                    properties:
+                      photoCount: { type: integer }
+                      commentCount: { type: integer }
+                      joinedDate: { type: string, format: date-time }
+                  groupsInCommon:
+                    type: array
+                    items: { $ref: "#/components/schemas/GroupSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{username}/photos:
+    get:
+      summary: Get photos by user
+      tags: [User, Photos]
+      parameters:
+        - $ref: "#/components/parameters/Username"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Before"
+      responses:
+        "200": { $ref: "#/components/responses/PhotoList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /photos:
+    get:
+      summary: Get photo feed
+      tags: [Photos]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Before"
+        - name: after
+          in: query
+          schema: { type: integer, format: int64 }
+          description: Forward pagination cursor (Unix timestamp ms)
+      responses:
+        "200": { $ref: "#/components/responses/PhotoList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Upload a photo
+      tags: [Photos]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [photo]
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: "Image (JPEG, PNG, WebP, GIF). Max 10 MB."
+                caption:
+                  type: string
+                  maxLength: 500
+                groupIds:
+                  type: string
+                  description: 'JSON array of group IDs, e.g. "[10, 11]"'
+      responses:
+        "200":
+          description: Photo created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PhotoCreated" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "415": { $ref: "#/components/responses/UnsupportedMediaType" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /photos/{id}:
+    get:
+      summary: Get a single photo
+      tags: [Photos]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200":
+          description: Photo detail
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Photo" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      summary: Edit photo caption
+      tags: [Photos]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [caption]
+              properties:
+                caption:
+                  type: string
+                  maxLength: 500
+                  nullable: true
+      responses:
+        "200":
+          description: Photo updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Photo" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Delete a photo
+      tags: [Photos]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /photos/user/{userId}:
+    get:
+      summary: Get photos by user ID
+      tags: [Photos]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: integer }
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Before"
+      responses:
+        "200": { $ref: "#/components/responses/PhotoList" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /photos/{id}/likes:
+    get:
+      summary: Get likes for a photo
+      tags: [Likes]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200":
+          description: Like status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LikeStatus" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      summary: Toggle like
+      tags: [Likes]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200":
+          description: New like status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/LikeStatus" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /photos/{id}/comments:
+    get:
+      summary: Get comments on a photo
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200":
+          description: Array of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Comment" }
+    post:
+      summary: Post a comment
+      tags: [Comments]
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        "200":
+          description: Comment created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /comments/{id}:
+    patch:
+      summary: Edit a comment
+      tags: [Comments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        "200":
+          description: Comment updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Comment" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /comments/{id}/reactions:
+    post:
+      summary: Toggle comment reaction
+      tags: [Comments]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { $ref: "#/components/schemas/ReactionType" }
+      responses:
+        "200":
+          description: Updated reaction counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  counts: { $ref: "#/components/schemas/ReactionCounts" }
+                  myReaction: { $ref: "#/components/schemas/ReactionType" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups:
+    get:
+      summary: List user's groups
+      tags: [Groups]
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  groups:
+                    type: array
+                    items: { $ref: "#/components/schemas/Group" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+    post:
+      summary: Create a group
+      tags: [Groups]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 50 }
+                icon: { type: string, description: Single emoji }
+                color: { type: string, description: "Hex color, e.g. #3B82F6" }
+      responses:
+        "200":
+          description: Group created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Group" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /groups/{id}:
+    get:
+      summary: Get group details
+      tags: [Groups]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Group with members
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GroupDetail" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      summary: Update group
+      tags: [Groups]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                icon: { type: string }
+                color: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Delete group
+      tags: [Groups]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/leave:
+    post:
+      summary: Leave a group
+      tags: [Groups]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /groups/{id}/invites:
+    get:
+      summary: List group invites
+      tags: [Groups, Invites]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      responses:
+        "200":
+          description: Invite list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GroupInvite" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      summary: Create group invite
+      tags: [Groups, Invites]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                maxUses:
+                  type: integer
+                  minimum: 1
+      responses:
+        "200":
+          description: Invite created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GroupInvite" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /groups/{id}/invites/{inviteId}:
+    delete:
+      summary: Revoke group invite
+      tags: [Groups, Invites]
+      parameters:
+        - $ref: "#/components/parameters/GroupId"
+        - name: inviteId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/invites/redeem:
+    post:
+      summary: Redeem group invite
+      tags: [Groups, Invites]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "410": { $ref: "#/components/responses/Gone" }
+
+  /notifications:
+    get:
+      summary: List notifications
+      tags: [Notifications]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Before"
+      responses:
+        "200":
+          description: Notification list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notifications:
+                    type: array
+                    items: { $ref: "#/components/schemas/Notification" }
+                  nextCursor:
+                    type: integer
+                    nullable: true
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /notifications/read:
+    patch:
+      summary: Mark notifications as read
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    all: { type: boolean }
+                - type: object
+                  properties:
+                    ids:
+                      type: array
+                      items: { type: integer }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /notifications/subscribe:
+    post:
+      summary: Subscribe to push notifications
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint, keys]
+              properties:
+                endpoint: { type: string }
+                keys:
+                  type: object
+                  properties:
+                    auth: { type: string }
+                    p256dh: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /notifications/unsubscribe:
+    post:
+      summary: Unsubscribe from push notifications
+      tags: [Notifications]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endpoint]
+              properties:
+                endpoint: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /version:
+    get:
+      summary: Get server version
+      tags: [Utility]
+      security: []
+      responses:
+        "200":
+          description: Version
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version: { type: string }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: "API token via POST /api/auth/tokens"
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: nuxt-session
+      description: Encrypted session cookie (WebAuthn login)
+
+  parameters:
+    PhotoId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    GroupId:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer }
+    TokenId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Username:
+      name: username
+      in: path
+      required: true
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, maximum: 50 }
+    Before:
+      name: before
+      in: query
+      schema: { type: integer, format: int64 }
+      description: "Backward pagination cursor (Unix timestamp ms)"
+
+  schemas:
+    ReactionType:
+      type: string
+      enum: [thumbs_up, thumbs_down, heart, cry]
+
+    ReactionCounts:
+      type: object
+      properties:
+        thumbs_up: { type: integer }
+        thumbs_down: { type: integer }
+        heart: { type: integer }
+        cry: { type: integer }
+
+    CurrentUser:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        username: { type: string }
+        avatarUrl: { type: string, nullable: true }
+        hasSeenOobe: { type: boolean }
+
+    UserPublic:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        name: { type: string }
+        avatarUrl: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ApiToken:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+
+    GroupSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        icon: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+
+    Group:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        isPublic: { type: boolean }
+        ownerId: { type: integer, nullable: true }
+        icon: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        role: { type: string, enum: [owner, admin, member] }
+
+    GroupDetail:
+      allOf:
+        - $ref: "#/components/schemas/Group"
+        - type: object
+          properties:
+            archivedAt: { type: string, format: date-time, nullable: true }
+            members:
+              type: array
+              items: { $ref: "#/components/schemas/GroupMember" }
+
+    GroupMember:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        role: { type: string, enum: [owner, admin, member] }
+        joinedAt: { type: string, format: date-time }
+        username: { type: string }
+        name: { type: string }
+        avatarUrl: { type: string, nullable: true }
+
+    GroupInvite:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        groupId: { type: integer }
+        code: { type: string }
+        createdBy: { type: integer }
+        maxUses: { type: integer, nullable: true }
+        useCount: { type: integer }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Photo:
+      type: object
+      properties:
+        id: { type: integer }
+        caption: { type: string, nullable: true }
+        captionEditedAt: { type: string, format: date-time, nullable: true }
+        captionHistory:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              editedAt: { type: string }
+        createdAt: { type: string, format: date-time }
+        url: { type: string, description: "Presigned blob URL (~1h TTL)" }
+        user:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            avatarUrl: { type: string, nullable: true }
+        groups:
+          type: array
+          items: { $ref: "#/components/schemas/GroupSummary" }
+
+    PhotoCreated:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        caption: { type: string, nullable: true }
+        blobPathname: { type: string }
+        createdAt: { type: string, format: date-time }
+        captionEditedAt: { type: string, nullable: true }
+        captionHistory: { type: array, nullable: true }
+        url: { type: string }
+
+    LikeStatus:
+      type: object
+      properties:
+        liked: { type: boolean }
+        count:
+          type: integer
+          nullable: true
+          description: Viewer-scoped count (null if unauthenticated)
+
+    Comment:
+      type: object
+      properties:
+        id: { type: integer }
+        body: { type: string }
+        editedAt: { type: string, format: date-time, nullable: true }
+        editHistory:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              text: { type: string }
+              editedAt: { type: string }
+        createdAt: { type: string, format: date-time }
+        user:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            username: { type: string }
+            avatarUrl: { type: string, nullable: true }
+        reactions:
+          type: object
+          properties:
+            counts: { $ref: "#/components/schemas/ReactionCounts" }
+            myReaction: { $ref: "#/components/schemas/ReactionType" }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: integer }
+        type: { type: string, enum: [like, comment, group_join] }
+        isRead: { type: boolean }
+        photoId: { type: integer, nullable: true }
+        commentId: { type: integer, nullable: true }
+        groupId: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+        photoUrl: { type: string, nullable: true }
+        actor:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            username: { type: string }
+            avatarUrl: { type: string, nullable: true }
+
+    Error:
+      type: object
+      properties:
+        statusCode: { type: integer }
+        statusMessage: { type: string }
+
+  responses:
+    Ok:
+      description: Success
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+    BadRequest:
+      description: Bad Request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Gone:
+      description: Gone (invite revoked/expired/exhausted)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    PayloadTooLarge:
+      description: Payload Too Large
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    UnsupportedMediaType:
+      description: Unsupported Media Type
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Too Many Requests
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/Error"
+              - type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      retryAfter:
+                        type: integer
+                        description: Seconds until rate limit resets

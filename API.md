@@ -6,9 +6,11 @@ Collct is a self-hosted, friends-first photo-sharing platform. This document des
 
 **Base URL:** `https://<instance-url>/api`
 
-**Authentication:** WebAuthn (passkey-based) with encrypted session cookies. Optional TOTP two-factor authentication with recovery codes.
+**Authentication:** WebAuthn (passkey-based) with encrypted session cookies. Optional TOTP two-factor authentication with recovery codes. API tokens (Bearer) for third-party clients.
 
 **Content Type:** `application/json` for request/response bodies, `multipart/form-data` for file uploads.
+
+**API Version:** `X-API-Version: 1` header is included on all `/api/*` responses.
 
 ---
 
@@ -203,6 +205,116 @@ Exactly one of `token` or `recoveryCode` must be provided.
 
 ---
 
+### API Token Management
+
+API tokens allow third-party clients (mobile apps, CLI tools, bots, etc.) to authenticate with a Collct instance without using WebAuthn, which is origin-bound and cannot work cross-origin.
+
+Tokens are Bearer tokens sent in the `Authorization` header. They have the same permissions as the user who created them.
+
+#### Generate Token
+
+**Endpoint:** `POST /auth/tokens`
+
+**Description:** Create a new API token. Returns the raw token once — store it securely. The token is SHA-256 hashed before storage; the plaintext is never retrievable again.
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "name": "My Mobile App"
+}
+```
+
+- `name` (required) — human-readable label for the token (1–100 characters)
+
+**Response:**
+
+```json
+{
+  "id": 1,
+  "name": "My Mobile App",
+  "token": "ct_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "createdAt": "2026-07-19T10:00:00.000Z"
+}
+```
+
+⚠️ The `token` field is only returned once. Store it securely — it cannot be retrieved later.
+
+**Rate Limit:** 5 tokens per hour per user.
+
+**Status codes:**
+- `200` — success
+- `400` — invalid input
+- `401` — not authenticated
+- `429` — rate limit exceeded
+
+---
+
+#### List Tokens
+
+**Endpoint:** `GET /auth/tokens`
+
+**Description:** List all active (non-revoked) API tokens for the authenticated user. Returns token metadata only — the raw token is never returned.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "tokens": [
+    {
+      "id": 1,
+      "name": "My Mobile App",
+      "createdAt": "2026-07-19T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+**Status codes:**
+- `200` — success
+- `401` — not authenticated
+
+---
+
+#### Revoke Token
+
+**Endpoint:** `DELETE /auth/tokens/:id`
+
+**Description:** Revoke (delete) an API token. The token immediately stops working.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success
+- `401` — not authenticated
+- `404` — token not found
+
+---
+
+### Using API Tokens
+
+Include the token in the `Authorization` header as a Bearer token:
+
+```
+Authorization: Bearer ct_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+The server validates the token on every request. If valid, the request is processed as if the user had an active session cookie. No additional session management is needed on the client side.
+
+**Important:** API tokens bypass WebAuthn/TOTP entirely. If you need to revoke a compromised token, use `DELETE /auth/tokens/:id`.
+
+---
+
 ### Recovery Code Generate
 
 **Endpoint:** `POST /auth/recovery/generate`
@@ -373,11 +485,13 @@ The session cookie is resealed with the updated values.
 
 ```json
 {
-  "avatarUrl": "avatars/1-1720000000000.jpg"
+  "avatarUrl": "https://<presigned-url>/avatars/1-1720000000000.jpg?..."
 }
 ```
 
-Returns the stored blob pathname (not a presigned URL). The client can resolve it via `GET /api/blob/<pathname>` or the server will presign it on subsequent `GET /user/me` calls.
+Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is automatically deleted.
+
+**Rate Limit:** 30 uploads per hour per user.
 
 **Status codes:**
 - `200` — success
@@ -663,6 +777,7 @@ Returns the stored blob pathname (not a presigned URL). The client can resolve i
 - `403` — user is not a member of one or more specified groups
 - `413` — file too large (max 10 MB)
 - `415` — unsupported file type
+- `429` — rate limit exceeded (30 per hour)
 
 ---
 
@@ -1701,7 +1816,47 @@ Common status codes:
 - `413` — Payload Too Large (file exceeds size limit)
 - `415` — Unsupported Media Type (invalid file type)
 - `405` — Method Not Allowed
+- `429` — Too Many Requests (rate limit exceeded, includes `data.retryAfter` in seconds)
 - `500` — Internal Server Error (unexpected error)
+
+---
+
+## CORS
+
+Cross-Origin Resource Sharing (CORS) is supported for third-party clients. When the `COLLCT_APP_URL` environment variable is set, the server responds with the appropriate CORS headers for requests from allowed origins.
+
+**Configuration:**
+
+Set `COLLCT_APP_URL` to one or more allowed origins (comma-separated):
+
+```
+COLLCT_APP_URL=https://my-pwa.vercel.app
+COLLCT_APP_URL=https://my-pwa.vercel.app,https://localhost:3000
+```
+
+**Headers:**
+
+- `Access-Control-Allow-Origin` — the matched request origin
+- `Access-Control-Allow-Credentials: true` — allows cookies and auth headers
+- `Access-Control-Allow-Methods` — `GET, POST, PATCH, DELETE, OPTIONS`
+- `Access-Control-Allow-Headers` — `Authorization, Content-Type`
+- `Access-Control-Max-Age: 86400` — preflight cache for 24 hours
+
+**Note:** If `COLLCT_APP_URL` is not set, CORS headers are not added and browsers will block cross-origin requests. This is the default for single-instance deployments where the client is served from the same origin.
+
+---
+
+## API Versioning
+
+All `/api/*` responses include an `X-API-Version` header:
+
+```
+X-API-Version: 1
+```
+
+This header identifies the API contract version. When breaking changes are introduced in the future, the version number will be incremented. Clients should check this header to ensure compatibility.
+
+The OpenAPI 3.1 specification for the full API is available at `/openapi.yaml` on any running instance.
 
 ---
 
@@ -1737,8 +1892,29 @@ Feed and user-photo endpoints support cursor-based pagination:
 
 ### Rate Limiting
 
-- No official rate limiting is currently enforced. However, clients should respect the server's resources and avoid aggressive polling.
-- The recommended polling interval for live updates is 10–30 seconds.
+Rate limiting is enforced on sensitive endpoints to prevent abuse. Limits are applied per client IP (for unauthenticated endpoints) or per user (for authenticated endpoints).
+
+| Endpoint | Limit | Window |
+|----------|-------|--------|
+| TOTP verify/challenge | 5 requests | 15 minutes (per IP) |
+| Recovery code redeem | 5 requests | 15 minutes (per IP) |
+| WebAuthn authenticate | 10 requests | 5 minutes (per IP) |
+| API token generation | 5 requests | 1 hour (per user) |
+| Photo/avatar upload | 30 requests | 1 hour (per user) |
+
+When a rate limit is exceeded, the server responds with `429 Too Many Requests`:
+
+```json
+{
+  "statusCode": 429,
+  "statusMessage": "Too many requests. Retry after 42s.",
+  "data": {
+    "retryAfter": 42
+  }
+}
+```
+
+The `data.retryAfter` field indicates the number of seconds until the limit resets.
 
 ---
 
@@ -1747,9 +1923,11 @@ Feed and user-photo endpoints support cursor-based pagination:
 A client that connects to multiple Collct instances would:
 
 1. **User adds an instance URL** (e.g., `https://family.collct.example`) to their account list.
-2. **Client initiates WebAuthn registration/login** for that instance.
-3. **Client stores the session** (cookie or token) alongside the instance URL.
-4. **When switching between instances**, the client uses the appropriate stored session.
+2. **Client initiates WebAuthn registration/login** for that instance, or uses an API token for headless access.
+3. **Client stores the session** (cookie, token, or both) alongside the instance URL.
+4. **When switching between instances**, the client uses the appropriate stored credentials.
 5. **The feed is instance-scoped** — switching instances shows a different feed, different groups, different friends.
+
+**For third-party/mobile clients:** Use API tokens instead of WebAuthn, since WebAuthn requires a browser context. Generate a token via `POST /auth/tokens` in a browser-based setup flow, then use it for all subsequent API calls.
 
 No federation protocol is needed; each instance is independent, and the client simply multiplexes requests across them.
