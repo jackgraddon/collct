@@ -20,10 +20,10 @@ export default defineEventHandler(async (event) => {
       )
     ).then(r => r[0])
     
-  if (!totpRow) throw createError({ statusCode: 400, message: 'No pending TOTP setup' })
+  if (!totpRow) throw createError({ statusCode: 400, statusMessage: 'No pending TOTP setup' })
 
   const valid = verifyTotpToken(totpRow.secret, token)
-  if (!valid) throw createError({ statusCode: 400, message: 'Invalid code' })
+  if (!valid) throw createError({ statusCode: 400, statusMessage: 'Invalid code' })
 
   await db.transaction(async (tx) => {
     await tx.update(schema.totpSecrets)

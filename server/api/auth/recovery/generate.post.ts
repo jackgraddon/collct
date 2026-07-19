@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const userId = session.user.id
   
   const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).then(r => r[0])
-  if (!user) throw createError({ statusCode: 401, message: 'User not found' })
+  if (!user) throw createError({ statusCode: 401, statusMessage: 'User not found' })
 
   const codes = generateRecoveryCodes(10)
 

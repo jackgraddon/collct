@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
   )
 
   if (!body.all && (!body.ids || body.ids.length === 0)) {
-    throw createError({ statusCode: 400, message: 'Provide ids or set all: true' })
+    throw createError({ statusCode: 400, statusMessage: 'Provide ids or set all: true' })
   }
 
   const conditions = [

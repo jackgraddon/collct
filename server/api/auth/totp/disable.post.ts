@@ -12,16 +12,16 @@ export default defineEventHandler(async (event) => {
   }).parse(body))
 
   if (!body.token && !body.recoveryCode) {
-    throw createError({ statusCode: 400, message: 'TOTP token or recovery code is required' })
+    throw createError({ statusCode: 400, statusMessage: 'TOTP token or recovery code is required' })
   }
 
   const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).then(r => r[0])
   if (!user || !user.totpEnabled) {
-    throw createError({ statusCode: 400, message: 'TOTP is not enabled' })
+    throw createError({ statusCode: 400, statusMessage: 'TOTP is not enabled' })
   }
 
   const totpRow = await db.select().from(schema.totpSecrets).where(eq(schema.totpSecrets.userId, userId)).then(r => r[0])
-  if (!totpRow) throw createError({ statusCode: 400, message: 'TOTP secret not found' })
+  if (!totpRow) throw createError({ statusCode: 400, statusMessage: 'TOTP secret not found' })
 
   let verified = false
 
@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (!verified) {
-    throw createError({ statusCode: 400, message: 'Invalid TOTP token or recovery code' })
+    throw createError({ statusCode: 400, statusMessage: 'Invalid TOTP token or recovery code' })
   }
 
   await db.transaction(async (tx) => {

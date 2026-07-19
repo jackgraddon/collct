@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
 
   // Must have a pending MFA state (unverifiedUserId)
   if (!session.unverifiedUserId) {
-    throw createError({ statusCode: 401, message: 'No pending MFA challenge' })
+    throw createError({ statusCode: 401, statusMessage: 'No pending MFA challenge' })
   }
 
   const { token } = await readValidatedBody(event, z.object({
@@ -22,10 +22,10 @@ export default defineEventHandler(async (event) => {
       eq(schema.totpSecrets.userId, user.id)
     ).then(r => r[0])
     
-  if (!totpRow || !totpRow.verified) throw createError({ statusCode: 400, message: 'TOTP not configured' })
+  if (!totpRow || !totpRow.verified) throw createError({ statusCode: 400, statusMessage: 'TOTP not configured' })
 
   if (!verifyTotpToken(totpRow.secret, token)) {
-    throw createError({ statusCode: 400, message: 'Invalid code' })
+    throw createError({ statusCode: 400, statusMessage: 'Invalid code' })
   }
 
   // Upgrade: clear unverifiedUserId, grant full session

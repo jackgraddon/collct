@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const currentUserId: number = session.user.id
 
   const commentId = Number(getRouterParam(event, 'id'))
-  if (isNaN(commentId)) throw createError({ statusCode: 400, message: 'Invalid comment ID' })
+  if (isNaN(commentId)) throw createError({ statusCode: 400, statusMessage: 'Invalid comment ID' })
 
   const { type } = await readValidatedBody(
     event,
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     .from(schema.comments)
     .where(eq(schema.comments.id, commentId))
     .limit(1)
-  if (!comment) throw createError({ statusCode: 404, message: 'Comment not found' })
+  if (!comment) throw createError({ statusCode: 404, statusMessage: 'Comment not found' })
 
   // Check viewer can see this comment's photo's groups
   const [viewerMembership] = await db
@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     .limit(1)
 
   if (!viewerMembership) {
-    throw createError({ statusCode: 404, message: 'Comment not found' })
+    throw createError({ statusCode: 404, statusMessage: 'Comment not found' })
   }
 
   // Check for existing reaction from this user

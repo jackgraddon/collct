@@ -73,7 +73,7 @@ export default defineWebAuthnAuthenticateEventHandler({
       .then(r => r[0])
 
     if (!row) {
-      throw createError({ statusCode: 400, message: 'User associated with credential not found' })
+      throw createError({ statusCode: 400, statusMessage: 'User associated with credential not found' })
     }
 
     if (row.user.totpEnabled) {

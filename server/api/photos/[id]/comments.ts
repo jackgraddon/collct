@@ -17,12 +17,11 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 403,
       statusMessage: 'Comments are disabled on this instance',
-      message: 'Comments are disabled on this instance'
     })
   }
 
   const photoId = Number(getRouterParam(event, 'id'))
-  if (isNaN(photoId)) throw createError({ statusCode: 400, message: 'Invalid photo ID' })
+  if (isNaN(photoId)) throw createError({ statusCode: 400, statusMessage: 'Invalid photo ID' })
 
   if (event.method === 'GET') {
     const session = await getUserSession(event)
@@ -160,7 +159,7 @@ export default defineEventHandler(async (event) => {
       .limit(1)
 
     if (!viewerMembership) {
-      throw createError({ statusCode: 404, message: 'Photo not found' })
+      throw createError({ statusCode: 404, statusMessage: 'Photo not found' })
     }
 
     const body = await readValidatedBody(
@@ -173,7 +172,7 @@ export default defineEventHandler(async (event) => {
       .values({ photoId, userId: currentUserId, body: body.body })
       .returning()
 
-    if (!comment) throw createError({ statusCode: 500, message: 'Failed to create comment' })
+    if (!comment) throw createError({ statusCode: 500, statusMessage: 'Failed to create comment' })
 
     // Notify photo owner
     const [photoOwner] = await db

@@ -53,5 +53,10 @@ export default defineEventHandler(async (event) => {
     },
   })
 
-  return { avatarUrl: updated.avatarUrl }
+  let avatarUrl: string | null = updated.avatarUrl
+  if (avatarUrl) {
+    avatarUrl = await getBlobUrl(avatarUrl)
+  }
+
+  return { avatarUrl }
 })

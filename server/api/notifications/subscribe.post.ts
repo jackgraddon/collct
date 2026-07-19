@@ -6,7 +6,6 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: 403,
       statusMessage: 'Notifications are disabled on this instance',
-      message: 'Notifications are disabled on this instance'
     })
   }
 

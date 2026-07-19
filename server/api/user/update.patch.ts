@@ -5,11 +5,10 @@ import { db, schema } from '@nuxthub/db'
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
   
-  const body = await readBody(event)
-  const { name, email } = await z.object({
+  const { name, email } = await readValidatedBody(event, z.object({
     name: z.string().min(1).max(100),
     email: z.string().email().max(255),
-  }).parseAsync(body)
+  }).parse)
 
   const [updated] = await db
     .update(schema.users)

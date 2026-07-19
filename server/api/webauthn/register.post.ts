@@ -17,7 +17,7 @@ export default defineWebAuthnRegisterEventHandler({
     if (!challenge) {
       throw createError({
         statusCode: 400,
-        message: 'Challenge expired or invalid'
+        statusMessage: 'Challenge expired or invalid'
       })
     }
     
@@ -34,13 +34,13 @@ export default defineWebAuthnRegisterEventHandler({
     if (session.user?.username) {
       // Existing session: must match username (normal re-registration or adding a device)
       if (session.user.username !== userBody.userName) {
-        throw createError({ statusCode: 400, message: 'Username does not match session' })
+        throw createError({ statusCode: 400, statusMessage: 'Username does not match session' })
       }
     } else if (session.recoveryUserId && session.recoveryScope === 'passkey_registration') {
        // Recovery flow: ensure username matches the recovery user's email/username
        const dbUser = await db.select().from(schema.users).where(eq(schema.users.id, session.recoveryUserId as number)).then(r => r[0])
        if (!dbUser || dbUser.username !== userBody.userName) {
-         throw createError({ statusCode: 400, message: 'Username does not match recovery session' })
+         throw createError({ statusCode: 400, statusMessage: 'Username does not match recovery session' })
        }
     } else {
       const config = getAdminConfig()
@@ -48,21 +48,19 @@ export default defineWebAuthnRegisterEventHandler({
         throw createError({
           statusCode: 403,
           statusMessage: 'Registration is disabled on this instance',
-          message: 'Registration is disabled on this instance'
         })
       }
       if (config.allowRegistration === 'invite-only') {
         throw createError({
           statusCode: 403,
           statusMessage: 'This instance requires an invite code to register',
-          message: 'This instance requires an invite code to register'
         })
       }
 
       // No session: check if user already exists (prevent account takeover)
       const existingUser = await db.select().from(schema.users).where(eq(schema.users.username, userBody.userName)).then(r => r[0])
       if (existingUser) {
-        throw createError({ statusCode: 400, message: 'Username is already taken' })
+        throw createError({ statusCode: 400, statusMessage: 'Username is already taken' })
       }
     }
 
@@ -100,7 +98,7 @@ export default defineWebAuthnRegisterEventHandler({
     }
 
     if (!dbUser) {
-      throw createError({ statusCode: 400, message: 'User creation failed' })
+      throw createError({ statusCode: 400, statusMessage: 'User creation failed' })
     }
 
     // Auto-join new users to the Public group

@@ -23,7 +23,7 @@ export async function ensurePublicGroup() {
     .values({ name: 'Public', slug: 'public', isPublic: true })
     .returning()
 
-  if (!created) throw new Error('Failed to create Public group')
+  if (!created) throw createError({ statusCode: 500, statusMessage: 'Failed to create Public group' })
   return created
 }
 

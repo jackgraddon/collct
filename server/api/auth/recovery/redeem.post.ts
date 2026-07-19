@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   if (!user) {
     // Constant-time response: don't reveal whether the email exists
     await new Promise(r => setTimeout(r, 200))
-    throw createError({ statusCode: 400, message: 'Invalid recovery code' })
+    throw createError({ statusCode: 400, statusMessage: 'Invalid recovery code' })
   }
 
   const normalised = normaliseCode(body.code)
@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     ).then(r => r[0])
 
   if (!match || match.usedAt) {
-    throw createError({ statusCode: 400, message: 'Invalid recovery code' })
+    throw createError({ statusCode: 400, statusMessage: 'Invalid recovery code' })
   }
 
   // Burn the code

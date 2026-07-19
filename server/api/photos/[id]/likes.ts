@@ -3,7 +3,7 @@ import { eq, and, sql, count as drizzleCount } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const photoId = Number(getRouterParam(event, 'id'))
-  if (isNaN(photoId)) throw createError({ statusCode: 400, message: 'Invalid photo ID' })
+  if (isNaN(photoId)) throw createError({ statusCode: 400, statusMessage: 'Invalid photo ID' })
 
   const session = await getUserSession(event)
   const viewerId: number | null = session?.user?.id ?? null
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     .where(eq(schema.photos.id, photoId))
     .limit(1)
 
-  if (!photo) throw createError({ statusCode: 404, message: 'Photo not found' })
+  if (!photo) throw createError({ statusCode: 404, statusMessage: 'Photo not found' })
 
   if (event.method === 'GET') {
     // Check if viewer can see likes on this photo
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
   }
 
   if (event.method === 'POST') {
-    if (!viewerId) throw createError({ statusCode: 401, message: 'Not authenticated' })
+    if (!viewerId) throw createError({ statusCode: 401, statusMessage: 'Not authenticated' })
 
     // Check viewer can see this photo's groups
     const [viewerMembership] = await db
@@ -100,7 +100,7 @@ export default defineEventHandler(async (event) => {
       .limit(1)
 
     if (!viewerMembership) {
-      throw createError({ statusCode: 404, message: 'Photo not found' })
+      throw createError({ statusCode: 404, statusMessage: 'Photo not found' })
     }
 
     // Toggle like
