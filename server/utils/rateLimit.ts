@@ -72,4 +72,10 @@ export const RATE_LIMITS = {
   tokenCreate: { windowMs: 60 * 60 * 1000, max: 5 },
   /** Photo upload: 30 per hour */
   upload: { windowMs: 60 * 60 * 1000, max: 30 },
+  /** Device code request: 10 per 15 minutes (per IP) */
+  deviceCode: { windowMs: 15 * 60 * 1000, max: 10 },
+  /** Device token poll: 30 per 10 minutes (per IP) */
+  devicePoll: { windowMs: 10 * 60 * 1000, max: 30 },
+  /** Authorization code exchange: 10 per 15 minutes (per IP) */
+  tokenExchange: { windowMs: 15 * 60 * 1000, max: 10 },
 } as const

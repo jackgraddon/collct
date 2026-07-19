@@ -1,4 +1,29 @@
 import { createHash, randomBytes } from 'node:crypto'
+
+// ------- Device Flow / Authorization Codes -------
+
+/** Generate a user-facing code in XXXX-XXXX format (8 chars). */
+export function generateUserCode(): string {
+  const bytes = randomBytes(4).toString('hex').toUpperCase()
+  return `${bytes.slice(0, 4)}-${bytes.slice(4, 8)}`
+}
+
+/** Generate a device code (high-entropy random string). */
+export function generateDeviceCode(): string {
+  return randomBytes(32).toString('base64url')
+}
+
+/** Hash a device code for storage. */
+export function hashDeviceCode(raw: string): string {
+  return createHash('sha256').update(raw).digest('hex')
+}
+
+/** Generate an authorization code for the redirect flow. */
+export function generateAuthorizationCode(): string {
+  return randomBytes(32).toString('base64url')
+}
+
+// ------- API Tokens -------
 import * as OTPAuth from 'otpauth'
 import { getAdminConfig } from './config'
 

@@ -245,6 +245,23 @@ export const apiTokens = pgTable('api_tokens', {
   expiresAt: timestamp('expires_at', { mode: 'date' }),
 })
 
+// Pending Authorizations (device flow + browser redirect flow)
+
+export const pendingAuthorizations = pgTable('pending_authorizations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  type: text('type').notNull(), // 'device' | 'authorization_code'
+  userCode: text('user_code').unique(), // device flow only: displayed to user
+  deviceCodeHash: text('device_code_hash').unique(), // device flow only: polled by app
+  authorizationCode: text('authorization_code').unique(), // redirect flow only: exchanged for token
+  appName: text('app_name'), // display name of the requesting app
+  redirectUri: text('redirect_uri'), // redirect flow only
+  status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'denied' | 'expired'
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+  approvedAt: timestamp('approved_at', { mode: 'date' }),
+})
+
 // Push Subscriptions
 
 export const pushSubscriptions = pgTable(

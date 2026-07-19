@@ -315,6 +315,229 @@ The server validates the token on every request. If valid, the request is proces
 
 ---
 
+### Device Flow (for CLIs and devices)
+
+The device flow allows headless devices (CLI tools, smart TVs, etc.) to authenticate without a browser. The device shows a code and URL; the user enters the code in a browser to approve.
+
+#### Step 1: Request Device Code
+
+**Endpoint:** `POST /auth/device/code`
+
+**Description:** Initiate the device authorization flow. Returns a device code for the app to poll, and a user code for the user to enter.
+
+**Authentication:** None
+
+**Request:**
+
+```json
+{
+  "app_name": "My CLI Tool"
+}
+```
+
+- `app_name` (optional) — display name shown to the user during approval
+
+**Response:**
+
+```json
+{
+  "device_code": "a1b2c3d4e5f6...",
+  "user_code": "ABCD-1234",
+  "verification_uri": "https://collct.example/auth/device",
+  "verification_uri_complete": "https://collct.example/auth/device?code=ABCD-1234",
+  "expires_in": 600,
+  "interval": 5
+}
+```
+
+**Rate Limit:** 10 requests per 15 minutes (per IP).
+
+**Status codes:**
+- `200` — success
+
+---
+
+#### Step 2: User Enters Code and Approves
+
+The user opens `verification_uri` (or clicks `verification_uri_complete`) in a browser. If not already signed in, they authenticate via passkey. They then enter the `user_code` and click **Verify Device** to approve.
+
+**Endpoint:** `POST /auth/device/authorize`
+
+**Description:** Approve or deny a device authorization request. Requires an active session (user must be signed in via browser).
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "code": "ABCD-1234",
+  "approve": true
+}
+```
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid, expired, or already used code
+- `401` — not authenticated
+
+---
+
+#### Step 3: App Polls for Token
+
+**Endpoint:** `POST /auth/device/token`
+
+**Description:** Poll for the result of the device authorization. The app should poll this endpoint every `interval` seconds (default: 5) until the user approves or denies, or the code expires.
+
+**Authentication:** None
+
+**Request:**
+
+```json
+{
+  "device_code": "a1b2c3d4e5f6..."
+}
+```
+
+**Response (pending):**
+
+```json
+{
+  "status": "pending"
+}
+```
+
+**Response (approved):**
+
+```json
+{
+  "token": "ct_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "token_type": "Bearer",
+  "expires_in": null
+}
+```
+
+**Rate Limit:** 30 requests per 10 minutes (per IP).
+
+**Status codes:**
+- `200` — success (check `status` field)
+- `400` — invalid/expired device code, or authorization denied
+
+---
+
+### Browser Redirect Flow (for mobile apps)
+
+The browser redirect flow works like OAuth — the app opens a browser, the user authorizes, and the app receives a token via a callback URL.
+
+#### Step 1: Request Authorization
+
+**Endpoint:** `POST /auth/authorize`
+
+**Description:** Create an authorization request. Returns a URL for the app to open in a browser.
+
+**Authentication:** None
+
+**Request:**
+
+```json
+{
+  "redirect_uri": "myapp://auth/callback",
+  "app_name": "My Mobile App",
+  "state": "optional-csrf-token"
+}
+```
+
+- `redirect_uri` (required) — the URL to redirect to after approval
+- `app_name` (optional) — display name shown to the user during approval
+- `state` (optional) — opaque state returned with the redirect (for CSRF protection)
+
+**Response:**
+
+```json
+{
+  "authorize_url": "https://collct.example/auth/authorize?code=xyz789...",
+  "code": "xyz789...",
+  "expires_in": 600,
+  "state": "optional-csrf-token"
+}
+```
+
+**Status codes:**
+- `200` — success
+
+---
+
+#### Step 2: User Authorizes in Browser
+
+The app opens `authorize_url` in a browser. The user signs in with their passkey (if not already signed in) and clicks **Authorize** on the consent page.
+
+**Endpoint:** `POST /auth/authorize/approve`
+
+**Description:** Approve the authorization. Requires an active session.
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "code": "xyz789..."
+}
+```
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid or expired code
+- `401` — not authenticated
+
+---
+
+#### Step 3: Exchange Code for Token
+
+**Endpoint:** `POST /auth/token`
+
+**Description:** Exchange an approved authorization code for an API token.
+
+**Authentication:** None
+
+**Request:**
+
+```json
+{
+  "code": "xyz789..."
+}
+```
+
+**Response:**
+
+```json
+{
+  "access_token": "ct_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "token_type": "Bearer",
+  "expires_in": null
+}
+```
+
+**Rate Limit:** 10 requests per 15 minutes (per IP).
+
+**Status codes:**
+- `200` — success
+- `400` — invalid, expired, or unused code
+
+---
+
 ### Recovery Code Generate
 
 **Endpoint:** `POST /auth/recovery/generate`
@@ -1923,11 +2146,13 @@ The `data.retryAfter` field indicates the number of seconds until the limit rese
 A client that connects to multiple Collct instances would:
 
 1. **User adds an instance URL** (e.g., `https://family.collct.example`) to their account list.
-2. **Client initiates WebAuthn registration/login** for that instance, or uses an API token for headless access.
-3. **Client stores the session** (cookie, token, or both) alongside the instance URL.
-4. **When switching between instances**, the client uses the appropriate stored credentials.
+2. **Client authenticates** using one of the third-party auth flows:
+   - **Device flow** (CLI, smart TV): App requests a device code, user enters it in a browser.
+   - **Browser redirect** (mobile app): App opens a browser for passkey login, receives a token via callback.
+3. **Client stores the token** alongside the instance URL.
+4. **When switching between instances**, the client uses the appropriate stored token.
 5. **The feed is instance-scoped** — switching instances shows a different feed, different groups, different friends.
 
-**For third-party/mobile clients:** Use API tokens instead of WebAuthn, since WebAuthn requires a browser context. Generate a token via `POST /auth/tokens` in a browser-based setup flow, then use it for all subsequent API calls.
+**For manual setup:** Users can also log into the Collct web UI, go to Settings → API Tokens, and create a token manually to paste into the app.
 
 No federation protocol is needed; each instance is independent, and the client simply multiplexes requests across them.

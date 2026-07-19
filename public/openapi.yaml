@@ -265,6 +265,158 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /auth/device/code:
+    post:
+      summary: Request a device code
+      tags: [Auth, Device Flow]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                app_name:
+                  type: string
+                  maxLength: 100
+      responses:
+        "200":
+          description: Device code issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  device_code: { type: string }
+                  user_code: { type: string }
+                  verification_uri: { type: string, format: uri }
+                  verification_uri_complete: { type: string, format: uri }
+                  expires_in: { type: integer }
+                  interval: { type: integer }
+
+  /auth/device/authorize:
+    post:
+      summary: Approve or deny a device code
+      tags: [Auth, Device Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, approve]
+              properties:
+                code: { type: string }
+                approve: { type: boolean }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/device/token:
+    post:
+      summary: Poll for device authorization result
+      tags: [Auth, Device Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [device_code]
+              properties:
+                device_code: { type: string }
+      responses:
+        "200":
+          description: Pending, denied, or token issued
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      status: { type: string, enum: [pending] }
+                  - type: object
+                    properties:
+                      token: { type: string }
+                      token_type: { type: string }
+                      expires_in: { type: integer, nullable: true }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /auth/authorize:
+    post:
+      summary: Create an authorization request (browser redirect flow)
+      tags: [Auth, Browser Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [redirect_uri]
+              properties:
+                redirect_uri: { type: string, format: uri }
+                app_name: { type: string, maxLength: 100 }
+                state: { type: string, maxLength: 2048 }
+      responses:
+        "200":
+          description: Authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorize_url: { type: string, format: uri }
+                  code: { type: string }
+                  expires_in: { type: integer }
+                  state: { type: string }
+
+  /auth/authorize/approve:
+    post:
+      summary: Approve an authorization request
+      tags: [Auth, Browser Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/token:
+    post:
+      summary: Exchange authorization code for token
+      tags: [Auth, Browser Flow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200":
+          description: Token issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  token_type: { type: string }
+                  expires_in: { type: integer, nullable: true }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
   /user/me:
     get:
       summary: Get current user

@@ -2,7 +2,7 @@ export default defineNuxtRouteMiddleware((to) => {
   const { loggedIn } = useUserSession()
 
   // Define public routes that don't require authentication
-  const publicRoutes = ['/login', '/register']
+  const publicRoutes = ['/login', '/register', '/auth/device', '/auth/authorize']
 
   // If not logged in and trying to access a protected route (including /)
   if (!loggedIn.value && !publicRoutes.includes(to.path)) {

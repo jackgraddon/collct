@@ -85,6 +85,13 @@
       "when": 1752950400000,
       "tag": "0011_add_api_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1752950400001,
+      "tag": "0012_add_pending_authorizations",
+      "breakpoints": true
     }
   ]
 }
