@@ -4,14 +4,16 @@ interface RateLimitEntry {
 }
 
 const buckets = new Map<string, RateLimitEntry>()
+let lastCleanup = Date.now()
 
-// Evict expired entries periodically to prevent memory leaks
-setInterval(() => {
+function cleanup() {
   const now = Date.now()
+  if (now - lastCleanup < 60_000) return
+  lastCleanup = now
   for (const [key, entry] of buckets) {
     if (now > entry.resetAt) buckets.delete(key)
   }
-}, 60_000)
+}
 
 export interface RateLimitConfig {
   windowMs: number
@@ -26,6 +28,8 @@ export interface RateLimitConfig {
  * (e.g. IP address, user ID, or a combination).
  */
 export function rateLimit(key: string, config: RateLimitConfig): { ok: true; remaining: number } {
+  cleanup()
+
   const now = Date.now()
   const entry = buckets.get(key)
 
