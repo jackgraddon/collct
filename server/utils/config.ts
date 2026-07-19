@@ -11,6 +11,7 @@ export interface AdminConfig {
   notificationsEnabled: boolean
   commentsEnabled: boolean
   offlineModeEnabled: boolean
+  appUrl: string | null
 }
 
 export const getAdminConfig = (): AdminConfig => {
@@ -30,6 +31,7 @@ export const getAdminConfig = (): AdminConfig => {
     requireEmailVerification: process.env.COLLCT_REQUIRE_EMAIL_VERIFICATION === 'true',
     notificationsEnabled: process.env.COLLCT_NOTIFICATIONS_ENABLED !== 'false',
     commentsEnabled: process.env.COLLCT_COMMENTS_ENABLED !== 'false',
-    offlineModeEnabled: process.env.COLLCT_OFFLINE_MODE_ENABLED !== 'false'
+    offlineModeEnabled: process.env.COLLCT_OFFLINE_MODE_ENABLED !== 'false',
+    appUrl: process.env.COLLCT_APP_URL || null,
   }
 }

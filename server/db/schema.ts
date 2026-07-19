@@ -231,6 +231,20 @@ export const photoGroups = pgTable(
   ],
 )
 
+// API Tokens (for third-party client authentication)
+
+export const apiTokens = pgTable('api_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull().unique(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  lastUsedAt: timestamp('last_used_at', { mode: 'date' }),
+  expiresAt: timestamp('expires_at', { mode: 'date' }),
+})
+
 // Push Subscriptions
 
 export const pushSubscriptions = pgTable(

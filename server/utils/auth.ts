@@ -2,6 +2,20 @@ import { createHash, randomBytes } from 'node:crypto'
 import * as OTPAuth from 'otpauth'
 import { getAdminConfig } from './config'
 
+// ------- API Tokens -------
+
+/** Generate a new API token. Returns the raw token (shown once) and its SHA-256 hash (stored in DB). */
+export function createApiToken(): { raw: string; hash: string } {
+  const raw = randomBytes(32).toString('base64url')
+  const hash = createHash('sha256').update(raw).digest('hex')
+  return { raw, hash }
+}
+
+/** Hash an API token for lookup. */
+export function hashApiToken(raw: string): string {
+  return createHash('sha256').update(raw).digest('hex')
+}
+
 // ------- Recovery codes -------
 
 /** Generate N random recovery codes in XXXX-XXXX-XXXX format */
