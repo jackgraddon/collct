@@ -9,6 +9,8 @@ export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId: number = session.user.id
 
+  rateLimit(`tokens:create:${userId}`, RATE_LIMITS.tokenCreate)
+
   const body = await readValidatedBody(event, bodySchema.parse)
 
   const { raw, hash } = createApiToken()

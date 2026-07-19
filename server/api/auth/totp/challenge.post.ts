@@ -3,6 +3,8 @@ import { eq } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
 
 export default defineEventHandler(async (event) => {
+  rateLimit(`totp:challenge:${getClientIp(event)}`, RATE_LIMITS.totp)
+
   const session = await getUserSession(event)
 
   // Must have a pending MFA state (unverifiedUserId)

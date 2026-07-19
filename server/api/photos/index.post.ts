@@ -11,6 +11,8 @@ export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId = session.user.id
 
+  rateLimit(`upload:${userId}`, RATE_LIMITS.upload)
+
   const form = await readFormData(event)
   const file = form.get('photo') as File | null
   const caption = (form.get('caption') as string | null)?.trim() || null

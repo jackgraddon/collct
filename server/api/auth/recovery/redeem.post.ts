@@ -3,6 +3,8 @@ import { eq, and } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
 
 export default defineEventHandler(async (event) => {
+  rateLimit(`recovery:redeem:${getClientIp(event)}`, RATE_LIMITS.recovery)
+
   const body = await readValidatedBody(event, z.object({
     email: z.string().email(),
     code: z.string().min(10),

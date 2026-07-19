@@ -3,6 +3,8 @@ import { db, schema } from '@nuxthub/db'
 
 export default defineWebAuthnAuthenticateEventHandler({
   async storeChallenge(event, challenge, attemptId) {
+    rateLimit(`webauthn:auth:${getClientIp(event)}`, RATE_LIMITS.webauthn)
+
     setCookie(event, `webauthn_challenge_${attemptId}`, challenge, {
       maxAge: 60,
       httpOnly: true, // Prevents XSS access
@@ -16,7 +18,7 @@ export default defineWebAuthnAuthenticateEventHandler({
     if (!challenge) {
       throw createError({
         statusCode: 400,
-        message: 'Challenge expired or invalid'
+        statusMessage: 'Challenge expired or invalid'
       })
     }
     

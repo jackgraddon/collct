@@ -3,6 +3,8 @@ import { eq, and } from 'drizzle-orm'
 import { db, schema } from '@nuxthub/db'
 
 export default defineEventHandler(async (event) => {
+  rateLimit(`totp:verify:${getClientIp(event)}`, RATE_LIMITS.totp)
+
   const session = await requireUserSession(event)
   const { token } = await readValidatedBody(event, z.object({
     token: z.string().length(6).regex(/^\d+$/),
