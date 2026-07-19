@@ -187,6 +187,37 @@
               </div>
             </div>
           </div>
+
+          <USeparator />
+
+          <!-- API Tokens Section -->
+          <div>
+            <h3 class="text-sm font-medium mb-2">API Tokens</h3>
+            <p class="text-sm text-muted mb-3">
+              API tokens let third-party apps (mobile, CLI, bots) access your Collct account without using a passkey.
+            </p>
+
+            <div v-if="tokens.length > 0" class="space-y-2 mb-3">
+              <div v-for="t in tokens" :key="t.id" class="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <p class="text-sm font-medium">{{ t.name }}</p>
+                  <p class="text-xs text-muted">
+                    Created {{ formatDate(t.createdAt) }}
+                    <span v-if="t.lastUsedAt"> · Last used {{ formatDate(t.lastUsedAt) }}</span>
+                  </p>
+                </div>
+                <UButton color="error" variant="outline" size="xs" @click="onRevokeToken(t)">Revoke</UButton>
+              </div>
+            </div>
+
+            <div v-if="tokens.length === 0 && !tokensLoading" class="text-sm text-muted mb-3">
+              No API tokens yet.
+            </div>
+
+            <UButton variant="outline" size="sm" :loading="tokenCreating" @click="showCreateToken = true">
+              Create Token
+            </UButton>
+          </div>
         </div>
       </template>
 
@@ -254,6 +285,47 @@
   </UModal>
 
   <CollctOobeModal v-model:open="showOobe" />
+
+  <!-- Create Token Modal -->
+  <UModal v-model:open="showCreateToken" title="Create API Token">
+    <template #body>
+      <div v-if="!newTokenValue" class="space-y-4">
+        <p class="text-sm text-muted">Give this token a name so you can identify it later.</p>
+        <UFormField label="Token Name">
+          <UInput v-model="newTokenName" placeholder="My Mobile App" class="w-full" @keyup.enter="onCreateToken" />
+        </UFormField>
+        <UAlert color="warning" variant="subtle" title="Save this token!" description="The token will only be shown once. Copy it now — you won't be able to see it again." />
+      </div>
+      <div v-else class="space-y-4">
+        <UAlert color="success" variant="subtle" title="Token created" />
+        <div class="flex items-center gap-2">
+          <UInput :model-value="newTokenValue" readonly class="flex-1 font-mono text-xs" />
+          <UButton icon="i-solar-copy-bold" variant="outline" size="sm" @click="copyToken">Copy</UButton>
+        </div>
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton variant="outline" color="neutral" @click="closeCreateTokenModal">Close</UButton>
+        <UButton v-if="!newTokenValue" :loading="tokenCreating" :disabled="!newTokenName" @click="onCreateToken">Create</UButton>
+      </div>
+    </template>
+  </UModal>
+
+  <!-- Revoke Token Dialog -->
+  <UModal v-model:open="showRevokeDialog" title="Revoke Token">
+    <template #body>
+      <p class="text-sm text-muted">
+        Are you sure you want to revoke <strong>{{ revokeTarget?.name }}</strong>? Any app using this token will immediately lose access.
+      </p>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton variant="outline" color="neutral" @click="showRevokeDialog = false">Cancel</UButton>
+        <UButton color="error" :loading="tokenRevoking" @click="onConfirmRevoke">Revoke</UButton>
+      </div>
+    </template>
+  </UModal>
 </template>
 
 <script lang="ts" setup>
@@ -440,6 +512,84 @@ async function onSaveAccount() {
     saving.value = false
   }
 }
+
+// API Tokens
+const tokens = ref<any[]>([])
+const tokensLoading = ref(false)
+const tokenCreating = ref(false)
+const tokenRevoking = ref(false)
+const showCreateToken = ref(false)
+const showRevokeDialog = ref(false)
+const newTokenName = ref('')
+const newTokenValue = ref('')
+const revokeTarget = ref<any>(null)
+
+async function fetchTokens() {
+  tokensLoading.value = true
+  try {
+    const data = await $fetch('/api/auth/tokens')
+    tokens.value = (data as any).tokens || []
+  } catch {
+    // ignore
+  } finally {
+    tokensLoading.value = false
+  }
+}
+
+async function onCreateToken() {
+  if (!newTokenName.value) return
+  tokenCreating.value = true
+  try {
+    const data = await $fetch('/api/auth/tokens', {
+      method: 'POST',
+      body: { name: newTokenName.value },
+    })
+    newTokenValue.value = (data as any).token
+    newTokenName.value = ''
+    await fetchTokens()
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.data?.statusMessage || 'Failed to create token', color: 'error' })
+  } finally {
+    tokenCreating.value = false
+  }
+}
+
+function closeCreateTokenModal() {
+  showCreateToken.value = false
+  newTokenName.value = ''
+  newTokenValue.value = ''
+}
+
+function onRevokeToken(t: any) {
+  revokeTarget.value = t
+  showRevokeDialog.value = true
+}
+
+async function onConfirmRevoke() {
+  if (!revokeTarget.value) return
+  tokenRevoking.value = true
+  try {
+    await $fetch(`/api/auth/tokens/${revokeTarget.value.id}`, { method: 'DELETE' })
+    toast.add({ title: 'Token revoked', color: 'success' })
+    showRevokeDialog.value = false
+    await fetchTokens()
+  } catch (e: any) {
+    toast.add({ title: 'Error', description: e.data?.statusMessage || 'Failed to revoke token', color: 'error' })
+  } finally {
+    tokenRevoking.value = false
+  }
+}
+
+function copyToken() {
+  navigator.clipboard.writeText(newTokenValue.value)
+  toast.add({ title: 'Copied', description: 'Token copied to clipboard' })
+}
+
+function formatDate(d: string | Date) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+onMounted(() => { fetchTokens() })
 
 const tabs = computed(() => [
   {
