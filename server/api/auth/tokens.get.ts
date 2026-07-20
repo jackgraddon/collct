@@ -16,5 +16,5 @@ export default defineEventHandler(async (event) => {
     .from(schema.apiTokens)
     .where(eq(schema.apiTokens.userId, userId))
 
-  return tokens
+  return { tokens }
 })
