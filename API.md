@@ -1878,6 +1878,29 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ---
 
+### Get VAPID Public Key
+
+**Endpoint:** `GET /notifications/vapid-key`
+
+**Description:** Returns the VAPID public key needed to subscribe to push notifications. Third-party clients use this key when calling `PushManager.subscribe()` (web) or equivalent platform push APIs.
+
+**Authentication:** None
+
+**Response:**
+
+```json
+{
+  "vapidPublicKey": "BNcRdreALRFXTkOOUHKyEtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XHh2..."
+}
+```
+
+**Status codes:**
+- `200` — success
+- `403` — notifications disabled on this instance
+- `503` — VAPID keys not configured
+
+---
+
 ### Subscribe to Push Notifications
 
 **Endpoint:** `POST /notifications/subscribe`

@@ -1005,6 +1005,22 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /notifications/vapid-key:
+    get:
+      summary: Get VAPID public key for push subscriptions
+      tags: [Notifications]
+      responses:
+        "200":
+          description: VAPID public key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vapidPublicKey: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "503": { $ref: "#/components/responses/ServerError" }
+
   /notifications/subscribe:
     post:
       summary: Subscribe to push notifications
@@ -1346,6 +1362,11 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
     UnsupportedMediaType:
       description: Unsupported Media Type
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ServerError:
+      description: Service Unavailable (VAPID keys not configured)
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }
