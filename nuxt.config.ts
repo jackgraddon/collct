@@ -185,46 +185,72 @@ export default defineNuxtConfig({
       importScripts: ['/push-handler.js'],
       runtimeCaching: offlineModeEnabled ? [
         {
-          // All images served through NuxtImg / Vercel Image proxy
-          // (photos, thumbnails, avatars — covers everything)
+          // Avatars — StaleWhileRevalidate (change occasionally, small, accessed everywhere)
+          urlPattern: /\/_vercel\/image\?url=.*avatars/i,
+          handler: 'StaleWhileRevalidate',
+          options: {
+            cacheName: 'collct-avatars-cache',
+            expiration: { maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            cacheableResponse: { statuses: [0, 200] },
+          },
+        },
+        {
+          // All other proxied images (photos, thumbnails) — CacheFirst (immutable)
           urlPattern: /\/_vercel\/image\?url=.*/i,
           handler: 'CacheFirst',
           options: {
             cacheName: 'collct-images-cache',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
-            },
-            cacheableResponse: {
-              statuses: [0, 200],
-            },
+            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            cacheableResponse: { statuses: [0, 200] },
           },
         },
         {
-          // Raw blob URLs (direct access, e.g. from API or fallback)
+          // Direct blob URLs — CacheFirst
           urlPattern: /^https:\/\/.*\.blob\.vercel-storage\.com\/.*/i,
           handler: 'CacheFirst',
           options: {
-            cacheName: 'collct-photos-cache',
-            expiration: {
-              maxEntries: 50,
-              maxAgeSeconds: 60 * 60 * 24 * 7,
-            },
-            cacheableResponse: {
-              statuses: [0, 200],
-            },
+            cacheName: 'collct-blob-cache',
+            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+            cacheableResponse: { statuses: [0, 200] },
           },
         },
         {
-          // Feed API responses — serve cached data when offline
+          // Feed API — NetworkFirst with offline fallback
           urlPattern: /\/api\/photos(\?.*)?$/,
           handler: 'NetworkFirst',
           options: {
             cacheName: 'collct-feed-cache',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 60 * 60 * 24,
-            },
+            expiration: { maxEntries: 30, maxAgeSeconds: 24 * 60 * 60 },
+            networkTimeoutSeconds: 3,
+          },
+        },
+        {
+          // Comments — NetworkFirst
+          urlPattern: /\/api\/photos\/\d+\/comments/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'collct-comments-cache',
+            expiration: { maxEntries: 50, maxAgeSeconds: 24 * 60 * 60 },
+            networkTimeoutSeconds: 3,
+          },
+        },
+        {
+          // Groups — NetworkFirst
+          urlPattern: /\/api\/groups/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'collct-groups-cache',
+            expiration: { maxEntries: 10, maxAgeSeconds: 24 * 60 * 60 },
+            networkTimeoutSeconds: 3,
+          },
+        },
+        {
+          // User profiles — NetworkFirst
+          urlPattern: /\/api\/user\//,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'collct-user-cache',
+            expiration: { maxEntries: 20, maxAgeSeconds: 24 * 60 * 60 },
             networkTimeoutSeconds: 3,
           },
         },
