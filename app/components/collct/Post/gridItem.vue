@@ -65,7 +65,8 @@ const activeBorder = computed(() => {
 function navigateToPost() {
   const el = imgEl.value?.$el as HTMLElement | undefined
   const thumbnailUrl = (el as HTMLImageElement | undefined)?.currentSrc || props.postData.url
-  if (el && document.startViewTransition) {
+  const isSafari = navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')
+  if (el && document.startViewTransition && !isSafari) {
     el.style.viewTransitionName = `photo-${props.postData.id}`
     document.startViewTransition(() => {
       router.push({
