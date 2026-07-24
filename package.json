@@ -1,6 +1,6 @@
 {
   "name": "collct",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "A friends-first social media designed to connect you to your friends, and that's it. No algorithm, no tracking, no strangers.",
   "author": "Jack Graddon <hello@jackgraddon.com>",
   "type": "module",
