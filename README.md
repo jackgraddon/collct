@@ -2,6 +2,8 @@
 
 A friends-first social media designed to connect you to your friends, and that's it.
 
+Want to get started? It's easy! Just click the Deploy with Vercel button below, create a Vercel account if you don't have one, and deploy it for free! If you want to selfhost on your own device, check below for more information.
+
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jackgraddon/collct)
 
 ## What is Collct?
