@@ -85,7 +85,7 @@ paths:
       security: [{}]
       responses:
         "200":
-          description: Auth result (or mfaRequired: true)
+          description: "Auth result (or mfaRequired: true)"
         "400":
           $ref: "#/components/responses/BadRequest"
 
@@ -372,6 +372,27 @@ paths:
                   expires_in: { type: integer }
                   state: { type: string }
 
+  /auth/authorize/info:
+    get:
+      summary: Get authorization request info (app name)
+      tags: [Auth, Browser Flow]
+      security: []
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: App name for the pending authorization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  app_name: { type: string }
+        "400": { $ref: "#/components/responses/BadRequest" }
+
   /auth/authorize/approve:
     post:
       summary: Approve an authorization request
@@ -389,6 +410,24 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /auth/authorize/deny:
+    post:
+      summary: Deny an authorization request
+      tags: [Auth, Browser Flow]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/Ok" }
+        "400": { $ref: "#/components/responses/BadRequest" }
 
   /auth/token:
     post:
@@ -1064,18 +1103,20 @@ paths:
 
   /version:
     get:
-      summary: Get server version
+      summary: Get application version and uptime
       tags: [Utility]
       security: []
       responses:
         "200":
-          description: Version
+          description: Application version info
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  name: { type: string }
                   version: { type: string }
+                  uptime: { type: integer }
 
 components:
   securitySchemes:
@@ -1230,12 +1271,14 @@ components:
             properties:
               text: { type: string }
               editedAt: { type: string }
+        blobPathname: { type: string, description: "Internal blob path (returned by single photo endpoint)" }
         createdAt: { type: string, format: date-time }
         url: { type: string, description: "Presigned blob URL (~1h TTL)" }
         user:
           type: object
           properties:
             id: { type: integer }
+            username: { type: string }
             name: { type: string }
             avatarUrl: { type: string, nullable: true }
         groups:
@@ -1385,3 +1428,17 @@ components:
                       retryAfter:
                         type: integer
                         description: Seconds until rate limit resets
+    PhotoList:
+      description: Paginated list of photos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              photos:
+                type: array
+                items: { $ref: "#/components/schemas/Photo" }
+              nextCursor:
+                type: integer
+                nullable: true
+                description: Unix timestamp (ms) for next page, null if no more

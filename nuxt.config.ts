@@ -33,7 +33,9 @@ export default defineNuxtConfig({
   css: ['~/assets/css/main.css'],
 
   hub: {
-    blob: { driver: 'vercel-blob', access: 'private' },
+    blob: process.env.COLLCT_BLOB_DIR
+      ? { driver: 'fs', dir: process.env.COLLCT_BLOB_DIR }
+      : { driver: 'vercel-blob', access: 'private' },
     db: 'postgresql',
     kv: false,
   },

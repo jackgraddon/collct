@@ -2,6 +2,8 @@
 
 A friends-first social media designed to connect you to your friends, and that's it.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jackgraddon/collct)
+
 ## What is Collct?
 
 Collct is a new kind of social media that puts you and your friends at the center of the show. Gone are annoying ads, suggested content, "people you may know," and all of the annoyances the other guys shove in your face. Collct only shows you, your friends, and their photos. That's it.
@@ -26,12 +28,55 @@ Collct is a new kind of social media that puts you and your friends at the cente
 - **Frontend:** Nuxt 4, Vue 3, Nuxt UI
 - **Backend:** Nuxt Server API, Drizzle ORM, PostgreSQL
 - **Auth:** WebAuthn (passkeys) + TOTP 2FA
-- **Storage:** Vercel Blob (private image storage)
-- **Deploy:** Vercel
+- **Storage:** Vercel Blob (Vercel) / Local filesystem (Docker)
+
+## Deployment
+
+### Vercel (Recommended)
+
+The fastest way to get started. Click the deploy button above, or:
+
+1. Fork this repo
+2. Import on [vercel.com/new](https://vercel.com/new)
+3. Link a [Neon](https://neon.tech) PostgreSQL database from the Vercel dashboard
+4. Add Vercel Blob storage from the Vercel dashboard
+5. Deploy
+
+### Docker
+
+Run Collct on any server with Docker.
+
+**Quick start:**
+
+```bash
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+cp .env.example .env
+# Edit .env — at minimum, set NUXT_SESSION_PASSWORD
+docker compose up -d
+```
+
+Open `http://localhost:3000`.
+
+**Using a pre-built image from GHCR:**
+
+```yaml
+# docker-compose.yml override
+services:
+  collct:
+    image: ghcr.io/jackgraddon/collct:latest
+    build: # remove this line to use pre-built image
+```
+
+**Configuration:** Copy `.env.example` to `.env` and set at least `NUXT_SESSION_PASSWORD` (generate with `openssl rand -hex 32`). All other variables have sensible defaults. See `.env.example` for the full list.
+
+**Persistent data:** Photos and avatars are stored in a Docker volume (`blobdata`). PostgreSQL data is stored in a separate volume (`pgdata`). Back up both volumes for a complete backup.
+
+**Portainer / GitOps:** Point your stack at the repo. The `docker-compose.yml` builds from source by default. Set environment variables in the Portainer UI or via an `.env` file in the repo root.
 
 ## Configuration
 
-Collct is configured via environment variables. All variables are optional and have sensible defaults.
+Collct is configured via environment variables. All variables are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions.
 
 ### Registration & Access
 
@@ -50,24 +95,20 @@ Collct is configured via environment variables. All variables are optional and h
 - `COLLCT_SESSION_SECURE` — Whether session cookies are marked Secure (default: `"true"` in production, `"false"` in development)
 - `COLLCT_SESSION_SAME_SITE` — SameSite cookie attribute (default: `"lax"`, can be `"lax" | "strict" | "none"`)
 
-### Authentication
-
-- `COLLCT_REQUIRE_EMAIL_VERIFICATION` — Require email verification before login (default: `"false"`, requires email service integration — not yet implemented)
-
 ### Features
 
 - `COLLCT_NOTIFICATIONS_ENABLED` — Enable push notifications (default: `"true"`)
 - `COLLCT_COMMENTS_ENABLED` — Enable comments (default: `"true"`)
 - `COLLCT_OFFLINE_MODE_ENABLED` — Enable offline caching (default: `"true"`)
 
-### Example
+## Contributing
 
-```bash
-COLLCT_ALLOW_REGISTRATION=invite-only
-COLLCT_INSTANCE_NAME="Family Photos"
-COLLCT_ADMIN_EMAIL="dad@family.local"
-```
+Contributions are welcome! Please open an issue first to discuss what you'd like to change.
+
+## Security
+
+If you discover a security vulnerability, please see [SECURITY.md](SECURITY.md) for responsible disclosure instructions.
 
 ## License
 
-Private project (for now).
+[AGPL-3.0](LICENSE)

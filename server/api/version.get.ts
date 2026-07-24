@@ -1,8 +1,13 @@
-import { db } from '@nuxthub/db'
-import { sql } from 'drizzle-orm'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
-export default defineEventHandler(async () => {
-  const result = await db.execute(sql`SELECT version() as version`)
-  const response = result[0] as { version: string } | undefined
-  return { version: response?.version };
-});
+const startTime = Date.now()
+
+export default defineEventHandler(() => {
+  const pkg = JSON.parse(readFileSync(resolve('package.json'), 'utf-8'))
+  return {
+    name: pkg.name,
+    version: pkg.version ?? '0.0.0',
+    uptime: Math.floor((Date.now() - startTime) / 1000),
+  }
+})

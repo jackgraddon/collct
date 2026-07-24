@@ -1,14 +1,52 @@
 services:
-  postgres:
-    image: docker.io/library/postgres:16-alpine
+  collct:
+    build: .
+    image: ghcr.io/jackgraddon/collct:latest
     ports:
-      - "5432:5432"
+      - "${COLLCT_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://collct:${POSTGRES_PASSWORD:-collct}@postgres:5432/collct
+      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:-}
+      COLLCT_BLOB_DIR: /data/blob
+      COLLCT_ALLOW_REGISTRATION: ${COLLCT_ALLOW_REGISTRATION:-yes}
+      COLLCT_PUBLIC_GROUP_ENABLED: ${COLLCT_PUBLIC_GROUP_ENABLED:-true}
+      COLLCT_INSTANCE_NAME: ${COLLCT_INSTANCE_NAME:-Collct}
+      COLLCT_INSTANCE_DESCRIPTION: ${COLLCT_INSTANCE_DESCRIPTION:-}
+      COLLCT_ADMIN_EMAIL: ${COLLCT_ADMIN_EMAIL:-}
+      COLLCT_SESSION_MAX_AGE: ${COLLCT_SESSION_MAX_AGE:-}
+      COLLCT_SESSION_SECURE: ${COLLCT_SESSION_SECURE:-}
+      COLLCT_SESSION_SAME_SITE: ${COLLCT_SESSION_SAME_SITE:-}
+      COLLCT_NOTIFICATIONS_ENABLED: ${COLLCT_NOTIFICATIONS_ENABLED:-true}
+      COLLCT_COMMENTS_ENABLED: ${COLLCT_COMMENTS_ENABLED:-true}
+      COLLCT_OFFLINE_MODE_ENABLED: ${COLLCT_OFFLINE_MODE_ENABLED:-true}
+      COLLCT_APP_URL: ${COLLCT_APP_URL:-}
+    volumes:
+      - blobdata:/data/blob
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  postgres:
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: collct
-      POSTGRES_PASSWORD: collct
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-collct}
       POSTGRES_DB: collct
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collct"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pgdata:
+  blobdata:

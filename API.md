@@ -504,6 +504,58 @@ The app opens `authorize_url` in a browser. The user signs in with their passkey
 
 ---
 
+#### Deny Authorization
+
+**Endpoint:** `POST /auth/authorize/deny`
+
+**Description:** Deny a pending authorization request. Does not require authentication (can be called from a different browser/device).
+
+**Authentication:** None
+
+**Request:**
+
+```json
+{
+  "code": "xyz789..."
+}
+```
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success (or code was already expired/not found)
+
+---
+
+#### Get Authorization Info
+
+**Endpoint:** `GET /auth/authorize/info`
+
+**Description:** Returns the app name associated with a pending authorization code. Used by the consent UI to display which app is requesting access before the user approves or denies.
+
+**Authentication:** None
+
+**Query Parameters:**
+- `code` (required) — the authorization code
+
+**Response:**
+
+```json
+{
+  "app_name": "My Mobile App"
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid or expired code
+
+---
+
 #### Step 3: Exchange Code for Token
 
 **Endpoint:** `POST /auth/token`
@@ -1974,39 +2026,6 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ## Utility Endpoints
 
-### Get Lorem Posts
-
-**Endpoint:** `GET /lorem/posts`
-
-**Description:** Generate mock post data with random images from Picsum. Intended for development and testing.
-
-**Authentication:** None
-
-**Query Parameters:**
-
-| Parameter | Default | Max | Description |
-|-----------|---------|-----|-------------|
-| `count` | 10 | 50 | Number of mock posts to generate |
-
-**Response:**
-
-```json
-[
-  {
-    "id": "0001",
-    "author": "Jeff Goldblum",
-    "img": "https://picsum.photos/seed/abc123/800/450",
-    "width": 800,
-    "height": 450
-  }
-]
-```
-
-**Status codes:**
-- `200` — success
-
----
-
 ### Get Blob File
 
 **Endpoint:** `GET /blob/*`
@@ -2025,7 +2044,7 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `GET /version`
 
-**Description:** Returns the database (PostgreSQL) version. Useful for health checks.
+**Description:** Returns the application name, version, and server uptime in seconds.
 
 **Authentication:** None
 
@@ -2033,7 +2052,9 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ```json
 {
-  "version": "PostgreSQL 16.3 (Neon)"
+  "name": "collct",
+  "version": "0.1.0",
+  "uptime": 3600
 }
 ```
 

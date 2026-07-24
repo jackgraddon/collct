@@ -1,7 +1,18 @@
 {
   "name": "collct",
+  "version": "0.1.0",
+  "description": "A friends-first social media designed to connect you to your friends, and that's it. No algorithm, no tracking, no strangers.",
+  "author": "Jack Graddon <hello@jackgraddon.com>",
   "type": "module",
-  "private": true,
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jackgraddon/collct.git"
+  },
+  "bugs": {
+    "url": "https://github.com/jackgraddon/collct/issues"
+  },
+  "homepage": "https://github.com/jackgraddon/collct#readme",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",

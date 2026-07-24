@@ -15,7 +15,7 @@ async function getPresignUrl() {
 }
 
 export async function getDelegationToken() {
-  if (process.dev) return null
+  if (process.dev || process.env.COLLCT_BLOB_DIR) return null
 
   const now = Date.now()
   if (cachedToken && now < tokenExpiresAt) return cachedToken
@@ -30,7 +30,7 @@ export async function getDelegationToken() {
 }
 
 export async function getBlobUrl(pathname: string): Promise<string> {
-  if (process.dev) {
+  if (process.dev || process.env.COLLCT_BLOB_DIR) {
     return `/api/blob/${pathname}`
   }
 
