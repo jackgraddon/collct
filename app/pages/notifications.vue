@@ -28,7 +28,7 @@
       <UIcon name="i-lucide-bell-ring" class="w-10 h-10 text-primary shrink-0" />
       <div class="flex-1 min-w-0">
         <p class="text-sm font-medium">Enable notifications?</p>
-        <p class="text-xs text-muted mt-0.5">Get notified when friends like or comment on your photos.</p>
+        <p class="text-xs text-muted mt-0.5">Get notified when friends like, comment, or post new photos.</p>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <UButton color="neutral" variant="ghost" size="xs" @click="dismissPrompt">Later</UButton>
@@ -205,6 +205,8 @@ function notificationText(n: NotificationItem): string {
       return ' commented on your photo'
     case 'group_join':
       return ' joined your group'
+    case 'new_post':
+      return ' posted a new photo'
     default:
       return ' interacted with your content'
   }

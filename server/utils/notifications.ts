@@ -5,7 +5,7 @@ import { getAdminConfig } from './config'
 interface CreateNotificationData {
   userId: number
   actorId: number
-  type: 'like' | 'comment' | 'group_join'
+  type: 'like' | 'comment' | 'group_join' | 'new_post'
   photoId?: number
   commentId?: number
   groupId?: number
@@ -59,6 +59,11 @@ async function sendPushForNotification(data: CreateNotificationData) {
       body = `${actorName} joined your group`
       tag = `group_join-${data.groupId}`
       if (data.groupId) pushData.groupId = String(data.groupId)
+      break
+    case 'new_post':
+      body = `${actorName} posted a new photo`
+      tag = `new_post-${data.photoId}`
+      if (data.photoId) pushData.photoId = String(data.photoId)
       break
   }
 

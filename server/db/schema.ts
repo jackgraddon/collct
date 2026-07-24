@@ -137,6 +137,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'like',
   'comment',
   'group_join',
+  'new_post',
 ])
 
 export const notifications = pgTable(

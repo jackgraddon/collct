@@ -1,7 +1,7 @@
 import { db, schema } from '@nuxthub/db'
 import { blob } from 'hub:blob'
 import { presignUrl } from '@vercel/blob'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -94,6 +94,21 @@ export default defineEventHandler(async (event) => {
 
     return photo
   })
+
+  // Notify all group members (except the uploader)
+  const memberRows = await db
+    .select({ userId: schema.groupMembers.userId })
+    .from(schema.groupMembers)
+    .where(inArray(schema.groupMembers.groupId, groupIds))
+  const memberIds = [...new Set(memberRows.map((r) => r.userId))].filter((id) => id !== userId)
+  for (const memberId of memberIds) {
+    createNotification({
+      userId: memberId,
+      actorId: userId,
+      type: 'new_post',
+      photoId: result.id,
+    }).catch(() => {})
+  }
 
   const token = await getDelegationToken()
   const { presignedUrl } = await presignUrl(token, {

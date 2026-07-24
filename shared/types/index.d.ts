@@ -95,7 +95,7 @@ declare global {
 
   interface Notification {
     id: number
-    type: 'like' | 'comment' | 'group_join'
+    type: 'like' | 'comment' | 'group_join' | 'new_post'
     isRead: boolean
     photoId: number | null
     commentId: number | null

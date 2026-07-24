@@ -92,6 +92,13 @@
       "when": 1752950400001,
       "tag": "0012_add_pending_authorizations",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1752950400002,
+      "tag": "0013_add_new_post_notification_type",
+      "breakpoints": true
     }
   ]
 }
