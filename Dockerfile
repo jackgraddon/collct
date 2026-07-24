@@ -2,8 +2,11 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm ci
+# Install pnpm first
+RUN npm install -g pnpm
+
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN npx nuxt build
@@ -14,6 +17,9 @@ FROM node:20-alpine
 WORKDIR /app
 
 RUN addgroup -S collct && adduser -S collct -G collct
+
+# Install pnpm in production stage too
+RUN npm install -g pnpm
 
 COPY --from=build /app/.output ./.output
 COPY --from=build /app/package.json ./
