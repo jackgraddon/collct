@@ -153,7 +153,7 @@ export const notifications = pgTable(
     type: notificationTypeEnum('type').notNull(),
     photoId: integer('photo_id').references(() => photos.id, { onDelete: 'cascade' }),
     commentId: integer('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
-    groupId: integer('group_id').references(() => groups.id, { onDelete: 'cascade' }),
+    groupId: text('group_id'),
     isRead: boolean('is_read').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },

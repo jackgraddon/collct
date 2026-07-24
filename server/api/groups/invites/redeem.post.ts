@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
       userId: group.ownerId,
       actorId: userId,
       type: 'group_join',
-      groupId: invite.groupId,
+      groupIds: [invite.groupId],
     })
   }
 

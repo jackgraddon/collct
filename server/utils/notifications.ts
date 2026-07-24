@@ -8,7 +8,7 @@ interface CreateNotificationData {
   type: 'like' | 'comment' | 'group_join' | 'new_post'
   photoId?: number
   commentId?: number
-  groupId?: number
+  groupIds?: number[]
 }
 
 /**
@@ -24,7 +24,7 @@ export async function createNotification(data: CreateNotificationData) {
     type: data.type,
     photoId: data.photoId ?? null,
     commentId: data.commentId ?? null,
-    groupId: data.groupId ?? null,
+    groupId: data.groupIds?.length ? JSON.stringify(data.groupIds) : null,
   })
 
   // Fire-and-forget push notification
@@ -57,8 +57,8 @@ async function sendPushForNotification(data: CreateNotificationData) {
       break
     case 'group_join':
       body = `${actorName} joined your group`
-      tag = `group_join-${data.groupId}`
-      if (data.groupId) pushData.groupId = String(data.groupId)
+      tag = `group_join-${data.groupIds?.[0] ?? ''}`
+      if (data.groupIds?.length) pushData.groupId = String(data.groupIds[0])
       break
     case 'new_post':
       body = `${actorName} posted a new photo`

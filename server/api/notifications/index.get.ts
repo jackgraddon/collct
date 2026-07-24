@@ -80,6 +80,7 @@ export default defineEventHandler(async (event) => {
 
   const result = notifications.map((n) => ({
     ...n,
+    groupId: n.groupId ? JSON.parse(n.groupId) as number[] : [],
     photoUrl: n.photoId ? photoUrlMap.get(n.photoId) ?? null : null,
   }))
 

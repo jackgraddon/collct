@@ -121,7 +121,7 @@ interface NotificationItem {
   isRead: boolean
   photoId: number | null
   commentId: number | null
-  groupId: number | null
+  groupId: number[]
   createdAt: string
   actor: NotificationActor
   photoUrl: string | null
@@ -214,7 +214,7 @@ function notificationText(n: NotificationItem): string {
 
 function notificationLink(n: NotificationItem): string {
   if (n.photoId) return `/post/${n.photoId}`
-  if (n.groupId) return `/groups/${n.groupId}`
+  if (n.groupId?.length) return `/groups/${n.groupId[0]}`
   return '/'
 }
 

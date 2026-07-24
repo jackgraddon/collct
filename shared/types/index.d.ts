@@ -99,7 +99,7 @@ declare global {
     isRead: boolean
     photoId: number | null
     commentId: number | null
-    groupId: number | null
+    groupId: number[]
     createdAt: string
     photoUrl: string | null
     actor: {

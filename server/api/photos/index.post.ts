@@ -95,18 +95,25 @@ export default defineEventHandler(async (event) => {
     return photo
   })
 
-  // Notify all group members (except the uploader)
+  // Notify all group members (except the uploader), one notification per user
   const memberRows = await db
-    .select({ userId: schema.groupMembers.userId })
+    .select({ userId: schema.groupMembers.userId, groupId: schema.groupMembers.groupId })
     .from(schema.groupMembers)
     .where(inArray(schema.groupMembers.groupId, groupIds))
-  const memberIds = [...new Set(memberRows.map((r) => r.userId))].filter((id) => id !== userId)
-  for (const memberId of memberIds) {
+  const memberGroupMap = new Map<number, number[]>()
+  for (const row of memberRows) {
+    if (row.userId === userId) continue
+    const groups = memberGroupMap.get(row.userId) ?? []
+    groups.push(row.groupId)
+    memberGroupMap.set(row.userId, groups)
+  }
+  for (const [memberId, memberGroupIds] of memberGroupMap) {
     createNotification({
       userId: memberId,
       actorId: userId,
       type: 'new_post',
       photoId: result.id,
+      groupIds: memberGroupIds,
     }).catch(() => {})
   }
 

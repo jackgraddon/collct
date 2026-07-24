@@ -133,7 +133,7 @@ function notificationText(n: Notification): string {
 
 function notificationLink(n: Notification): string {
   if (n.photoId) return `/post/${n.photoId}`
-  if (n.groupId) return `/groups/${n.groupId}`
+  if (n.groupId?.length) return `/groups/${n.groupId[0]}`
   return '/'
 }
 
