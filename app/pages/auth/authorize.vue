@@ -155,12 +155,15 @@ async function onApprove() {
   if (!authCode.value) return
   loading.value = true
   try {
-    const { user } = useUserSession()
-    await $fetch('/api/auth/authorize/approve', {
+    const { redirect_url } = await $fetch('/api/auth/authorize/approve', {
       method: 'POST',
       body: { code: authCode.value },
     })
-    approved.value = true
+    if (redirect_url) {
+      window.location.href = redirect_url
+    } else {
+      approved.value = true
+    }
   } catch (error: any) {
     toast.add({
       title: 'Authorization Failed',

@@ -407,7 +407,14 @@ paths:
               properties:
                 code: { type: string }
       responses:
-        "200": { $ref: "#/components/responses/Ok" }
+        "200":
+          description: Approved — returns redirect URL with code and server_url
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  redirect_url: { type: string, format: uri }
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 

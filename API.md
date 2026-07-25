@@ -494,8 +494,10 @@ The app opens `authorize_url` in a browser. The user signs in with their passkey
 **Response:**
 
 ```json
-{ "ok": true }
+{ "redirect_url": "https://your-pwa.com/login?code=xyz789...&server_url=https://collct.example.com" }
 ```
+
+The `redirect_url` contains the `redirect_uri` from the original authorization request, with `code` and `server_url` appended as query params. The client should redirect the user there using `window.location.href`.
 
 **Status codes:**
 - `200` — success

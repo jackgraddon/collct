@@ -22,12 +22,15 @@ useHead({
 
 const { user } = useUser()
 const router = useRouter()
+const route = useRoute()
 const { subscribe } = usePushNotifications()
 
 const showOobe = ref(false)
 
+const isAuthRoute = computed(() => route.path.startsWith('/auth'))
+
 onMounted(() => {
-  if (user.value && !user.value.hasSeenOobe) {
+  if (user.value && !user.value.hasSeenOobe && !isAuthRoute.value) {
     showOobe.value = true
   }
   // Auto-subscribe if permission already granted (no prompt needed)
@@ -38,7 +41,7 @@ onMounted(() => {
 watch(
   () => user.value,
   (u) => {
-    if (u && !u.hasSeenOobe && !showOobe.value) {
+    if (u && !u.hasSeenOobe && !showOobe.value && !isAuthRoute.value) {
       showOobe.value = true
     }
   },
