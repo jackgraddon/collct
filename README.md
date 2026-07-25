@@ -2,10 +2,6 @@
 
 A friends-first social media designed to connect you to your friends, and that's it.
 
-Want to get started? It's easy! Just click the Deploy with Vercel button below, create a Vercel account if you don't have one, and deploy it for free! If you want to selfhost on your own device, check below for more information.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jackgraddon/collct)
-
 ## What is Collct?
 
 Collct is a new kind of social media that puts you and your friends at the center of the show. Gone are annoying ads, suggested content, "people you may know," and all of the annoyances the other guys shove in your face. Collct only shows you, your friends, and their photos. That's it.
@@ -34,7 +30,11 @@ Collct is a new kind of social media that puts you and your friends at the cente
 
 ### Vercel (Recommended)
 
-The fastest way to get started. Click the deploy button above, or:
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jackgraddon/collct)
+
+The fastest way to get started is clicking the deploy button above. Just make sure to set the NUXT_SESSION_PASSWORD environment variable or else it will fail to build. You should also make sure the databases for SQL and Blob are created and connected, as the button won't do that for you!
+
+Or if you prefer the manual way:
 
 1. Fork this repo
 2. Import on [vercel.com/new](https://vercel.com/new)
