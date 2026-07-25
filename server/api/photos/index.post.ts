@@ -1,6 +1,5 @@
 import { db, schema } from '@nuxthub/db'
 import { blob } from 'hub:blob'
-import { presignUrl } from '@vercel/blob'
 import { eq, and, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -117,17 +116,9 @@ export default defineEventHandler(async (event) => {
     }).catch(() => {})
   }
 
-  const token = await getDelegationToken()
-  const { presignedUrl } = await presignUrl(token, {
-    pathname: blobPathname,
-    access: 'private',
-    operation: 'get',
-    validUntil: Date.now() + 60 * 60 * 1000,
-  })
-
   return {
     ...result,
-    url: presignedUrl,
+    url: await getBlobUrl(blobPathname),
     captionEditedAt: null,
     captionHistory: null,
   }
