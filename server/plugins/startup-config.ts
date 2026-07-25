@@ -11,4 +11,8 @@ export default defineNitroPlugin(() => {
   console.log(`[Collct] Offline mode:    ${config.offlineModeEnabled ? 'enabled' : 'disabled'}`)
   console.log(`[Collct] Session max age: ${config.sessionMaxAge}s`)
   console.log(`[Collct] Admin email:     ${config.adminEmail}`)
+
+  if (!process.env.NUXT_SESSION_PASSWORD) {
+    console.warn('[Collct] NUXT_SESSION_PASSWORD not set — using default. Set a custom password for production.')
+  }
 })

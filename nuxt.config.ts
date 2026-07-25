@@ -44,6 +44,7 @@ export default defineNuxtConfig({
 
   session: {
     maxAge: sessionMaxAge,
+    password: process.env.NUXT_SESSION_PASSWORD || 'collct-default-session-key-change-me',
     cookie: {
       secure: sessionSecure,
       sameSite: sessionSameSite,
