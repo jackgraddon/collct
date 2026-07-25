@@ -27,10 +27,8 @@ Collct is a new kind of social media that puts you and your friends at the cente
 
 ## Tech Stack
 
-- **Frontend:** Nuxt 4, Vue 3, Nuxt UI
-- **Backend:** Nuxt Server API, Drizzle ORM, PostgreSQL
-- **Auth:** WebAuthn (passkeys) + TOTP 2FA
-- **Storage:** Vercel Blob (Vercel) / Local filesystem (self-hosted)
+- **Frontend:** Nuxt 4, Nuxt UI
+- **Backend:** Nuxt 4, NuxtHub
 
 ## Deployment
 
