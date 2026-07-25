@@ -2090,26 +2090,21 @@ Common status codes:
 
 ## CORS
 
-Cross-Origin Resource Sharing (CORS) is supported for third-party clients. When the `COLLCT_APP_URL` environment variable is set, the server responds with the appropriate CORS headers for requests from allowed origins.
+Cross-Origin Resource Sharing (CORS) is enabled for all `/api/*` routes by default — any origin can make cross-origin requests. This means a Collct client (e.g. `collct.vercel.app`) can talk to any Collct server without configuration.
 
-**Configuration:**
-
-Set `COLLCT_APP_URL` to one or more allowed origins (comma-separated):
+To **restrict** CORS to specific origins, set `COLLCT_ALLOWED_ORIGINS` (comma-separated):
 
 ```
-COLLCT_APP_URL=https://my-pwa.vercel.app
-COLLCT_APP_URL=https://my-pwa.vercel.app,https://localhost:3000
+COLLCT_ALLOWED_ORIGINS=https://collct.vercel.app,https://localhost:3000
 ```
 
 **Headers:**
 
-- `Access-Control-Allow-Origin` — the matched request origin
+- `Access-Control-Allow-Origin` — the matched request origin (or `*` if unrestricted)
 - `Access-Control-Allow-Credentials: true` — allows cookies and auth headers
-- `Access-Control-Allow-Methods` — `GET, POST, PATCH, DELETE, OPTIONS`
-- `Access-Control-Allow-Headers` — `Authorization, Content-Type`
+- `Access-Control-Allow-Methods` — `GET, POST, PUT, PATCH, DELETE, OPTIONS`
+- `Access-Control-Allow-Headers` — `Content-Type, Authorization`
 - `Access-Control-Max-Age: 86400` — preflight cache for 24 hours
-
-**Note:** If `COLLCT_APP_URL` is not set, CORS headers are not added and browsers will block cross-origin requests. This is the default for single-instance deployments where the client is served from the same origin.
 
 ---
 

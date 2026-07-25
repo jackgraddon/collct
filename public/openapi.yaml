@@ -25,7 +25,7 @@ info:
 
     ## CORS
 
-    Cross-origin requests are only allowed when `COLLCT_APP_URL` is configured on the server.
+    Cross-origin requests are allowed by default for all `/api/*` routes. To restrict CORS to specific origins, set the `COLLCT_ALLOWED_ORIGINS` environment variable (comma-separated).
 
     ## Versioning
 
