@@ -56,11 +56,65 @@ pnpm build
 pnpm start
 ```
 
+### Docker
+
+You can also run Collct using Docker with our provided docker-compose.yml file:
+
+```bash
+# Clone and navigate to the repository
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+
+# Start all services (database + app)
+docker-compose up -d
+
+# Stop services
+docker-compose down
+```
+
+The docker-compose.yml file sets up:
+- PostgreSQL database with persistent storage
+- Collct application container
+- All required environment variables configured
+- Data persistence for both database and application data
+
+Important: You'll need to generate a session password before running the application:
+```bash
+openssl rand -hex 32
+```
+
+Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
+
 Open `http://localhost:3000`.
 
-### Docker (Coming Soon)
+### Docker
 
-Docker support is planned for future releases. If you want to containerize your instance now, you can build a Dockerfile yourself using Node 20-alpine with the self-hosted commands above.
+You can run Collct using Docker with our provided docker-compose.yml file:
+
+```bash
+# Clone and navigate to the repository
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+
+# Start all services (database + app)
+docker-compose up -d
+
+# Stop services
+docker-compose down
+```
+
+The docker-compose.yml file sets up:
+- PostgreSQL database with persistent storage
+- Collct application container
+- All required environment variables configured
+- Data persistence for both database and application data
+
+Important: You'll need to generate a session password before running the application:
+```bash
+openssl rand -hex 32
+```
+
+Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
 
 ## Configuration
 
