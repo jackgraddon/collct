@@ -9,6 +9,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
+  // Local filesystem (Docker / self-hosted)
   if (process.env.COLLCT_BLOB_DIR) {
     const filePath = join(process.env.COLLCT_BLOB_DIR, pathname)
     if (!existsSync(filePath)) {
@@ -24,9 +25,21 @@ export default defineEventHandler(async (event) => {
     return createReadStream(filePath)
   }
 
-  if (!process.dev) {
+  // Vercel Blob — fetch and stream through our proxy (avoids CORS / presigned URL expiry)
+  const file = await blob.head(pathname)
+
+  if (!file) {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
-  return blob.serve(event, pathname)
+  const response = await blob.get(pathname)
+
+  if (!response) {
+    throw createError({ statusCode: 404, statusMessage: 'Not Found' })
+  }
+
+  setResponseHeader(event, 'Content-Type', file.contentType || 'application/octet-stream')
+  setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable')
+
+  return response.blob
 })
