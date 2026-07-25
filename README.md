@@ -30,7 +30,7 @@ Collct is a new kind of social media that puts you and your friends at the cente
 - **Frontend:** Nuxt 4, Vue 3, Nuxt UI
 - **Backend:** Nuxt Server API, Drizzle ORM, PostgreSQL
 - **Auth:** WebAuthn (passkeys) + TOTP 2FA
-- **Storage:** Vercel Blob (Vercel) / Local filesystem (Docker)
+- **Storage:** Vercel Blob (Vercel) / Local filesystem (self-hosted)
 
 ## Deployment
 
@@ -44,37 +44,25 @@ The fastest way to get started. Click the deploy button above, or:
 4. Add Vercel Blob storage from the Vercel dashboard
 5. Deploy
 
-### Docker
+### Self-Hosted
 
-Run Collct on any server with Docker.
-
-**Quick start:**
+Install Node.js 20+, then:
 
 ```bash
 git clone https://github.com/jackgraddon/collct.git
 cd collct
+pnpm install
 cp .env.example .env
-# Edit .env — at minimum, set NUXT_SESSION_PASSWORD
-docker compose up -d
+# Edit .env — at minimum, set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
+pnpm build
+pnpm start
 ```
 
 Open `http://localhost:3000`.
 
-**Using a pre-built image from GHCR:**
+### Docker (Coming Soon)
 
-```yaml
-# docker-compose.yml override
-services:
-  collct:
-    image: ghcr.io/jackgraddon/collct:latest
-    build: # remove this line to use pre-built image
-```
-
-**Configuration:** Copy `.env.example` to `.env` and set at least `NUXT_SESSION_PASSWORD` (generate with `openssl rand -hex 32`). All other variables have sensible defaults. See `.env.example` for the full list.
-
-**Persistent data:** Photos and avatars are stored in a Docker volume (`blobdata`). PostgreSQL data is stored in a separate volume (`pgdata`). Back up both volumes for a complete backup.
-
-**Portainer / GitOps:** Point your stack at the repo. The `docker-compose.yml` builds from source by default. Set environment variables in the Portainer UI or via an `.env` file in the repo root.
+Docker support is planned for future releases. If you want to containerize your instance now, you can build a Dockerfile yourself using Node 20-alpine with the self-hosted commands above.
 
 ## Configuration
 
@@ -102,6 +90,11 @@ Collct is configured via environment variables. All variables are optional and h
 - `COLLCT_NOTIFICATIONS_ENABLED` — Enable push notifications (default: `"true"`)
 - `COLLCT_COMMENTS_ENABLED` — Enable comments (default: `"true"`)
 - `COLLCT_OFFLINE_MODE_ENABLED` — Enable offline caching (default: `"true"`)
+
+### Third-Party Client Access
+
+- `COLLCT_ALLOWED_ORIGINS` — Comma-separated list of origins allowed for CORS. By default, all origins are allowed (no config needed). Set this to restrict to specific client domains.
+- `COLLCT_APP_URL` — Origin of the Collct web app, used to build authorize URLs. Only needed if the client runs on a different domain than the server.
 
 ## Contributing
 
