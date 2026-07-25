@@ -10,13 +10,23 @@ declare module 'web-push' {
     topic?: string
   }
 
-  function generateVAPIDKeys(): VapidKeys
-  function setVapidDetails(subject: string, publicKey: string, privateKey: string): void
-  function sendNotification(
+  export function generateVAPIDKeys(): VapidKeys
+  export function setVapidDetails(subject: string, publicKey: string, privateKey: string): void
+  export function sendNotification(
     subscription: { endpoint: string; keys?: { auth: string; p256dh: string } },
     payload: string,
     options?: SendNotificationOptions,
   ): Promise<void>
 
-  export { generateVAPIDKeys, setVapidDetails, sendNotification }
+  const webpush: {
+    generateVAPIDKeys(): VapidKeys
+    setVapidDetails(subject: string, publicKey: string, privateKey: string): void
+    sendNotification(
+      subscription: { endpoint: string; keys?: { auth: string; p256dh: string } },
+      payload: string,
+      options?: SendNotificationOptions,
+    ): Promise<void>
+  }
+
+  export default webpush
 }

@@ -33,8 +33,8 @@ export default defineEventHandler(async (event) => {
     .where(eq(schema.pendingAuthorizations.id, auth.id))
 
   const serverUrl = getRequestURL(event).origin
-  const redirectUrl = new URL(auth.redirectUri)
-  redirectUrl.searchParams.set('code', auth.authorizationCode)
+  const redirectUrl = new URL(auth.redirectUri!)
+  redirectUrl.searchParams.set('code', auth.authorizationCode!)
   redirectUrl.searchParams.set('server_url', serverUrl)
 
   return { redirect_url: redirectUrl.toString() }

@@ -38,8 +38,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Not Found' })
   }
 
-  setResponseHeader(event, 'Content-Type', file.contentType || 'application/octet-stream')
-  setResponseHeader(event, 'Cache-Control', 'public, max-age=31536000, immutable')
-
-  return response.blob
+  return new Response(await response.arrayBuffer(), {
+    headers: {
+      'Content-Type': file.contentType || 'application/octet-stream',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  })
 })
