@@ -1,4 +1,3 @@
-ALTER TYPE "public"."notification_type" ADD VALUE 'new_post';--> statement-breakpoint
 CREATE TABLE "api_tokens" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" integer NOT NULL,
