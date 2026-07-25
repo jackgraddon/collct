@@ -56,18 +56,85 @@ pnpm build
 pnpm start
 ```
 
+### Docker
+
+You can also run Collct using Docker with our provided docker-compose.yml file:
+
+```bash
+# Clone and navigate to the repository
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+
+# Start all services (database + app)
+docker-compose up -d
+
+# Stop services
+docker-compose down
+```
+
+The docker-compose.yml file sets up:
+- PostgreSQL database with persistent storage
+- Collct application container
+- All required environment variables configured
+- Data persistence for both database and application data
+
+Important: You'll need to generate a session password before running the application:
+```bash
+openssl rand -hex 32
+```
+
+Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
+
 Open `http://localhost:3000`.
 
-### Docker (Coming Soon)
+### Docker
 
-Docker support is planned for future releases. If you want to containerize your instance now, you can build a Dockerfile yourself using Node 20-alpine with the self-hosted commands above.
+You can run Collct using Docker with the image or with the docker-compose.yml file.
+
+Important: You'll need to generate a session password before running the application:
+```bash
+openssl rand -hex 32
+```
+
+Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
+
+#### Compose
+
+Using the docker-compose.yml file:
+
+```bash
+# Clone and navigate to the repository
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+
+# Start all services (database + app)
+docker-compose up -d
+
+# Stop services
+docker-compose down
+```
+
+The docker-compose.yml file sets up:
+- PostgreSQL database with persistent storage
+- Collct application container
+- All required environment variables configured
+- Data persistence for both database and application data
+
+#### Image
+
+You can also use the image with your own deployment methods.
+
+```bash
+docker pull jackgraddon/collct:latest
+```
 
 ## Configuration
 
-Collct is configured via environment variables. All variables are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions.
+Collct is configured via environment variables. All variables (excluding one) are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions.
 
 ### Registration & Access
 
+- `NUXT_SESSION_PASSWORD` - `<empty>` (default), use `openssl rand -hex 32` to set this, or authentication will not work.
 - `COLLCT_ALLOW_REGISTRATION` — `"yes"` (default), `"invite-only"`, or `"no"`. Controls who can create new accounts.
 - `COLLCT_PUBLIC_GROUP_ENABLED` — `"true"` (default) or `"false"`. Whether the Public group exists and users are auto-joined on signup.
 
