@@ -282,3 +282,11 @@ export const pushSubscriptions = pgTable(
     uniqueIndex('idx_push_subscription_unique').on(t.userId, t.endpoint),
   ],
 )
+
+// Instance Config (key-value store for auto-generated secrets etc.)
+
+export const config = pgTable('config', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).notNull().defaultNow(),
+})

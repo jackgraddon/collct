@@ -8,14 +8,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const vapidPublicKey = useRuntimeConfig().vapidPublicKey
+  const keys = await getVapidKeys()
 
-  if (!vapidPublicKey) {
-    throw createError({
-      statusCode: 503,
-      statusMessage: 'VAPID keys not configured on this instance',
-    })
-  }
-
-  return { vapidPublicKey }
+  return { vapidPublicKey: keys.publicKey }
 })

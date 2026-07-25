@@ -51,8 +51,6 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
-    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || '',
     session: {
       maxAge: sessionMaxAge,
       cookie: {
@@ -61,7 +59,6 @@ export default defineNuxtConfig({
       }
     },
     public: {
-      vapidPublicKey: process.env.VAPID_PUBLIC_KEY || '',
       instanceName,
       adminEmail: process.env.COLLCT_ADMIN_EMAIL || 'admin@example.com',
     },

@@ -12,24 +12,20 @@ interface PushMessage {
 
 let configured = false
 
-function configureVapid() {
+async function configureVapid() {
   if (configured) return
-  const config = useRuntimeConfig()
-  if (!config.vapidPublicKey || !config.vapidPrivateKey) {
-    console.error('[push] VAPID keys not configured')
-    return
-  }
+  const keys = await getVapidKeys()
   const adminConfig = getAdminConfig()
   webpush.setVapidDetails(
     `mailto:${adminConfig.adminEmail}`,
-    config.vapidPublicKey,
-    config.vapidPrivateKey,
+    keys.publicKey,
+    keys.privateKey,
   )
   configured = true
 }
 
 export async function sendPushNotification(userId: number, message: PushMessage) {
-  configureVapid()
+  await configureVapid()
   if (!configured) return
 
   const subscriptions = await db
