@@ -23,6 +23,13 @@
           Sign in with Passkey
         </UButton>
 
+        <p class="text-sm text-center text-gray-500 dark:text-gray-400">
+          Don't have an account?
+          <UButton variant="link" color="primary" class="p-0" :to="signupUrl">
+            Sign up
+          </UButton>
+        </p>
+
         <div v-if="mfaRequired" class="flex flex-col gap-4">
           <UFormField label="Verification Code">
             <UInput
@@ -91,6 +98,11 @@ const { loggedIn, user } = useUserSession()
 
 // If code is in URL, auto-authorize after login
 const codeFromUrl = computed(() => route.query.code as string | undefined)
+
+const signupUrl = computed(() => {
+  if (!codeFromUrl.value) return '/login'
+  return `/login?redirect=${encodeURIComponent(`/auth/device?code=${codeFromUrl.value}`)}`
+})
 
 async function onLogin() {
   if (!email.value) return
