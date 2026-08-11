@@ -4,9 +4,12 @@
       <!-- Not logged in -->
       <div v-if="!loggedIn && !approved" class="flex flex-col gap-6 p-4">
         <div class="flex flex-col gap-1">
-          <h1 class="text-2xl font-semibold">Sign In to Authorize</h1>
+          <h1 class="text-2xl font-semibold">
+            {{ isLogin ? 'Sign In to Authorize' : 'Create an Account' }}
+          </h1>
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            Sign in with your passkey to authorize <strong>{{ appName }}</strong>.
+            {{ isLogin ? 'Sign in with your passkey to authorize' : 'Register with a passkey to get started.' }}
+            <template v-if="isLogin"><strong>{{ appName }}</strong>.</template>
           </p>
         </div>
 
@@ -16,18 +19,18 @@
             type="email"
             placeholder="Enter your email"
             class="w-full"
-            @keyup.enter="onLogin"
+            @keyup.enter="onSubmit"
           />
         </UFormField>
 
-        <UButton :loading="loading" block @click="onLogin">
-          Sign in with Passkey
+        <UButton :loading="loading" block @click="onSubmit">
+          {{ isLogin ? 'Sign in' : 'Sign up' }} with Passkey
         </UButton>
 
         <p class="text-sm text-center text-gray-500 dark:text-gray-400">
-          Don't have an account?
-          <UButton variant="link" color="primary" class="p-0" :to="signupUrl">
-            Sign up
+          {{ isLogin ? "Don't have an account?" : 'Already have an account?' }}
+          <UButton variant="link" color="primary" class="p-0" @click="isLogin = !isLogin">
+            {{ isLogin ? 'Sign up' : 'Log in' }}
           </UButton>
         </p>
 
@@ -98,7 +101,7 @@ definePageMeta({ layout: false })
 
 const route = useRoute()
 const { fetch: refreshSession } = useUserSession()
-const { authenticate } = useWebAuthn()
+const { register, authenticate } = useWebAuthn()
 const { challenge: verifyMfa } = useTotp()
 const toast = useToast()
 
@@ -107,15 +110,11 @@ const loading = ref(false)
 const mfaRequired = ref(false)
 const mfaToken = ref('')
 const approved = ref(false)
+const isLogin = ref(true)
 
 const { loggedIn } = useUserSession()
 
 const authCode = computed(() => route.query.code as string | undefined)
-
-const signupUrl = computed(() => {
-  if (!authCode.value) return '/login'
-  return `/login?redirect=${encodeURIComponent(`/auth/authorize?code=${authCode.value}`)}`
-})
 
 // Fetch app name from the pending authorization
 const appName = ref('Unknown App')
@@ -130,19 +129,23 @@ if (authCode.value) {
   }
 }
 
-async function onLogin() {
+async function onSubmit() {
   if (!email.value) return
   loading.value = true
   try {
-    const result = await authenticate(email.value)
-    if (result && (result as any).mfaRequired) {
-      mfaRequired.value = true
-      return
+    if (isLogin.value) {
+      const result = await authenticate(email.value)
+      if (result && (result as any).mfaRequired) {
+        mfaRequired.value = true
+        return
+      }
+    } else {
+      await register({ userName: email.value })
     }
     await refreshSession()
   } catch (error: any) {
     toast.add({
-      title: 'Authentication Failed',
+      title: isLogin.value ? 'Authentication Failed' : 'Registration Failed',
       description: error?.message || 'An error occurred.',
       color: 'error',
     })

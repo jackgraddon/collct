@@ -3,9 +3,11 @@
     <UPageCard class="w-full max-w-md">
       <div v-if="!user" class="flex flex-col gap-6 p-4">
         <div class="flex flex-col gap-1">
-          <h1 class="text-2xl font-semibold">Device Verification</h1>
+          <h1 class="text-2xl font-semibold">
+            {{ isLogin ? 'Device Verification' : 'Create an Account' }}
+          </h1>
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            Sign in with your passkey to verify your device.
+            {{ isLogin ? 'Sign in with your passkey to verify your device.' : 'Register with a passkey to get started.' }}
           </p>
         </div>
 
@@ -15,18 +17,18 @@
             type="email"
             placeholder="Enter your email"
             class="w-full"
-            @keyup.enter="onLogin"
+            @keyup.enter="onSubmit"
           />
         </UFormField>
 
-        <UButton :loading="loading" block @click="onLogin">
-          Sign in with Passkey
+        <UButton :loading="loading" block @click="onSubmit">
+          {{ isLogin ? 'Sign in' : 'Sign up' }} with Passkey
         </UButton>
 
         <p class="text-sm text-center text-gray-500 dark:text-gray-400">
-          Don't have an account?
-          <UButton variant="link" color="primary" class="p-0" :to="signupUrl">
-            Sign up
+          {{ isLogin ? "Don't have an account?" : 'Already have an account?' }}
+          <UButton variant="link" color="primary" class="p-0" @click="isLogin = !isLogin">
+            {{ isLogin ? 'Sign up' : 'Log in' }}
           </UButton>
         </p>
 
@@ -83,7 +85,7 @@ definePageMeta({ layout: false })
 
 const route = useRoute()
 const { fetch: refreshSession } = useUserSession()
-const { authenticate } = useWebAuthn()
+const { register, authenticate } = useWebAuthn()
 const { challenge: verifyMfa } = useTotp()
 const toast = useToast()
 
@@ -93,25 +95,25 @@ const mfaRequired = ref(false)
 const mfaToken = ref('')
 const manualCode = ref('')
 const submitted = ref(false)
+const isLogin = ref(true)
 
 const { loggedIn, user } = useUserSession()
 
 // If code is in URL, auto-authorize after login
 const codeFromUrl = computed(() => route.query.code as string | undefined)
 
-const signupUrl = computed(() => {
-  if (!codeFromUrl.value) return '/login'
-  return `/login?redirect=${encodeURIComponent(`/auth/device?code=${codeFromUrl.value}`)}`
-})
-
-async function onLogin() {
+async function onSubmit() {
   if (!email.value) return
   loading.value = true
   try {
-    const result = await authenticate(email.value)
-    if (result && (result as any).mfaRequired) {
-      mfaRequired.value = true
-      return
+    if (isLogin.value) {
+      const result = await authenticate(email.value)
+      if (result && (result as any).mfaRequired) {
+        mfaRequired.value = true
+        return
+      }
+    } else {
+      await register({ userName: email.value })
     }
     await refreshSession()
     // If there's a code in the URL, auto-authorize
@@ -120,7 +122,7 @@ async function onLogin() {
     }
   } catch (error: any) {
     toast.add({
-      title: 'Authentication Failed',
+      title: isLogin.value ? 'Authentication Failed' : 'Registration Failed',
       description: error?.message || 'An error occurred.',
       color: 'error',
     })
