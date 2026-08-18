@@ -50,6 +50,7 @@ export default defineEventHandler(async (event) => {
       name: z.string().trim().min(1).max(50).optional(),
       icon: z.string().trim().optional(),
       color: z.string().trim().optional(),
+      momentsEnabled: z.boolean().optional(),
     }).parse,
   )
 
@@ -60,10 +61,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid color. Please provide a hex color code (e.g., #3B82F6).' })
   }
 
-  const updateData: Record<string, string | null> = {}
+  const updateData: Record<string, string | boolean | null> = {}
   if (body.name !== undefined) updateData.name = body.name
   if (body.icon !== undefined) updateData.icon = body.icon || null
   if (body.color !== undefined) updateData.color = body.color || null
+  if (body.momentsEnabled !== undefined) updateData.momentsEnabled = body.momentsEnabled
 
   if (Object.keys(updateData).length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'No fields to update' })

@@ -28,7 +28,9 @@ self.addEventListener('notificationclick', (event) => {
   const data = event.notification.data
   let url = '/'
 
-  if (data.photoId) {
+  if (data.type === 'moment') {
+    url = '/?upload=moment'
+  } else if (data.photoId) {
     url = `/post/${data.photoId}`
   } else if (data.groupId) {
     url = `/groups/${data.groupId}`

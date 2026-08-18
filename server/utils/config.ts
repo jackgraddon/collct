@@ -12,6 +12,10 @@ export interface AdminConfig {
   commentsEnabled: boolean
   offlineModeEnabled: boolean
   appUrl: string | null
+  momentsEnabled: boolean
+  momentsWindowStart: string
+  momentsWindowEnd: string
+  momentsCaptureDuration: number
 }
 
 export const getAdminConfig = (): AdminConfig => {
@@ -33,5 +37,9 @@ export const getAdminConfig = (): AdminConfig => {
     commentsEnabled: process.env.COLLCT_COMMENTS_ENABLED !== 'false',
     offlineModeEnabled: process.env.COLLCT_OFFLINE_MODE_ENABLED !== 'false',
     appUrl: process.env.COLLCT_APP_URL || null,
+    momentsEnabled: process.env.COLLCT_MOMENTS_ENABLED === 'true',
+    momentsWindowStart: process.env.COLLCT_MOMENTS_WINDOW_START || '18:00',
+    momentsWindowEnd: process.env.COLLCT_MOMENTS_WINDOW_END || '20:00',
+    momentsCaptureDuration: parseInt(process.env.COLLCT_MOMENTS_CAPTURE_DURATION || '300', 10),
   }
 }

@@ -40,6 +40,13 @@
       <USkeleton v-if="loadingMore" class="h-8 w-32" />
       <p v-else-if="exhausted" class="text-sm text-neutral-400">You're all caught up!</p>
     </div>
+
+    <!-- Upload modal -->
+    <CollctUploadModal
+      v-model:open="showUploadModal"
+      :is-moment="uploadMomentMode"
+      @uploaded="onUpload"
+    />
   </div>
 </template>
 
@@ -47,6 +54,23 @@
 import { useIntersectionObserver } from '@vueuse/core'
 
 const { on } = useUploadBus()
+const route = useRoute()
+
+// Upload modal state
+const showUploadModal = ref(false)
+const uploadMomentMode = ref(false)
+
+// Auto-open upload modal for moment notifications
+watch(() => route.query.upload, (val) => {
+  if (val === 'moment') {
+    uploadMomentMode.value = true
+    showUploadModal.value = true
+    // Clear the query param without triggering navigation
+    router.replace({ query: {} })
+  }
+}, { immediate: true })
+
+const router = useRouter()
 
 // ─── Persistent feed state (survives component destruction) ───────────────────
 interface FeedState {
@@ -178,6 +202,11 @@ async function loadMore() {
 
 // ─── Handle manual uploads ───────────────────────────────────────────────────
 on((post) => appendedPosts.value.unshift(post))
+
+function onUpload(post: PostData) {
+  appendedPosts.value.unshift(post)
+  uploadMomentMode.value = false
+}
 
 // ─── Intersection observer for infinite scroll ───────────────────────────────
 useIntersectionObserver(

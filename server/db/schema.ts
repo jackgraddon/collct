@@ -62,6 +62,8 @@ export const photos = pgTable('photos', {
   caption: text('caption'),
   captionHistory: text('caption_history').default('[]'),
   captionEditedAt: timestamp('caption_edited_at', { mode: 'date' }),
+  isMoment: boolean('is_moment').notNull().default(false),
+  momentCapturedAt: timestamp('moment_captured_at', { mode: 'date' }),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 });
 
@@ -138,6 +140,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'comment',
   'group_join',
   'new_post',
+  'moment',
 ])
 
 export const notifications = pgTable(
@@ -175,6 +178,7 @@ export const groups = pgTable('groups', {
   color: text('color'),
   isPublic: boolean('is_public').notNull().default(false),
   ownerId: integer('owner_id').references(() => users.id),
+  momentsEnabled: boolean('moments_enabled').notNull().default(true),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   archivedAt: timestamp('archived_at', { mode: 'date' }),
 })

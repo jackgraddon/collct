@@ -78,7 +78,17 @@ export default defineNuxtConfig({
     },
   },
 
-  experimental: {},
+  experimental: {
+    tasks: true,
+  },
+
+  nitro: {
+    scheduledTasks: {
+      // Pre-computes daily moment time. Only fires on platforms with cron support
+      // (Cloudflare Workers, etc.). On Vercel, lazy computation in GET /api/moments/today handles it.
+      '0 0 * * *': ['moments:daily-compute'],
+    },
+  },
 
   app: {
     head: {

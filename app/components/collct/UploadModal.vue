@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 const props = defineProps<{
   open: boolean
+  isMoment?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +20,10 @@ const preview = ref<string | null>(null)
 const caption = ref('')
 const uploading = ref(false)
 
+// Moment state
+const { momentState, isActive, capturedToday, momentsGroups, timeRemaining } = useMoment()
+const isMomentMode = computed(() => props.isMoment && isActive.value && !capturedToday.value)
+
 // Groups — only fetch when the modal opens, not on component mount
 const { data: groupsData } = useFetch<{ groups: GroupData[] }>('/api/groups', {
   watch: [() => props.open],
@@ -26,17 +31,27 @@ const { data: groupsData } = useFetch<{ groups: GroupData[] }>('/api/groups', {
 })
 
 const selectedGroupIds = ref<number[]>([])
-const nonPublicGroups = computed(() => groupsData.value?.groups.filter((g) => !g.isPublic) ?? [])
+const nonPublicGroups = computed(() => {
+  if (isMomentMode.value) {
+    return momentsGroups.value.filter((g) => !g.isPublic)
+  }
+  return groupsData.value?.groups.filter((g) => !g.isPublic) ?? []
+})
 const hasPrivateGroups = computed(() => nonPublicGroups.value.length > 0)
 
 // Start with no groups selected — empty selection = post publicly to everyone
+// For moment mode, auto-select all moment groups
 watch(() => props.open, (isOpen) => {
   if (isOpen) {
-    selectedGroupIds.value = []
+    if (isMomentMode.value) {
+      selectedGroupIds.value = momentsGroups.value.map((g) => g.id)
+    } else {
+      selectedGroupIds.value = []
+    }
   }
 })
 
-const canSubmit = computed(() => !!file.value)
+const canSubmit = computed(() => !!file.value && (!isMomentMode.value || selectedGroupIds.value.length > 0))
 
 // Create group confirmation
 const showCreateGroupDialog = ref(false)
@@ -78,6 +93,12 @@ function goToGroups() {
   router.push('/groups')
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 async function upload() {
   if (!file.value || !canSubmit.value) return
 
@@ -87,14 +108,15 @@ async function upload() {
     form.append('photo', file.value)
     if (caption.value.trim()) form.append('caption', caption.value.trim())
     form.append('groupIds', JSON.stringify(selectedGroupIds.value))
+    if (isMomentMode.value) form.append('isMoment', 'true')
 
     const post = await $fetch<PostData>('/api/photos', { method: 'POST', body: form })
 
-    toast.add({ title: 'Photo uploaded', color: 'success', icon: 'i-lucide-circle-check' })
+    toast.add({ title: isMomentMode.value ? 'Moment captured' : 'Photo uploaded', color: 'success', icon: 'i-lucide-circle-check' })
     emit('uploaded', post)
     close()
   } catch {
-    toast.add({ title: 'Upload failed', description: 'Please try again.', color: 'error', icon: 'i-lucide-triangle-alert' })
+    toast.add({ title: isMomentMode.value ? 'Failed to capture moment' : 'Upload failed', description: 'Please try again.', color: 'error', icon: 'i-lucide-triangle-alert' })
   } finally {
     uploading.value = false
   }
@@ -109,8 +131,15 @@ async function upload() {
         <!-- Fixed header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 shrink-0">
           <div class="flex items-center gap-2">
-            <UIcon name="i-solar-upload-square-linear" class="w-5 h-5 text-primary" />
-            <span class="font-semibold">Upload photo</span>
+            <template v-if="isMomentMode">
+              <UBadge color="success" variant="subtle" size="sm">Moment</UBadge>
+              <span class="font-semibold">Capture your moment</span>
+              <span class="text-sm text-muted tabular-nums ml-auto">{{ formatTime(timeRemaining) }}</span>
+            </template>
+            <template v-else>
+              <UIcon name="i-solar-upload-square-linear" class="w-5 h-5 text-primary" />
+              <span class="font-semibold">Upload photo</span>
+            </template>
           </div>
           <UButton color="neutral" variant="ghost" icon="i-lucide-x" size="xs" @click="close" />
         </div>
@@ -197,7 +226,9 @@ async function upload() {
 
           <!-- Visible to (only when user has private groups) -->
           <div v-if="hasPrivateGroups" class="space-y-2">
-            <p class="text-xs font-medium text-muted uppercase tracking-wider">Visible to</p>
+            <p class="text-xs font-medium text-muted uppercase tracking-wider">
+              {{ isMomentMode ? 'Share moment to' : 'Visible to' }}
+            </p>
             <div class="space-y-1.5">
               <label
                 v-for="group in nonPublicGroups"
@@ -217,7 +248,10 @@ async function upload() {
                 <span class="text-sm text-default">{{ group.name }}</span>
               </label>
             </div>
-            <p class="text-xs text-muted">
+            <p class="text-xs text-muted" v-if="isMomentMode">
+              Posting a moment to all your moment groups by default.
+            </p>
+            <p class="text-xs text-muted" v-else>
               Visible only to members of selected groups. Uncheck all to post publicly.
             </p>
           </div>
@@ -226,9 +260,9 @@ async function upload() {
           <div v-if="!hasPrivateGroups" class="rounded-lg bg-muted/30 p-3 space-y-2">
             <div class="flex items-center gap-2">
               <UIcon name="i-solar-global-linear" class="w-4 h-4 text-muted" />
-              <p class="text-xs text-muted">Visible to everyone on this server</p>
+              <p class="text-xs text-muted">{{ isMomentMode ? 'No moment groups available' : 'Visible to everyone on this server' }}</p>
             </div>
-            <p class="text-xs text-muted">
+            <p class="text-xs text-muted" v-if="!isMomentMode">
               Want to share privately?
               <button class="text-primary hover:underline font-medium" @click.prevent="showCreateGroupDialog = true">
                 Create a group
@@ -245,10 +279,10 @@ async function upload() {
               variant="solid"
               :loading="uploading"
               :disabled="!canSubmit"
-              icon="i-solar-upload-square-linear"
+              :icon="isMomentMode ? 'i-lucide-camera' : 'i-solar-upload-square-linear'"
               @click="upload"
             >
-              Upload
+              {{ isMomentMode ? 'Capture' : 'Upload' }}
             </UButton>
           </div>
 

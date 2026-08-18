@@ -2,6 +2,7 @@ import { db, schema } from '@nuxthub/db'
 import { blob } from 'hub:blob'
 import { eq, and, inArray } from 'drizzle-orm'
 import { z } from 'zod'
+import { getOrCreateTodayMomentTime, getMomentStatus, hasUserCapturedMomentToday, getUserMomentsGroups } from '../../utils/moments'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 10 * 1024 * 1024
@@ -16,6 +17,7 @@ export default defineEventHandler(async (event) => {
   const file = form.get('photo') as File | null
   const caption = (form.get('caption') as string | null)?.trim() || null
   const groupIdsRaw = form.get('groupIds') as string | null
+  const isMomentRaw = form.get('isMoment') as string | null
 
   if (!file || file.size === 0)
     throw createError({ statusCode: 400, statusMessage: 'No photo provided' })
@@ -67,6 +69,57 @@ export default defineEventHandler(async (event) => {
     })
   }
 
+  // Moment validation
+  let isMoment = false
+  let momentCapturedAt: Date | null = null
+
+  if (isMomentRaw === 'true') {
+    const config = getAdminConfig()
+    if (!config.momentsEnabled) {
+      throw createError({ statusCode: 403, statusMessage: 'Moments are not enabled on this instance' })
+    }
+
+    // Check that all selected groups have moments enabled
+    const groupMomentChecks = await Promise.all(
+      groupIds.map(async (gid) => {
+        const [g] = await db
+          .select({ momentsEnabled: schema.groups.momentsEnabled })
+          .from(schema.groups)
+          .where(eq(schema.groups.id, gid))
+          .limit(1)
+        return { groupId: gid, momentsEnabled: g?.momentsEnabled ?? true }
+      }),
+    )
+    const disabledGroups = groupMomentChecks.filter((g) => !g.momentsEnabled)
+    if (disabledGroups.length > 0) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: `Moments are not enabled in group(s): ${disabledGroups.map((g) => g.groupId).join(', ')}`,
+      })
+    }
+
+    // Check capture window
+    const { momentTime } = await getOrCreateTodayMomentTime()
+    const status = getMomentStatus(momentTime, config.momentsCaptureDuration)
+    if (status !== 'active') {
+      throw createError({
+        statusCode: 409,
+        statusMessage: status === 'before'
+          ? 'The moment window has not opened yet'
+          : 'The moment window has closed',
+      })
+    }
+
+    // Check if user already captured today
+    const alreadyCaptured = await hasUserCapturedMomentToday(userId)
+    if (alreadyCaptured) {
+      throw createError({ statusCode: 409, statusMessage: "You've already captured your moment today" })
+    }
+
+    isMoment = true
+    momentCapturedAt = new Date()
+  }
+
   const ext = file.type.split('/')[1]!.replace('jpeg', 'jpg')
   const blobPathname = `photos/${userId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
@@ -79,7 +132,13 @@ export default defineEventHandler(async (event) => {
   const result = await db.transaction(async (tx) => {
     const [photo] = await tx
       .insert(schema.photos)
-      .values({ userId, blobPathname, caption })
+      .values({
+        userId,
+        blobPathname,
+        caption,
+        isMoment,
+        momentCapturedAt,
+      })
       .returning()
 
     if (!photo) throw createError({ statusCode: 500, statusMessage: 'Failed to create photo' })

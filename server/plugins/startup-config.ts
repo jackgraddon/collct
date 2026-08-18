@@ -9,6 +9,7 @@ export default defineNitroPlugin(() => {
   console.log(`[Collct] Notifications:   ${config.notificationsEnabled ? 'enabled' : 'disabled'}`)
   console.log(`[Collct] Comments:        ${config.commentsEnabled ? 'enabled' : 'disabled'}`)
   console.log(`[Collct] Offline mode:    ${config.offlineModeEnabled ? 'enabled' : 'disabled'}`)
+  console.log(`[Collct] Moments:         ${config.momentsEnabled ? 'enabled' : 'disabled'} (${config.momentsWindowStart}–${config.momentsWindowEnd}, ${config.momentsCaptureDuration}s capture)`)
   console.log(`[Collct] Session max age: ${config.sessionMaxAge}s`)
   console.log(`[Collct] Admin email:     ${config.adminEmail}`)
 

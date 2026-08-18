@@ -19,6 +19,11 @@ const isMember = computed(() => !!group.value?.role)
 const editIcon = ref('')
 const editColor = ref('#6366f1')
 const savingCustomization = ref(false)
+const savingMoments = ref(false)
+
+// Moments state
+const { momentState } = useMoment()
+const momentsEnabledGlobally = computed(() => momentState.value?.enabled ?? false)
 
 watch(group, (g) => {
   if (g) {
@@ -71,6 +76,30 @@ async function saveCustomization() {
     })
   } finally {
     savingCustomization.value = false
+  }
+}
+
+async function saveMoments() {
+  if (!group.value) return
+  savingMoments.value = true
+  try {
+    const updated = await $fetch<GroupData>(`/api/groups/${groupId}`, {
+      method: 'PATCH',
+      body: { momentsEnabled: !group.value.momentsEnabled },
+    })
+    if (group.value) {
+      group.value.momentsEnabled = updated.momentsEnabled
+    }
+    toast.add({ title: 'Moments setting updated', color: 'success', icon: 'i-lucide-circle-check' })
+  } catch (e: any) {
+    toast.add({
+      title: 'Failed to update moments setting',
+      description: e.data?.statusMessage || 'Please try again.',
+      color: 'error',
+      icon: 'i-lucide-triangle-alert',
+    })
+  } finally {
+    savingMoments.value = false
   }
 }
 
@@ -254,6 +283,33 @@ watchEffect(() => {
               @click="saveCustomization"
             >
               Save
+            </UButton>
+          </div>
+        </div>
+      </div>
+
+      <!-- Moments (admin+ only) -->
+      <div v-if="isAdmin && !group.isPublic" class="space-y-3">
+        <h2 class="text-sm font-semibold text-muted uppercase tracking-wider">Moments</h2>
+        <div class="p-4 rounded-xl border border-default space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="space-y-1">
+              <p class="text-sm font-medium">Allow moments in this group</p>
+              <p class="text-xs text-muted" v-if="momentsEnabledGlobally">
+                Moments are enabled globally. Toggle off to exclude this group.
+              </p>
+              <p class="text-xs text-muted" v-else>
+                Global moments are off, but you can enable them for this group.
+              </p>
+            </div>
+            <UButton
+              :color="group.momentsEnabled ? 'success' : 'neutral'"
+              :variant="group.momentsEnabled ? 'solid' : 'outline'"
+              size="sm"
+              :loading="savingMoments"
+              @click="saveMoments"
+            >
+              {{ group.momentsEnabled ? 'Enabled' : 'Disabled' }}
             </UButton>
           </div>
         </div>

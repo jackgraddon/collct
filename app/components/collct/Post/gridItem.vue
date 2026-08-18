@@ -1,7 +1,7 @@
 <template>
   <div
     class="relative rounded-lg border-4 overflow-hidden cursor-pointer"
-    :class="activeBorder"
+    :class="postData.isMoment ? momentBorder : activeBorder"
     @click="navigateToPost"
   >
     <USkeleton
@@ -60,6 +60,15 @@ const themeBorders: Record<string, string> = {
 
 const activeBorder = computed(() => {
   return themeBorders[colorMode.value] || themeBorders.light
+})
+
+const momentBorders: Record<string, string> = {
+  light: 'border-jungle-teal-400',
+  dark: 'border-jungle-teal-500',
+}
+
+const momentBorder = computed(() => {
+  return momentBorders[colorMode.value] || momentBorders.light
 })
 
 function navigateToPost() {

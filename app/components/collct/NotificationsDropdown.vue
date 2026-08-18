@@ -126,6 +126,8 @@ function notificationText(n: Notification): string {
       return ' joined your group'
     case 'new_post':
       return ' posted a new photo'
+    case 'moment':
+      return ' — time for your daily moment!'
     default:
       return ' interacted with your content'
   }

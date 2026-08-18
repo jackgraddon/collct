@@ -37,6 +37,15 @@ const formattedDate = computed(() => {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(parseSafeDate(post.value.createdAt))
 })
 
+const formattedCaptureTime = computed(() => {
+  if (!post.value?.momentCapturedAt) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(parseSafeDate(post.value.momentCapturedAt))
+})
+
 function formatEditDate(isoString: string) {
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
@@ -274,6 +283,14 @@ onUnmounted(() => {
 
         <!-- Group chips -->
         <CollctPostGroupChips :groups="post.groups" />
+
+        <!-- Moment badge -->
+        <div v-if="post.isMoment" class="flex items-center gap-2">
+          <UBadge color="success" variant="subtle" size="sm">Moment</UBadge>
+          <span v-if="formattedCaptureTime" class="text-xs text-muted">
+            Captured at {{ formattedCaptureTime }}
+          </span>
+        </div>
 
         <!-- Caption + Like row -->
         <div class="flex items-start justify-between gap-4">

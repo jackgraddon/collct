@@ -5,7 +5,7 @@ import { getAdminConfig } from './config'
 interface CreateNotificationData {
   userId: number
   actorId: number
-  type: 'like' | 'comment' | 'group_join' | 'new_post'
+  type: 'like' | 'comment' | 'group_join' | 'new_post' | 'moment'
   photoId?: number
   commentId?: number
   groupIds?: number[]
@@ -64,6 +64,10 @@ async function sendPushForNotification(data: CreateNotificationData) {
       body = `${actorName} posted a new photo`
       tag = `new_post-${data.photoId}`
       if (data.photoId) pushData.photoId = String(data.photoId)
+      break
+    case 'moment':
+      body = 'Time for your daily moment! Capture a photo now.'
+      tag = `moment-${new Date().toISOString().slice(0, 10)}`
       break
   }
 

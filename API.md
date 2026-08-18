@@ -936,6 +936,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
       "caption": "so hot, and respectful.",
       "captionEditedAt": null,
       "createdAt": "2026-07-15T12:00:00.000Z",
+      "isMoment": false,
+      "momentCapturedAt": null,
       "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
       "user": {
         "id": 1,
@@ -989,6 +991,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
   ],
   "blobPathname": "photos/1/1720000000000-abc123.jpg",
   "createdAt": "2026-07-15T12:00:00.000Z",
+  "isMoment": false,
+  "momentCapturedAt": null,
   "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
   "user": {
     "id": 1,
@@ -1007,6 +1011,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 ```
 
 - `captionHistory` — present only if the caption has been edited. Array of `{ text, editedAt }` entries in chronological order.
+- `isMoment` — `true` if this photo was captured as part of a Moment.
+- `momentCapturedAt` — ISO timestamp of when the user captured the photo during the moment window (null for non-moment photos).
 
 **Status codes:**
 - `200` — success
@@ -1031,6 +1037,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 | `photo` | File | Yes | Image file (JPEG, PNG, WebP, GIF). Max 10 MB. |
 | `caption` | string | No | Text caption, max 500 characters |
 | `groupIds` | string | No | JSON array of group IDs (e.g. `"[10, 11]"`). Defaults to `[publicGroupId]` |
+| `isMoment` | string | No | Set to `"true"` to flag as a moment capture. Requires active moment window. |
 
 **Response:**
 
@@ -1043,6 +1050,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
   "createdAt": "2026-07-15T12:00:00.000Z",
   "captionEditedAt": null,
   "captionHistory": null,
+  "isMoment": false,
+  "momentCapturedAt": null,
   "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
 }
 ```
@@ -1051,7 +1060,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 - `200` — success
 - `400` — no photo provided
 - `401` — not authenticated
-- `403` — user is not a member of one or more specified groups
+- `403` — user is not a member of one or more specified groups, or moment validation failed
+- `409` — moment window not active, or already captured today
 - `413` — file too large (max 10 MB)
 - `415` — unsupported file type
 - `429` — rate limit exceeded (30 per hour)
@@ -1459,6 +1469,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "ownerId": null,
       "icon": null,
       "color": null,
+      "momentsEnabled": true,
       "createdAt": "2026-01-01T00:00:00.000Z",
       "role": "member"
     },
@@ -1470,6 +1481,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "ownerId": 1,
       "icon": "👥",
       "color": "#ef4444",
+      "momentsEnabled": true,
       "createdAt": "2026-07-15T10:00:00.000Z",
       "role": "owner"
     }
@@ -1478,6 +1490,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
 ```
 
 - `role` — the authenticated user's role in the group: `owner`, `admin`, or `member`.
+- `momentsEnabled` — whether this group participates in Moments.
 
 **Status codes:**
 - `200` — success
@@ -1504,6 +1517,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
   "ownerId": 1,
   "icon": "👥",
   "color": "#ef4444",
+  "momentsEnabled": true,
   "createdAt": "2026-07-15T10:00:00.000Z",
   "archivedAt": null,
   "members": [
@@ -1597,11 +1611,14 @@ Returns the fresh per-type counts and the user's current reaction on this commen
 {
   "name": "The Cool Boys",
   "icon": "😎",
-  "color": "#3b82f6"
+  "color": "#3b82f6",
+  "momentsEnabled": true
 }
 ```
 
 Any subset of fields can be provided; omitted fields are not changed. Setting `icon` or `color` to an empty string clears them.
+
+- `momentsEnabled` (optional) — whether this group participates in Moments. Defaults to `true`. When `false`, members cannot post moments to this group.
 
 **Response:**
 
@@ -1614,6 +1631,7 @@ Any subset of fields can be provided; omitted fields are not changed. Setting `i
   "ownerId": 1,
   "icon": "😎",
   "color": "#3b82f6",
+  "momentsEnabled": true,
   "createdAt": "2026-07-15T10:00:00.000Z",
   "archivedAt": null
 }
@@ -1859,7 +1877,7 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
 }
 ```
 
-- `type` — notification type (e.g. `"like"`, `"comment"`, `"group_invite"`).
+- `type` — notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"`.
 - `photoUrl` — presigned thumbnail URL for the associated photo, if applicable.
 - `nextCursor` — notification ID to pass as `before` for the next page. `null` when there are no more results.
 
@@ -2026,6 +2044,110 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ---
 
+## Moments
+
+Moments is a BeReal-style feature: once per day, during a randomly-chosen time within an admin-configured window, users get a notification and a limited window to capture and share a photo. A moment is a regular photo with an `isMoment` flag — no separate data model.
+
+### Get Today's Moment State
+
+**Endpoint:** `GET /moments/today`
+
+**Description:** Returns the current moment state for today, including whether the capture window is active, when it occurs, and which groups the user can post moments to.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "enabled": true,
+  "windowStart": "18:00",
+  "windowEnd": "20:00",
+  "momentTime": "2026-08-15T19:23:00.000Z",
+  "captureDuration": 300,
+  "status": "active",
+  "capturedToday": false,
+  "userMomentsGroups": [
+    {
+      "id": 10,
+      "name": "The Boys",
+      "slug": "the-boys",
+      "icon": "👥",
+      "color": "#ef4444",
+      "isPublic": false
+    }
+  ]
+}
+```
+
+- `enabled` — whether Moments is enabled instance-wide (`COLLCT_MOMENTS_ENABLED`)
+- `windowStart` / `windowEnd` — the admin-configured daily window (server timezone, `HH:mm`)
+- `momentTime` — ISO timestamp of today's randomly chosen moment (null if disabled or not yet computed)
+- `captureDuration` — seconds users have to capture once notified
+- `status` — `"before"` (window hasn't opened), `"active"` (capture now!), `"after"` (window closed), `"disabled"` (feature off)
+- `capturedToday` — whether the authenticated user already posted a moment today
+- `userMomentsGroups` — groups where the user can post moments (groups with `momentsEnabled = true` that the user belongs to)
+
+**Notes:**
+- The first request each day lazily computes the random moment time and persists it. All subsequent requests (and clients) see the same time.
+- The first request also triggers idempotent notification fan-out to all eligible users.
+- On platforms with cron support (Cloudflare Workers), a scheduled task pre-computes the time at midnight.
+
+**Status codes:**
+- `200` — success
+- `401` — not authenticated
+
+---
+
+### Moment Upload Flow
+
+Moment uploads use the same `POST /photos` endpoint as regular uploads, with additional fields and validation.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `photo` | File | Yes | Image file (JPEG, PNG, WebP, GIF). Max 10 MB. |
+| `caption` | string | No | Text caption, max 500 characters |
+| `groupIds` | string | No | JSON array of group IDs. For moments, only groups with `momentsEnabled = true` are allowed. |
+| `isMoment` | string | No | Set to `"true"` to flag this as a moment capture |
+
+**Additional validation when `isMoment = "true"`:**
+
+1. Global moments must be enabled (`COLLCT_MOMENTS_ENABLED=true`)
+2. Current server time must be within the capture window (momentTime → momentTime + captureDuration)
+3. User must not have already captured a moment today
+4. All specified groups must have `momentsEnabled = true`
+
+**Error responses for moment uploads:**
+
+| Status | Message | Meaning |
+|--------|---------|---------|
+| `403` | "Moments are not enabled on this instance" | Global toggle is off |
+| `403` | "Moments are not enabled in group(s): ..." | One or more groups opted out |
+| `409` | "The moment window has not opened yet" | Too early |
+| `409` | "The moment window has closed" | Too late |
+| `409` | "You've already captured your moment today" | Already posted a moment today |
+
+**Response:** Same as regular photo upload, with additional moment fields:
+
+```json
+{
+  "id": 43,
+  "userId": 1,
+  "caption": "Dinner time!",
+  "blobPathname": "photos/1/1720000000000-abc123.jpg",
+  "createdAt": "2026-08-15T19:25:00.000Z",
+  "captionEditedAt": null,
+  "captionHistory": null,
+  "isMoment": true,
+  "momentCapturedAt": "2026-08-15T19:25:00.000Z",
+  "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+}
+```
+
+---
+
 ## Utility Endpoints
 
 ### Get Blob File
@@ -2139,6 +2261,18 @@ The OpenAPI 3.1 specification for the full API is available at `/openapi.yaml` o
 - Likes follow the same visibility rule — the count is viewer-scoped (only likes from users who share a group with the viewer are included).
 - When querying feeds or user photos, results are automatically filtered by the authenticated user's group membership.
 - The Public group is a system group that all users are automatically joined to. It cannot be deleted or left.
+
+### Moments
+
+- Call `GET /moments/today` to get the current moment state. This is idempotent and safe to call frequently.
+- The response includes `status`: `"before"`, `"active"`, `"after"`, or `"disabled"`.
+- When `status` is `"active"`, the client should show the capture UI with a countdown timer (`captureDuration` seconds remaining).
+- When `status` is `"before"`, the client can show "Today's moment window: HH:MM – HH:MM" without revealing the exact time.
+- When `status` is `"after"`, the client should indicate the window has passed.
+- Push notifications with `type: "moment"` should deep-link to `/?upload=moment` to auto-open the upload modal in moment mode.
+- Moment uploads use `POST /photos` with `isMoment=true` in the form data. The server validates the capture window server-side.
+- Photo responses include `isMoment` and `momentCapturedAt` fields for display in feeds and detail views.
+- Groups include a `momentsEnabled` field. Group admins can toggle this via `PATCH /groups/:id`.
 
 ### Pagination
 

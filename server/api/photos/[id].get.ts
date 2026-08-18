@@ -34,6 +34,8 @@ export default defineEventHandler(async (event) => {
       caption: schema.photos.caption,
       captionEditedAt: schema.photos.captionEditedAt,
       blobPathname: schema.photos.blobPathname,
+      isMoment: schema.photos.isMoment,
+      momentCapturedAt: schema.photos.momentCapturedAt,
       createdAt: schema.photos.createdAt,
       user: {
         id: schema.users.id,
