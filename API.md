@@ -2092,10 +2092,73 @@ Moments is a BeReal-style feature: once per day, during a randomly-chosen time w
 - The first request each day lazily computes the random moment time and persists it. All subsequent requests (and clients) see the same time.
 - The first request also triggers idempotent notification fan-out to all eligible users.
 - On platforms with cron support (Cloudflare Workers), a scheduled task pre-computes the time at midnight.
+- **Recommended:** Use the `GET /moments/trigger` endpoint with an external cron service or Vercel Cron so notifications fire regardless of user activity. The lazy path here serves as a fallback.
 
 **Status codes:**
 - `200` — success
 - `401` — not authenticated
+
+---
+
+### Server-Side Trigger
+
+**Endpoint:** `GET /moments/trigger`
+
+**Description:** Compute the daily moment time and send notifications. Intended for external cron services and Vercel Cron — no user authentication required. Protected by a shared secret token.
+
+**Authentication:** Bearer token (`CRON_SECRET` env var)
+
+**Request:**
+
+```
+GET /api/moments/trigger
+Authorization: Bearer <CRON_SECRET>
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "momentTime": "2026-08-15T19:23:00.000Z",
+  "notificationsSent": true
+}
+```
+
+- `notificationsSent` — `true` if this was the first trigger of the day (notifications were sent), `false` if already sent (idempotent).
+
+**Setup (Vercel):**
+
+Add a `vercel.json` to your project root:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/moments/trigger",
+      "schedule": "5 0 * * *"
+    }
+  ]
+}
+```
+
+Set `CRON_SECRET` as an environment variable in your Vercel dashboard. Vercel automatically injects this as a Bearer token on cron-triggered requests.
+
+**Setup (external cron service):**
+
+Use any cron service (cron-job.org, GitHub Actions, etc.) to send:
+
+```
+GET https://<your-instance>/api/moments/trigger
+Authorization: Bearer <your-CRON_SECRET>
+```
+
+**Timing:** The cron should fire before the earliest reasonable `COLLCT_MOMENTS_WINDOW_START`. The default `0 0 * * *` (midnight UTC) works for most configurations, but if your window starts early in the server timezone, adjust accordingly. The trigger is idempotent — safe to run multiple times.
+
+**Status codes:**
+- `200` — success
+- `401` — missing or invalid bearer token
+- `500` — `CRON_SECRET` not configured on the server
 
 ---
 

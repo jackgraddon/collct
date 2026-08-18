@@ -52,6 +52,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    cronSecret: process.env.CRON_SECRET || '',
     session: {
       maxAge: sessionMaxAge,
       cookie: {
