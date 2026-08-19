@@ -2240,7 +2240,7 @@ Moment uploads use the same `POST /photos` endpoint as regular uploads, with add
 ```json
 {
   "name": "collct",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "uptime": 3600
 }
 ```
