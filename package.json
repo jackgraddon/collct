@@ -1,6 +1,6 @@
 {
   "name": "collct",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A friends-first social media designed to connect you to your friends, and that's it. No algorithm, no tracking, no strangers.",
   "author": "Jack Graddon <hello@jackgraddon.com>",
   "type": "module",
@@ -15,12 +15,15 @@
   "homepage": "https://github.com/jackgraddon/collct#readme",
   "scripts": {
     "build": "nuxt build",
+    "predev": "docker compose -f docker-compose.dev.yml up -d --wait postgres",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "DATABASE_URL=postgresql://collct:collct@localhost:5432/collct drizzle-kit migrate"
+    "db:migrate": "DATABASE_URL=postgresql://collct:collct@localhost:5432/collct drizzle-kit migrate",
+    "predb:seed:dev": "docker compose -f docker-compose.dev.yml up -d --wait postgres && pnpm run db:migrate",
+    "db:seed:dev": "tsx scripts/seed-dev.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -51,6 +54,7 @@
     "@vite-pwa/nuxt": "^1.1.1",
     "drizzle-kit": "^0.31.10",
     "nuxt-auth-utils": "^0.5.29",
+    "tsx": "^4.19.0",
     "vercel": "^54.6.1"
   }
 }

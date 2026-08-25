@@ -16,6 +16,8 @@ export interface AdminConfig {
   momentsWindowStart: string
   momentsWindowEnd: string
   momentsCaptureDuration: number
+  momentsAllowPostToAll: boolean
+  momentsAllowLibraryFallback: boolean
 }
 
 export const getAdminConfig = (): AdminConfig => {
@@ -41,5 +43,7 @@ export const getAdminConfig = (): AdminConfig => {
     momentsWindowStart: process.env.COLLCT_MOMENTS_WINDOW_START || '18:00',
     momentsWindowEnd: process.env.COLLCT_MOMENTS_WINDOW_END || '20:00',
     momentsCaptureDuration: parseInt(process.env.COLLCT_MOMENTS_CAPTURE_DURATION || '300', 10),
+    momentsAllowPostToAll: process.env.COLLCT_MOMENTS_ALLOW_POST_TO_ALL !== 'false',
+    momentsAllowLibraryFallback: process.env.COLLCT_MOMENTS_ALLOW_LIBRARY_FALLBACK === 'true',
   }
 }

@@ -30,7 +30,7 @@
     </template>
   </UHeader>
 
-  <CollctUploadModal v-model:open="uploadModal" @uploaded="onUploaded" />
+  <CollctPostModal v-model:open="uploadModal" mode="upload" @uploaded="onUploaded" />
 </template>
 
 <script setup lang="ts">

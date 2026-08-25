@@ -49,7 +49,7 @@
               :to="notificationLink(n)"
               class="flex items-center gap-3 p-3 transition-colors hover:bg-(--ui-bg-muted)"
               :class="{ 'bg-primary/5': !n.isRead }"
-              @click="isOpen = false"
+              @click="onNotificationClick(n)"
             >
               <div class="w-2 h-2 rounded-full shrink-0" :class="n.isRead ? 'bg-transparent' : 'bg-primary'" />
               <UAvatar
@@ -134,9 +134,24 @@ function notificationText(n: Notification): string {
 }
 
 function notificationLink(n: Notification): string {
+  if (n.type === 'moment') return '/?moment=capture'
   if (n.photoId) return `/post/${n.photoId}`
   if (n.groupId?.length) return `/groups/${n.groupId[0]}`
   return '/'
+}
+
+async function markRead(n: Notification) {
+  if (n.isRead) return
+  n.isRead = true
+  await $fetch('/api/notifications/read', {
+    method: 'PATCH',
+    body: { ids: [n.id] },
+  }).catch(() => {})
+}
+
+function onNotificationClick(n: Notification) {
+  isOpen.value = false
+  markRead(n)
 }
 
 function formatRelativeTime(date: string): string {

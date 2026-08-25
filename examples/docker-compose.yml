@@ -4,6 +4,8 @@ services:
   # PostgreSQL database
   db:
     image: postgres:15
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -26,7 +28,7 @@ services:
       # Database configuration
       - DATABASE_URL=postgresql://collct:collct@db:5432/collct
       
-      # Session configuration (generate with openssl rand -hex 32)w
+      # Session configuration (generate with: openssl rand -hex 32)
       - NUXT_SESSION_PASSWORD=
       
       # Blob storage directory
@@ -54,8 +56,8 @@ services:
       - COLLCT_OFFLINE_MODE_ENABLED=true
       
       # Third-party client access
-      - COLLCT_ALLOWED_ORIGINS=
-      - COLLCT_APP_URL=https://collct.vercel.app
+      - COLLCT_ALLOWED_ORIGINS=https://collct.domain.app
+      - COLLCT_APP_URL=https://collct.domain.app
     depends_on:
       db:
         condition: service_healthy

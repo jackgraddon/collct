@@ -2065,6 +2065,8 @@ Moments is a BeReal-style feature: once per day, during a randomly-chosen time w
   "windowEnd": "20:00",
   "momentTime": "2026-08-15T19:23:00.000Z",
   "captureDuration": 300,
+  "allowPostToAll": true,
+  "allowLibraryFallback": false,
   "status": "active",
   "capturedToday": false,
   "userMomentsGroups": [
@@ -2084,6 +2086,8 @@ Moments is a BeReal-style feature: once per day, during a randomly-chosen time w
 - `windowStart` / `windowEnd` — the admin-configured daily window (server timezone, `HH:mm`)
 - `momentTime` — ISO timestamp of today's randomly chosen moment (null if disabled or not yet computed)
 - `captureDuration` — seconds users have to capture once notified
+- `allowPostToAll` — whether users can post to all moment groups at once (single toggle UX). Controlled by `COLLCT_MOMENTS_ALLOW_POST_TO_ALL`
+- `allowLibraryFallback` — whether desktop users can fall back to photo library selection. Controlled by `COLLCT_MOMENTS_ALLOW_LIBRARY_FALLBACK`
 - `status` — `"before"` (window hasn't opened), `"active"` (capture now!), `"after"` (window closed), `"disabled"` (feature off)
 - `capturedToday` — whether the authenticated user already posted a moment today
 - `userMomentsGroups` — groups where the user can post moments (groups with `momentsEnabled = true` that the user belongs to)
@@ -2174,11 +2178,12 @@ Moment uploads use the same `POST /photos` endpoint as regular uploads, with add
 | `caption` | string | No | Text caption, max 500 characters |
 | `groupIds` | string | No | JSON array of group IDs. For moments, only groups with `momentsEnabled = true` are allowed. |
 | `isMoment` | string | No | Set to `"true"` to flag this as a moment capture |
+| `momentCapturedAt` | string | No | ISO timestamp of when the photo was captured (shutter tap time). If omitted, server time is used. The server validates that this timestamp falls within the capture window, allowing late uploads as long as the photo was captured in-time. |
 
 **Additional validation when `isMoment = "true"`:**
 
 1. Global moments must be enabled (`COLLCT_MOMENTS_ENABLED=true`)
-2. Current server time must be within the capture window (momentTime → momentTime + captureDuration)
+2. The provided `momentCapturedAt` timestamp (or server time if omitted) must fall within the capture window (momentTime → momentTime + captureDuration)
 3. User must not have already captured a moment today
 4. All specified groups must have `momentsEnabled = true`
 
@@ -2376,6 +2381,106 @@ When a rate limit is exceeded, the server responds with `429 Too Many Requests`:
 ```
 
 The `data.retryAfter` field indicates the number of seconds until the limit resets.
+
+---
+
+## Dev-Only Endpoints
+
+> **⚠️ These endpoints are only available in development (`pnpm dev`).** They are not registered in production builds and return `403` if somehow reached. They require the `modules/devtools-login/` module, which is auto-discovered and gated behind `nuxt.options.dev`.
+
+These endpoints power the **Dev Tools** panel in Nuxt DevTools, providing one-click login and Moments state controls for testing.
+
+### Login As
+
+**Endpoint:** `POST /api/dev/login-as`
+
+**Description:** Log in as a test user without needing a passkey. Sets an encrypted session cookie via `setUserSession()`. Only accepts pre-defined test usernames.
+
+**Request:**
+
+```json
+{
+  "username": "test1"
+}
+```
+
+- `username` (required) — must be one of: `test1`, `test2`, `test3`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "username": "test1"
+}
+```
+
+**Status codes:**
+- `200` — success, session cookie set
+- `400` — invalid username
+- `403` — endpoint not available in production
+- `404` — user not found (run `pnpm db:seed:dev` first)
+
+---
+
+### Moment Control
+
+**Endpoint:** `POST /api/dev/moment-control`
+
+**Description:** Control the Moments feature state for testing. Manipulates the moment time and notification flags in the database, then triggers or skips notification fan-out as needed. Moments must be enabled (`COLLCT_MOMENTS_ENABLED=true`).
+
+**Request:**
+
+```json
+{
+  "action": "open"
+}
+```
+
+- `action` (required) — one of:
+  - `open` — Sets moment time to 5 seconds ago (window immediately active), resets notification flag, triggers notification fan-out
+  - `close` — Sets moment time far in the past (past capture window, "after" state)
+  - `reset` — Sets moment time 5 minutes in the future ("before" state)
+  - `clearCaptured` — Clears the captured-today flag for a specific user (requires `username`)
+- `username` (optional, required for `clearCaptured`) — must be one of: `test1`, `test2`, `test3`
+
+**Response (open/close/reset):**
+
+```json
+{
+  "success": true,
+  "action": "open",
+  "momentTime": "2026-08-22T06:38:00.000Z",
+  "status": "during",
+  "message": "Moment window opened. Status: during. Notifications sent."
+}
+```
+
+**Response (clearCaptured):**
+
+```json
+{
+  "success": true,
+  "action": "clearCaptured",
+  "username": "test1",
+  "clearedPhotos": 3,
+  "message": "Cleared captured-today flag for test1 (3 photo(s))."
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid action, missing username for `clearCaptured`, or Moments not enabled
+- `403` — endpoint not available in production
+- `404` — user not found (for `clearCaptured`)
+
+---
+
+### DevTools Panel
+
+**Endpoint:** `GET /__dev-login__/panel`
+
+**Description:** HTML iframe panel displayed in the Nuxt DevTools "Dev Tools" tab. Provides a UI for the Login and Moment Control endpoints above. Not intended to be accessed directly — loaded as an iframe by Nuxt DevTools.
 
 ---
 

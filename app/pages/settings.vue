@@ -67,14 +67,16 @@
             />
             <div class="flex-1">
               <p class="text-sm font-medium">
-                {{ isPushGranted ? 'Notifications enabled' : isPushDenied ? 'Notifications blocked' : 'Notifications not enabled' }}
+                {{ isPushGranted ? 'Notifications enabled' : isPushDenied ? 'Notifications blocked' : isPushPermissionGranted ? 'Permission granted' : 'Notifications not enabled' }}
               </p>
               <p class="text-xs text-muted mt-0.5">
                 {{ isPushDenied
                   ? 'You\'ll need to enable notifications in your browser settings.'
                   : isPushGranted
                     ? 'You\'ll receive push notifications for new likes, comments, and group joins.'
-                    : 'Enable notifications to get alerted when friends interact with your photos.'
+                    : isPushPermissionGranted
+                      ? 'Browser permission is granted but you need to re-subscribe to receive notifications.'
+                      : 'Enable notifications to get alerted when friends interact with your photos.'
                 }}
               </p>
             </div>
@@ -84,7 +86,7 @@
               size="xs"
               @click="enableNotifications"
             >
-              Enable
+              {{ isPushPermissionGranted ? 'Re-enable' : 'Enable' }}
             </UButton>
             <UButton
               v-else-if="isPushGranted"
@@ -342,6 +344,7 @@ const showOobe = ref(false)
 
 const isPushGranted = computed(() => permission.value === 'granted' && isSubscribed.value)
 const isPushDenied = computed(() => permission.value === 'denied')
+const isPushPermissionGranted = computed(() => permission.value === 'granted' && !isSubscribed.value)
 
 async function enableNotifications() {
   const granted = await requestPermission()

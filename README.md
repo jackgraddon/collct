@@ -56,69 +56,88 @@ pnpm build
 pnpm start
 ```
 
-### Docker
+### Local Development
 
-You can also run Collct using Docker with our provided docker-compose.yml file:
+Requires Docker for the database.
 
 ```bash
-# Clone and navigate to the repository
 git clone https://github.com/jackgraddon/collct.git
 cd collct
+pnpm install
+cp .env.example .env
+# Edit .env — set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
 
-# Start all services (database + app)
-docker-compose up -d
+# Start Postgres
+docker compose -f docker-compose.dev.yml up -d
 
-# Stop services
-docker-compose down
+# Run migrations
+pnpm db:migrate
+
+# (Optional) Seed test users, groups, and photos
+pnpm db:seed:dev
+
+# Start dev server
+pnpm dev
 ```
 
-The docker-compose.yml file sets up:
-- PostgreSQL database with persistent storage
-- Collct application container
-- All required environment variables configured
-- Data persistence for both database and application data
+If you have a `.env.local` with a `DATABASE_URL` pointing to a remote database (e.g., Neon), override it for local dev:
 
-Important: You'll need to generate a session password before running the application:
 ```bash
-openssl rand -hex 32
+DATABASE_URL=postgresql://collct:collct@localhost:5432/collct pnpm dev
 ```
 
-Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
+Open `https://localhost:3000`.
 
-Open `http://localhost:3000`.
+#### DevTools Panel
+
+When running `pnpm dev`, a **Dev Tools** tab appears in Nuxt DevTools (open with `Shift+Option+D` in the browser). It provides:
+
+- **One-click login** — Log in as `test1`, `test2`, or `test3` without needing a passkey
+- **Moments controls** — Open/close/reset the moment window, clear captured-today flags per user
+
+These endpoints are structurally excluded from production builds (the module's `setup()` returns early when `nuxt.options.dev` is false, so no routes are registered).
+
+#### Seed Script
+
+`pnpm db:seed:dev` wipes and recreates test data:
+
+| Resource | Count | Details |
+|----------|-------|---------|
+| Users | 3 | `test1`, `test2`, `test3` (no passwords — use DevTools login) |
+| Groups | 3 | "All Friends", "Close Friends", "Just Us" |
+| Photos | 16 | With likes and comments; images cached in `dev/seed-images/` |
 
 ### Docker
 
-You can run Collct using Docker with the image or with the docker-compose.yml file.
+You can run Collct using Docker with the provided example compose file at [`examples/docker-compose.yml`](examples/docker-compose.yml).
 
-Important: You'll need to generate a session password before running the application:
+Generate a session password first:
 ```bash
 openssl rand -hex 32
 ```
 
-Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
+Then set the `NUXT_SESSION_PASSWORD` environment variable in the compose file or a `.env` file alongside it.
 
 #### Compose
 
-Using the docker-compose.yml file:
-
 ```bash
-# Clone and navigate to the repository
 git clone https://github.com/jackgraddon/collct.git
-cd collct
+cd collct/examples
 
 # Start all services (database + app)
-docker-compose up -d
+docker compose up -d
 
 # Stop services
-docker-compose down
+docker compose down
 ```
 
-The docker-compose.yml file sets up:
+The compose file sets up:
 - PostgreSQL database with persistent storage
-- Collct application container
+- Collct application container (latest image)
 - All required environment variables configured
 - Data persistence for both database and application data
+
+Open `http://localhost:3000`.
 
 #### Image
 

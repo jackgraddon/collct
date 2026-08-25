@@ -40,6 +40,16 @@
       :groups="postData.groups"
       class="absolute bottom-2 left-2 right-2"
     />
+
+    <!-- Like count overlay (if synced from detail page) -->
+    <div
+      v-if="postData.isLiked"
+      class="absolute top-2 right-2 z-10"
+    >
+      <div class="w-6 h-6 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
+        <UIcon name="i-lucide-heart" class="w-3.5 h-3.5 fill-current text-red-500" />
+      </div>
+    </div>
   </div>
 </template>
 

@@ -47,6 +47,8 @@ export default defineEventHandler(async (event) => {
     windowEnd,
     momentTime: momentTime.toISOString(),
     captureDuration: config.momentsCaptureDuration,
+    allowPostToAll: config.momentsAllowPostToAll,
+    allowLibraryFallback: config.momentsAllowLibraryFallback,
     status,
     capturedToday,
     userMomentsGroups,

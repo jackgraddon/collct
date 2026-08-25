@@ -51,6 +51,8 @@ declare global {
     createdAt: string | Date
     isMoment?: boolean
     momentCapturedAt?: string | Date | null
+    isLiked?: boolean
+    likeCount?: number | null
     user: {
       id: number
       name: string

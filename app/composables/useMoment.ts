@@ -4,6 +4,8 @@ interface MomentState {
   windowEnd: string
   momentTime: string | null
   captureDuration: number
+  allowPostToAll: boolean
+  allowLibraryFallback: boolean
   status: 'before' | 'active' | 'after' | 'disabled'
   capturedToday: boolean
   userMomentsGroups: Array<{ id: number; name: string; slug: string; icon: string | null; color: string | null; isPublic: boolean }>
@@ -17,6 +19,8 @@ export function useMoment() {
       windowEnd: '20:00',
       momentTime: null,
       captureDuration: 300,
+      allowPostToAll: true,
+      allowLibraryFallback: false,
       status: 'disabled' as const,
       capturedToday: false,
       userMomentsGroups: [],

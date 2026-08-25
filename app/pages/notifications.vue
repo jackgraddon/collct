@@ -215,6 +215,7 @@ function notificationText(n: NotificationItem): string {
 }
 
 function notificationLink(n: NotificationItem): string {
+  if (n.type === 'moment') return '/?moment=capture'
   if (n.photoId) return `/post/${n.photoId}`
   if (n.groupId?.length) return `/groups/${n.groupId[0]}`
   return '/'

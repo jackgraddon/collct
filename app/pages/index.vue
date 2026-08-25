@@ -32,6 +32,15 @@
       </button>
     </Transition>
 
+    <!-- Pending moment upload indicator -->
+    <CollctMomentPendingIndicator
+      :visible="capture.isPending.value || capture.hasDraft.value"
+      :is-error="capture.flowState.value === 'error'"
+      :error-message="capture.lastUploadError.value"
+      :retry-count="capture.retryCount.value"
+      @retry="capture.retryUpload()"
+    />
+
     <CollctPostGrid :posts="visiblePosts" v-slot="{ post }">
       <CollctPostGridItem :post-data="post" />
     </CollctPostGrid>
@@ -41,11 +50,31 @@
       <p v-else-if="exhausted" class="text-sm text-neutral-400">You're all caught up!</p>
     </div>
 
-    <!-- Upload modal -->
-    <CollctUploadModal
+    <!-- Upload modal (non-moment) -->
+    <CollctPostModal
       v-model:open="showUploadModal"
-      :is-moment="uploadMomentMode"
+      mode="upload"
       @uploaded="onUpload"
+    />
+
+    <!-- Moment capture overlay -->
+    <CollctMomentCaptureOverlay
+      :visible="showCaptureOverlay"
+      :time-remaining="captureTimeRemaining"
+      :allow-library-fallback="allowLibraryFallback"
+      @capture="onCapture"
+      @dismiss="onCaptureDismiss"
+    />
+
+    <!-- Moment group selection modal -->
+    <CollctPostModal
+      v-model:open="showGroupSelect"
+      mode="moment"
+      :preview-url="capture.capturedPreviewUrl.value"
+      :groups="momentsGroups"
+      :uploading="capture.flowState.value === 'uploading'"
+      @retake="onGroupSelectBack"
+      @submit="onGroupSubmit"
     />
   </div>
 </template>
@@ -55,157 +84,148 @@ import { useIntersectionObserver } from '@vueuse/core'
 
 const { on } = useUploadBus()
 const route = useRoute()
-
-// Upload modal state
-const showUploadModal = ref(false)
-const uploadMomentMode = ref(false)
-
-// Auto-open upload modal for moment notifications
-watch(() => route.query.upload, (val) => {
-  if (val === 'moment') {
-    uploadMomentMode.value = true
-    showUploadModal.value = true
-    // Clear the query param without triggering navigation
-    router.replace({ query: {} })
-  }
-}, { immediate: true })
-
 const router = useRouter()
+const toast = useToast()
 
-// ─── Persistent feed state (survives component destruction) ───────────────────
-interface FeedState {
-  photos: PostData[]
-  nextCursor: number | null
-}
+// Upload modal state (non-moment)
+const showUploadModal = ref(false)
 
-const { data: feedState } = await useFetch<FeedState>('/api/photos', {
-  query: { limit: 20 },
-  key: 'feed',
-  getCachedData(key, nuxtApp) {
-    if (import.meta.server) return
+// Moment capture flow
+const capture = useMomentCapture()
+const { momentState, isActive, capturedToday, timeRemaining: captureTimeRemaining, momentsGroups, refresh: refreshMoment } = useMoment()
 
-    const cached = nuxtApp.payload.data[key] || nuxtApp.static.data[key]
-    if (cached) return cached
+const uploadedThisSession = ref(false)
 
-    try {
-      const local = localStorage.getItem(key)
-      if (local) {
-        return JSON.parse(local)
-      }
-    } catch (e) {
-      console.error('Error reading feed from localStorage:', e)
+const showCaptureOverlay = computed(() => {
+  const state = capture.flowState.value
+  return !uploadedThisSession.value && ((state === 'idle' && isActive.value && !capturedToday.value) || state === 'capturing')
+})
+
+const showGroupSelect = computed({
+  get() {
+    const state = capture.flowState.value
+    return state === 'captured' || state === 'selecting-groups' || state === 'uploading'
+  },
+  set(val) {
+    if (!val) {
+      capture.dismissMissedAndReset()
     }
   },
 })
 
-watch(feedState, (newVal) => {
-  if (import.meta.client && newVal) {
-    try {
-      localStorage.setItem('feed', JSON.stringify(newVal))
-    } catch (e) {
-      console.error('Error writing feed to localStorage:', e)
-    }
+const allowLibraryFallback = computed(() => momentState.value?.allowLibraryFallback ?? false)
+
+// Auto-open capture overlay from notification or ?moment=capture
+watch(() => route.query.moment, (val) => {
+  if (val === 'capture') {
+    capture.startCapture()
+    router.replace({ query: {} })
   }
-}, { deep: true, immediate: true })
+}, { immediate: true })
 
-// Buffer for manually appended items (uploads)
-const appendedPosts = ref<PostData[]>([])
-const loadMoreTrigger = ref(null)
-const loadingMore = ref(false)
-const checkingForNew = ref(false)
+function onCapture(blob: Blob, previewUrl: string) {
+  capture.onShutterTap(blob, previewUrl)
+  capture.enterGroupSelection(momentsGroups.value)
+}
 
-// New posts that arrived since the last visible state
+function onCaptureDismiss() {
+  if (capture.flowState.value === 'capturing') {
+    capture.dismissMissedAndReset()
+    const missKey = `moment_miss_shown_${new Date().toISOString().slice(0, 10)}`
+    if (!localStorage.getItem(missKey)) {
+      localStorage.setItem(missKey, '1')
+      toast.add({
+        title: 'Moment missed',
+        description: 'You missed today\'s moment, but you can still post a normal photo.',
+        color: 'warning',
+        icon: 'i-lucide-clock',
+      })
+    }
+    markUnreadMomentNotificationsAsRead()
+  } else {
+    capture.resetFlow()
+  }
+}
+
+async function markUnreadMomentNotificationsAsRead() {
+  try {
+    const data = await $fetch<{ notifications: Array<{ id: number; type: string; isRead: boolean }> }>('/api/notifications', { query: { limit: 50 } })
+    const unreadMomentIds = data.notifications
+      .filter(n => n.type === 'moment' && !n.isRead)
+      .map(n => n.id)
+    if (unreadMomentIds.length > 0) {
+      await $fetch('/api/notifications/read', {
+        method: 'PATCH',
+        body: { ids: unreadMomentIds },
+      })
+    }
+  } catch {
+    // Best effort — don't block UX
+  }
+}
+
+function onGroupSelectBack() {
+  capture.startCapture()
+}
+
+async function onGroupSubmit(groupIds: number[]) {
+  capture.setGroupIds(groupIds)
+  const success = await capture.submitUpload()
+  if (success) {
+    uploadedThisSession.value = true
+    toast.add({ title: 'Moment captured!', color: 'success', icon: 'i-lucide-circle-check' })
+    refreshMoment()
+    markUnreadMomentNotificationsAsRead()
+  }
+}
+
+// ─── Feed state (shared via composable) ──────────────────────────────────────
+const feed = useFeed({ limit: 20, pollInterval: 10_000 })
+const { photos, exhausted } = feed
+
+// New posts that arrived since last visible state
 const pendingNewPosts = ref<PostData[]>([])
 const newPostCount = computed(() => pendingNewPosts.value.length)
+const loadMoreTrigger = ref(null)
+const loadingMore = ref(false)
 
 // ─── Pull to refresh ────────────────────────────────────────────────────────
 const { pullDistance, refreshing: ptrRefreshing } = usePullToRefresh(async () => {
   pendingNewPosts.value = []
-  const fresh = await $fetch<FeedState>('/api/photos', { query: { limit: 20 } })
-  if (feedState.value) {
-    feedState.value = fresh
-  }
+  await feed.fetchPage()
 })
 
-// Visible posts = pending new + existing feed + appended uploads
+// Visible posts = pending new + feed
 const visiblePosts = computed(() => [
-  ...appendedPosts.value,
   ...pendingNewPosts.value,
-  ...(feedState.value?.photos ?? []),
+  ...photos.value,
 ])
 
-const exhausted = computed(() => feedState.value?.nextCursor === null)
-
-// ─── Check for new posts on every mount (including back-navigation) ──────────
+// ─── Check for new posts on every mount ──────────────────────────────────────
 onMounted(async () => {
-  await checkForNewPosts()
+  await feed.checkNew()
 })
 
-const parseSafeDate = (dateVal: string | Date | null | undefined): Date => {
-  if (!dateVal) return new Date()
-  if (dateVal instanceof Date) return dateVal
-  if (typeof dateVal === 'string') {
-    const normalized = dateVal.includes('T') ? dateVal : dateVal.replace(' ', 'T')
-    return new Date(normalized)
-  }
-  return new Date(dateVal)
-}
-
-async function checkForNewPosts() {
-  if (!feedState.value?.photos.length || checkingForNew.value) return
-  checkingForNew.value = true
-  try {
-    const newest = feedState.value.photos[0]
-    if (!newest) return
-    const newer = await $fetch<FeedState>('/api/photos', {
-      query: { limit: 50, after: parseSafeDate(newest.createdAt).getTime() + 1 },
-    })
-    if (newer.photos.length) {
-      pendingNewPosts.value = newer.photos
-    }
-  } catch {
-    // Silently ignore — we'll check again on next mount
-  } finally {
-    checkingForNew.value = false
-  }
-}
-
 function showNewPosts() {
-  // Move pending posts into the main feed state
-  if (feedState.value && pendingNewPosts.value.length) {
-    feedState.value = {
-      ...feedState.value,
-      photos: [...pendingNewPosts.value, ...feedState.value.photos],
-    }
+  if (pendingNewPosts.value.length) {
+    feed.photos = [...pendingNewPosts.value, ...feed.photos]
     pendingNewPosts.value = []
   }
 }
 
 // ─── Load more (infinite scroll) ─────────────────────────────────────────────
 async function loadMore() {
-  if (loadingMore.value || !feedState.value?.nextCursor) return
+  if (loadingMore.value || exhausted.value) return
   loadingMore.value = true
-  try {
-    const result = await $fetch<FeedState>('/api/photos', {
-      query: { limit: 20, before: feedState.value.nextCursor },
-    })
-    if (feedState.value) {
-      feedState.value = {
-        photos: [...feedState.value.photos, ...result.photos],
-        nextCursor: result.nextCursor,
-      }
-    }
-  } finally {
-    loadingMore.value = false
-  }
+  await feed.fetchMore()
+  loadingMore.value = false
 }
 
-// ─── Handle manual uploads ───────────────────────────────────────────────────
-on((post) => appendedPosts.value.unshift(post))
+// ─── Handle uploads ──────────────────────────────────────────────────────────
+on((post) => feed.addPost(post))
 
 function onUpload(post: PostData) {
-  appendedPosts.value.unshift(post)
-  uploadMomentMode.value = false
+  feed.addPost(post)
 }
 
 // ─── Intersection observer for infinite scroll ───────────────────────────────
