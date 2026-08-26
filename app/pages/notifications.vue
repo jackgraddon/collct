@@ -52,44 +52,55 @@
     </div>
 
     <div v-else class="space-y-1">
-      <NuxtLink
+      <div
         v-for="n in notifications"
         :key="n.id"
-        :to="notificationLink(n)"
-        class="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-muted/50"
+        class="flex items-center gap-3 p-3 rounded-lg transition-colors hover:bg-muted/50 group"
         :class="{ 'bg-primary/5': !n.isRead }"
-        @click="markRead(n)"
       >
-        <!-- Unread dot -->
-        <div class="w-2 h-2 rounded-full shrink-0" :class="n.isRead ? 'bg-transparent' : 'bg-primary'" />
+        <NuxtLink
+          :to="notificationLink(n)"
+          class="flex items-center gap-3 flex-1 min-w-0"
+          @click="markRead(n)"
+        >
+          <!-- Unread dot -->
+          <div class="w-2 h-2 rounded-full shrink-0" :class="n.isRead ? 'bg-transparent' : 'bg-primary'" />
 
-        <!-- Actor avatar -->
-        <UAvatar
-          :src="n.actor.avatarUrl || undefined"
-          :alt="n.actor.name"
-          :text="n.actor.name?.slice(0, 2).toUpperCase() || '?'"
-          size="sm"
-        />
+          <!-- Actor avatar -->
+          <UAvatar
+            :src="n.actor.avatarUrl || undefined"
+            :alt="n.actor.name"
+            :text="n.actor.name?.slice(0, 2).toUpperCase() || '?'"
+            size="sm"
+          />
 
-        <!-- Content -->
-        <div class="flex-1 min-w-0">
-          <p class="text-sm">
-            <span class="font-medium">{{ n.actor.name }}</span>
-            <span class="text-muted">{{ notificationText(n) }}</span>
-          </p>
-          <p class="text-xs text-muted mt-0.5">{{ formatRelativeTime(n.createdAt) }}</p>
-        </div>
+          <!-- Content -->
+          <div class="flex-1 min-w-0">
+            <p class="text-sm">
+              <span class="font-medium">{{ n.actor.name }}</span>
+              <span class="text-muted">{{ notificationText(n) }}</span>
+            </p>
+            <p class="text-xs text-muted mt-0.5">{{ formatRelativeTime(n.createdAt) }}</p>
+          </div>
 
-        <!-- Photo thumbnail -->
-        <NuxtImg
-          v-if="n.photoUrl"
-          :src="n.photoUrl"
-          width="44"
-          height="44"
-          format="webp"
-          class="w-11 h-11 rounded-md object-cover shrink-0"
-        />
-      </NuxtLink>
+          <!-- Photo thumbnail -->
+          <NuxtImg
+            v-if="n.photoUrl"
+            :src="n.photoUrl"
+            width="44"
+            height="44"
+            format="webp"
+            class="w-11 h-11 rounded-md object-cover shrink-0"
+          />
+        </NuxtLink>
+        <button
+          class="p-1.5 rounded hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          title="Dismiss"
+          @click.stop="dismissNotification(n)"
+        >
+          <UIcon name="i-lucide-x" class="w-4 h-4 text-muted" />
+        </button>
+      </div>
     </div>
 
     <!-- Load more -->
@@ -194,6 +205,12 @@ async function markAllRead() {
     method: 'PATCH',
     body: { all: true },
   })
+  refreshUnread()
+}
+
+async function dismissNotification(n: NotificationItem) {
+  await $fetch(`/api/notifications/${n.id}`, { method: 'DELETE' }).catch(() => {})
+  notifications.value = notifications.value.filter((item) => item.id !== n.id)
   refreshUnread()
 }
 

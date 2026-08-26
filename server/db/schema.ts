@@ -157,12 +157,16 @@ export const notifications = pgTable(
     photoId: integer('photo_id').references(() => photos.id, { onDelete: 'cascade' }),
     commentId: integer('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
     groupId: text('group_id'),
+    notificationTag: text('notification_tag'),
     isRead: boolean('is_read').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },
   (t) => [
     index('notifications_user_id_idx').on(t.userId),
     index('notifications_user_read_idx').on(t.userId, t.isRead),
+    uniqueIndex('notifications_tag_active_unique')
+      .on(t.notificationTag)
+      .where(sql`${t.isRead} = false`),
   ],
 )
 

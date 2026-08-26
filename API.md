@@ -1881,6 +1881,8 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
 - `photoUrl` — presigned thumbnail URL for the associated photo, if applicable.
 - `nextCursor` — notification ID to pass as `before` for the next page. `null` when there are no more results.
 
+**Like notification consolidation:** Multiple likes on the same photo are consolidated into a single notification. When a new like arrives on a photo that already has an active (unread) like notification, the existing notification is updated with the new like count rather than creating a duplicate. The `actor` field reflects the most recent liker. Push notifications for consolidated likes use the same `tag` value, so the OS replaces the previous notification in-place.
+
 **Status codes:**
 - `200` — success
 - `401` — not authenticated
@@ -1947,6 +1949,37 @@ Exactly one of `ids` or `all: true` must be provided.
 - `200` — success
 - `400` — neither `ids` nor `all` provided
 - `401` — not authenticated
+
+---
+
+### Dismiss Notification
+
+**Endpoint:** `DELETE /notifications/:id`
+
+**Description:** Permanently delete a notification. Used when the user dismisses a push notification (swipes away / taps X) or explicitly removes an in-app notification. Unlike marking as read, this removes the notification entirely — it will not appear in the notification list again.
+
+**Authentication:** Required
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | number | Notification ID |
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success (notification deleted or didn't exist)
+- `401` — not authenticated
+- `400` — invalid notification ID
+
+**Notes:**
+- The service worker's `notificationclose` event handler calls this endpoint automatically when a user dismisses a push notification.
+- Deleting a like notification frees its `notificationTag`, allowing a new like notification for the same photo to be created later.
 
 ---
 
@@ -2041,6 +2074,66 @@ Exactly one of `ids` or `all: true` must be provided.
 - `200` — success
 - `400` — missing endpoint
 - `401` — not authenticated
+
+---
+
+### Push Notification Payload Format
+
+When the server sends a push notification, the payload follows this structure:
+
+```json
+{
+  "title": "Collct",
+  "body": "Friend liked your photo",
+  "icon": "/icon-192x192.png",
+  "tag": "like_42",
+  "data": {
+    "notificationId": 1001,
+    "type": "like",
+    "photoId": "42"
+  }
+}
+```
+
+**Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Instance name (from `COLLCT_INSTANCE_NAME`) or `"Collct"` |
+| `body` | string | Notification text. For likes: `"1 person liked your photo"` or `"N people liked your photo"` when consolidated. |
+| `icon` | string | App icon path |
+| `tag` | string | OS-level deduplication tag. Same tag = replacement, not stacking. |
+| `data.notificationId` | number | **Required for client dismiss handling.** The DB notification ID. Client must include this in `notificationclose` handler to call `DELETE /notifications/:id`. |
+| `data.type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"` |
+| `data.photoId` | string | Photo ID, if applicable |
+| `data.groupId` | string | Group ID, if applicable |
+
+**Tag format by notification type:**
+
+| Type | Tag | Consolidates? |
+|------|-----|---------------|
+| `like` | `like_{photoId}` | Yes — multiple likes on same photo produce one notification |
+| `comment` | `comment_{photoId}_{commentId}` | No |
+| `group_join` | `group_join_{groupId}_{userId}` | No |
+| `new_post` | `new_post_{photoId}_{userId}` | No |
+| `moment` | `moment_{userId}_{YYYY-MM-DD}` | No |
+
+**Service worker requirements:**
+
+Third-party clients implementing a service worker must:
+
+1. Pass the `tag` field through to `showNotification()` — this enables OS-level notification replacement for consolidated likes.
+2. Listen for `notificationclose` and call `DELETE /api/notifications/{notificationId}` using the `data.notificationId` value. This prevents the server from sending further updates for dismissed notifications.
+
+```js
+self.addEventListener('notificationclose', (event) => {
+  const notificationId = event.notification.data?.notificationId
+  if (!notificationId) return
+  event.waitUntil(
+    fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' }).catch(() => {})
+  )
+})
+```
 
 ---
 

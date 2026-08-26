@@ -66,5 +66,6 @@ export const useNotificationPolling = () => {
     notifications,
     isPolling,
     refresh: fetchNotifications,
+    refreshUnread,
   }
 }

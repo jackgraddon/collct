@@ -43,37 +43,48 @@
           </div>
 
           <div v-if="notifications.length" class="divide-y divide-(--ui-border)">
-            <NuxtLink
+            <div
               v-for="n in notifications"
               :key="n.id"
-              :to="notificationLink(n)"
-              class="flex items-center gap-3 p-3 transition-colors hover:bg-(--ui-bg-muted)"
+              class="flex items-center gap-3 p-3 transition-colors hover:bg-(--ui-bg-muted) group"
               :class="{ 'bg-primary/5': !n.isRead }"
-              @click="onNotificationClick(n)"
             >
-              <div class="w-2 h-2 rounded-full shrink-0" :class="n.isRead ? 'bg-transparent' : 'bg-primary'" />
-              <UAvatar
-                :src="n.actor.avatarUrl || undefined"
-                :alt="n.actor.name"
-                :text="n.actor.name?.slice(0, 2).toUpperCase() || '?'"
-                size="sm"
-              />
-              <div class="flex-1 min-w-0">
-                <p class="text-sm">
-                  <span class="font-medium">{{ n.actor.name }}</span>
-                  <span class="text-muted">{{ notificationText(n) }}</span>
-                </p>
-                <p class="text-xs text-muted mt-0.5">{{ formatRelativeTime(n.createdAt) }}</p>
-              </div>
-              <NuxtImg
-                v-if="n.photoUrl"
-                :src="n.photoUrl"
-                width="36"
-                height="36"
-                format="webp"
-                class="w-9 h-9 rounded object-cover shrink-0"
-              />
-            </NuxtLink>
+              <NuxtLink
+                :to="notificationLink(n)"
+                class="flex items-center gap-3 flex-1 min-w-0"
+                @click="onNotificationClick(n)"
+              >
+                <div class="w-2 h-2 rounded-full shrink-0" :class="n.isRead ? 'bg-transparent' : 'bg-primary'" />
+                <UAvatar
+                  :src="n.actor.avatarUrl || undefined"
+                  :alt="n.actor.name"
+                  :text="n.actor.name?.slice(0, 2).toUpperCase() || '?'"
+                  size="sm"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm">
+                    <span class="font-medium">{{ n.actor.name }}</span>
+                    <span class="text-muted">{{ notificationText(n) }}</span>
+                  </p>
+                  <p class="text-xs text-muted mt-0.5">{{ formatRelativeTime(n.createdAt) }}</p>
+                </div>
+                <NuxtImg
+                  v-if="n.photoUrl"
+                  :src="n.photoUrl"
+                  width="36"
+                  height="36"
+                  format="webp"
+                  class="w-9 h-9 rounded object-cover shrink-0"
+                />
+              </NuxtLink>
+              <button
+                class="p-1 rounded hover:bg-(--ui-bg-muted) opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                title="Dismiss"
+                @click.stop="dismissNotification(n)"
+              >
+                <UIcon name="i-lucide-x" class="w-3.5 h-3.5 text-muted" />
+              </button>
+            </div>
           </div>
 
           <div v-else class="p-8 text-center">
@@ -99,7 +110,7 @@ import { onClickOutside } from '@vueuse/core'
 
 const isOpen = ref(false)
 const container = ref<HTMLElement | null>(null)
-const { unreadCount, notifications } = useNotificationPolling()
+const { unreadCount, notifications, refresh: refreshNotifications } = useNotificationPolling()
 const { shouldPrompt, requestPermission, dismissPrompt } = usePushNotifications()
 
 const showPrompt = computed(() => shouldPrompt.value)
@@ -131,6 +142,11 @@ function notificationText(n: Notification): string {
     default:
       return ' interacted with your content'
   }
+}
+
+async function dismissNotification(n: Notification) {
+  await $fetch(`/api/notifications/${n.id}`, { method: 'DELETE' }).catch(() => {})
+  refreshNotifications()
 }
 
 function notificationLink(n: Notification): string {

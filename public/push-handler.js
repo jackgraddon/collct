@@ -49,3 +49,12 @@ self.addEventListener('notificationclick', (event) => {
     }),
   )
 })
+
+self.addEventListener('notificationclose', (event) => {
+  const notificationId = event.notification.data?.notificationId
+  if (!notificationId) return
+
+  event.waitUntil(
+    fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' }).catch(() => {}),
+  )
+})

@@ -1,5 +1,5 @@
 import { db, schema } from '@nuxthub/db'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { getAdminConfig } from './config'
 
 interface CreateNotificationData {
@@ -11,27 +11,164 @@ interface CreateNotificationData {
   groupIds?: number[]
 }
 
+function generateNotificationTag(type: string, data: CreateNotificationData): string | null {
+  switch (type) {
+    case 'like':
+      return data.photoId ? `like_${data.photoId}` : null
+    case 'comment':
+      return data.photoId && data.commentId ? `comment_${data.photoId}_${data.commentId}` : null
+    case 'moment':
+      return `moment_${data.userId}_${new Date().toISOString().slice(0, 10)}`
+    case 'group_join':
+      return data.groupIds?.length ? `group_join_${data.groupIds[0]}_${data.userId}` : null
+    case 'new_post':
+      return data.photoId ? `new_post_${data.photoId}_${data.userId}` : null
+    default:
+      return null
+  }
+}
+
 /**
- * Create a notification, skipping self-notifications.
- * Also sends a push notification (fire-and-forget).
+ * Create or update a notification, skipping self-notifications.
+ * For like notifications, consolidates multiple likes on the same photo
+ * into a single notification with an updated count.
+ * Sends a push notification (fire-and-forget, debounced for likes).
  */
 export async function createNotification(data: CreateNotificationData) {
   if (data.userId === data.actorId) return
 
-  await db.insert(schema.notifications).values({
-    userId: data.userId,
-    actorId: data.actorId,
-    type: data.type,
-    photoId: data.photoId ?? null,
-    commentId: data.commentId ?? null,
-    groupId: data.groupIds?.length ? JSON.stringify(data.groupIds) : null,
-  })
+  if (data.type === 'like' && data.photoId) {
+    await createOrUpdateLikeNotification(data)
+    return
+  }
 
-  // Fire-and-forget push notification
-  sendPushForNotification(data).catch(() => {})
+  const tag = generateNotificationTag(data.type, data)
+
+  if (tag) {
+    const [existing] = await db
+      .select({ id: schema.notifications.id })
+      .from(schema.notifications)
+      .where(
+        and(
+          eq(schema.notifications.userId, data.userId),
+          eq(schema.notifications.notificationTag, tag),
+          eq(schema.notifications.isRead, false),
+        ),
+      )
+      .limit(1)
+
+    if (existing) {
+      await db
+        .update(schema.notifications)
+        .set({ actorId: data.actorId })
+        .where(eq(schema.notifications.id, existing.id))
+
+      sendPushForNotification({ ...data, notificationId: existing.id }).catch(() => {})
+      return
+    }
+  }
+
+  const [notification] = await db
+    .insert(schema.notifications)
+    .values({
+      userId: data.userId,
+      actorId: data.actorId,
+      type: data.type,
+      photoId: data.photoId ?? null,
+      commentId: data.commentId ?? null,
+      groupId: data.groupIds?.length ? JSON.stringify(data.groupIds) : null,
+      notificationTag: tag,
+    })
+    .returning({ id: schema.notifications.id })
+
+  sendPushForNotification({ ...data, notificationId: notification?.id }).catch(() => {})
 }
 
-async function sendPushForNotification(data: CreateNotificationData) {
+/**
+ * Like notification consolidation:
+ * - If an active notification exists for this photo, update it (new actor, count++)
+ * - Otherwise, create a new one
+ * - Debounce push sends by 1s to coalesce rapid likes
+ */
+async function createOrUpdateLikeNotification(data: CreateNotificationData) {
+  const tag = `like_${data.photoId}`
+
+  const [existing] = await db
+    .select({ id: schema.notifications.id })
+    .from(schema.notifications)
+    .where(
+      and(
+        eq(schema.notifications.userId, data.userId),
+        eq(schema.notifications.notificationTag, tag),
+        eq(schema.notifications.isRead, false),
+      ),
+    )
+    .limit(1)
+
+  let notificationId: number
+
+  if (existing) {
+    await db
+      .update(schema.notifications)
+      .set({ actorId: data.actorId })
+      .where(eq(schema.notifications.id, existing.id))
+    notificationId = existing.id
+  } else {
+    const [inserted] = await db
+      .insert(schema.notifications)
+      .values({
+        userId: data.userId,
+        actorId: data.actorId,
+        type: 'like',
+        photoId: data.photoId,
+        notificationTag: tag,
+      })
+      .returning({ id: schema.notifications.id })
+    notificationId = inserted!.id
+  }
+
+  scheduleDebouncedLikePush(data.userId, data.photoId!, notificationId)
+}
+
+const DEBOUNCE_MS = 1000
+const pendingLikePushes = new Map<string, ReturnType<typeof setTimeout>>()
+
+function scheduleDebouncedLikePush(userId: number, photoId: number, notificationId: number) {
+  const key = `like_${photoId}_${userId}`
+
+  const existing = pendingLikePushes.get(key)
+  if (existing) clearTimeout(existing)
+
+  pendingLikePushes.set(
+    key,
+    setTimeout(async () => {
+      pendingLikePushes.delete(key)
+
+      const [countResult] = await db
+        .select({ total: sql<number>`count(distinct ${schema.likes.userId})` })
+        .from(schema.likes)
+        .where(eq(schema.likes.photoId, photoId))
+
+      const likeCount = countResult ? Number(countResult.total) : 0
+
+      await sendPushForNotification({
+        userId,
+        actorId: 0,
+        type: 'like',
+        photoId,
+        notificationId,
+        likeCount,
+      })
+    }, DEBOUNCE_MS),
+  )
+}
+
+interface PushData extends CreateNotificationData {
+  notificationId?: number
+  likeCount?: number
+}
+
+async function sendPushForNotification(data: PushData) {
   const [actor] = await db
     .select({ name: schema.users.name })
     .from(schema.users)
@@ -43,31 +180,38 @@ async function sendPushForNotification(data: CreateNotificationData) {
   let body = ''
   let tag = ''
   const pushData: Record<string, string> = { type: data.type }
+  if (data.notificationId) pushData.notificationId = String(data.notificationId)
 
   switch (data.type) {
-    case 'like':
-      body = `${actorName} liked your photo`
-      tag = `like-${data.photoId}`
+    case 'like': {
+      const count = data.likeCount ?? 0
+      if (count <= 1) {
+        body = `${actorName} liked your photo`
+      } else {
+        body = `${count} people liked your photo`
+      }
+      tag = `like_${data.photoId}`
       if (data.photoId) pushData.photoId = String(data.photoId)
       break
+    }
     case 'comment':
       body = `${actorName} commented on your photo`
-      tag = `comment-${data.photoId}`
+      tag = `comment_${data.photoId}_${data.commentId}`
       if (data.photoId) pushData.photoId = String(data.photoId)
       break
     case 'group_join':
       body = `${actorName} joined your group`
-      tag = `group_join-${data.groupIds?.[0] ?? ''}`
+      tag = `group_join_${data.groupIds?.[0] ?? ''}_${data.userId}`
       if (data.groupIds?.length) pushData.groupId = String(data.groupIds[0])
       break
     case 'new_post':
       body = `${actorName} posted a new photo`
-      tag = `new_post-${data.photoId}`
+      tag = `new_post_${data.photoId}_${data.userId}`
       if (data.photoId) pushData.photoId = String(data.photoId)
       break
     case 'moment':
       body = 'Time for your daily moment! Capture a photo now.'
-      tag = `moment-${new Date().toISOString().slice(0, 10)}`
+      tag = `moment_${data.userId}_${new Date().toISOString().slice(0, 10)}`
       break
   }
 
@@ -81,8 +225,8 @@ async function sendPushForNotification(data: CreateNotificationData) {
 }
 
 /**
- * Delete a notification matching the given criteria.
- * Used when toggling off a like.
+ * Handle unlike: update the consolidated like notification or delete it
+ * if no likes remain. Resends push with updated count.
  */
 export async function deleteNotification(where: {
   userId: number
@@ -90,6 +234,11 @@ export async function deleteNotification(where: {
   type: string
   photoId?: number
 }) {
+  if (where.type === 'like' && where.photoId !== undefined) {
+    await deleteOrUpdateLikeNotification(where.userId, where.photoId)
+    return
+  }
+
   const conditions = [
     eq(schema.notifications.userId, where.userId),
     eq(schema.notifications.actorId, where.actorId),
@@ -99,4 +248,57 @@ export async function deleteNotification(where: {
     conditions.push(eq(schema.notifications.photoId, where.photoId))
   }
   await db.delete(schema.notifications).where(and(...conditions))
+}
+
+async function deleteOrUpdateLikeNotification(userId: number, photoId: number) {
+  const tag = `like_${photoId}`
+
+  const [countResult] = await db
+    .select({ total: sql<number>`count(distinct ${schema.likes.userId})` })
+    .from(schema.likes)
+    .where(eq(schema.likes.photoId, photoId))
+
+  const likeCount = countResult ? Number(countResult.total) : 0
+
+  const [existing] = await db
+    .select({ id: schema.notifications.id })
+    .from(schema.notifications)
+    .where(
+      and(
+        eq(schema.notifications.userId, userId),
+        eq(schema.notifications.notificationTag, tag),
+        eq(schema.notifications.isRead, false),
+      ),
+    )
+    .limit(1)
+
+  if (!existing) return
+
+  if (likeCount === 0) {
+    await db.delete(schema.notifications).where(eq(schema.notifications.id, existing.id))
+  } else {
+    await sendPushForNotification({
+      userId,
+      actorId: 0,
+      type: 'like',
+      photoId,
+      notificationId: existing.id,
+      likeCount,
+    })
+  }
+}
+
+/**
+ * Dismiss a notification: delete the row entirely.
+ * Called by the client when the user swipes away a push notification.
+ */
+export async function dismissNotification(notificationId: number, userId: number) {
+  await db
+    .delete(schema.notifications)
+    .where(
+      and(
+        eq(schema.notifications.id, notificationId),
+        eq(schema.notifications.userId, userId),
+      ),
+    )
 }
