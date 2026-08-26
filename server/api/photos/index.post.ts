@@ -1,8 +1,8 @@
 import { db, schema } from '@nuxthub/db'
 import { blob } from 'hub:blob'
-import { eq, and, inArray } from 'drizzle-orm'
+import { eq, and, inArray, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
-import { getOrCreateTodayMomentTime, hasUserCapturedMomentToday, getUserMomentsGroups } from '../../utils/moments'
+import { getOrCreateTodayMomentTime, getUserMomentsGroups } from '../../utils/moments'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 10 * 1024 * 1024
@@ -98,12 +98,6 @@ export default defineEventHandler(async (event) => {
       })
     }
 
-    // Check if user already captured today
-    const alreadyCaptured = await hasUserCapturedMomentToday(userId)
-    if (alreadyCaptured) {
-      throw createError({ statusCode: 409, statusMessage: "You've already captured your moment today" })
-    }
-
     // Accept client-provided capture timestamp (locked at shutter tap time)
     // Fall back to server time if not provided (backward compatibility)
     const clientTimestampRaw = form.get('momentCapturedAt') as string | null
@@ -145,6 +139,31 @@ export default defineEventHandler(async (event) => {
   })
 
   const result = await db.transaction(async (tx) => {
+    // Duplicate check inside transaction to prevent race conditions
+    if (isMoment) {
+      const todayStart = new Date()
+      todayStart.setHours(0, 0, 0, 0)
+      const todayEnd = new Date()
+      todayEnd.setHours(23, 59, 59, 999)
+
+      const [existingToday] = await tx
+        .select({ id: schema.photos.id })
+        .from(schema.photos)
+        .where(
+          and(
+            eq(schema.photos.userId, userId),
+            eq(schema.photos.isMoment, true),
+            gte(schema.photos.momentCapturedAt, todayStart),
+            lte(schema.photos.momentCapturedAt, todayEnd),
+          ),
+        )
+        .limit(1)
+
+      if (existingToday) {
+        throw createError({ statusCode: 409, statusMessage: "You've already captured your moment today" })
+      }
+    }
+
     const [photo] = await tx
       .insert(schema.photos)
       .values({
