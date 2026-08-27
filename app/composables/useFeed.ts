@@ -151,6 +151,13 @@ function resetFeed(options: UseFeedOptions) {
 export function useFeed(options: UseFeedOptions = {}) {
   const opts = { limit: 20, pollInterval: 10_000, ...options }
 
+  // Initial fetch via useAsyncData so SSR has the data (prevents hydration mismatch)
+  const { status } = useAsyncData(
+    `feed-${opts.limit}`,
+    () => fetchFeedPage(opts),
+    { immediate: true },
+  )
+
   // Ref-counted lifecycle
   subscriberCount++
 
