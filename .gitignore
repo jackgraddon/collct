@@ -6,6 +6,10 @@
 .cache
 dist
 
+# NuxtHub generated migrations (regenerate with `npx nuxt db generate`)
+server/db/migrations/postgresql
+server/db/migrations/sqlite
+
 # Node dependencies
 node_modules
 
