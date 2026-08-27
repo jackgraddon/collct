@@ -2,7 +2,7 @@ import { db, schema } from '@nuxthub/db'
 import { blob } from 'hub:blob'
 import { eq, and, inArray, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
-import { getOrCreateTodayMomentTime, getUserMomentsGroups } from '../../utils/moments'
+import { getOrCreateTodayMomentTime, getUserMomentsGroups, dismissMomentNotification } from '../../utils/moments'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 10 * 1024 * 1024
@@ -186,6 +186,11 @@ export default defineEventHandler(async (event) => {
 
     return photo
   })
+
+  // Dismiss moment notification if this was a moment upload
+  if (isMoment) {
+    await dismissMomentNotification(userId)
+  }
 
   // Notify all group members (except the uploader), one notification per user
   const memberRows = await db

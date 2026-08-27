@@ -2187,7 +2187,9 @@ Moments is a BeReal-style feature: once per day, during a randomly-chosen time w
 
 **Notes:**
 - The first request each day lazily computes the random moment time and persists it. All subsequent requests (and clients) see the same time.
-- The first request also triggers idempotent notification fan-out to all eligible users.
+- The first request triggers idempotent notification fan-out to all eligible users. Notifications use a deterministic tag (`moment_{userId}_{date}`) so each user has at most one active moment notification per day.
+- When the window closes, the first request also triggers expiry notifications — updating the notification body to "You missed today's moment..." and marking it as read.
+- If the user has already captured today, their moment notification is automatically dismissed on this request.
 - On platforms with cron support (Cloudflare Workers), a scheduled task pre-computes the time at midnight.
 - **Recommended:** Use the `GET /moments/trigger` endpoint with an external cron service or Vercel Cron so notifications fire regardless of user activity. The lazy path here serves as a fallback.
 
@@ -2218,11 +2220,13 @@ Authorization: Bearer <CRON_SECRET>
 {
   "ok": true,
   "momentTime": "2026-08-15T19:23:00.000Z",
-  "notificationsSent": true
+  "notificationsSent": true,
+  "expirySent": false
 }
 ```
 
-- `notificationsSent` — `true` if this was the first trigger of the day (notifications were sent), `false` if already sent (idempotent).
+- `notificationsSent` — `true` if this was the first trigger of the day (initial notifications were sent), `false` if already sent (idempotent).
+- `expirySent` — `true` if this trigger also sent expiry notifications (window had already closed), `false` if the window is still open or expiry was already sent.
 
 **Setup (Vercel):**
 
@@ -2309,7 +2313,28 @@ Moment uploads use the same `POST /photos` endpoint as regular uploads, with add
 
 ---
 
-## Utility Endpoints
+### Moment Notification Lifecycle
+
+Moment notifications follow a lifecycle driven by the server. Each user receives at most one moment notification per day, identified by a deterministic tag (`moment_{userId}_{YYYY-MM-DD}`).
+
+**States:**
+
+| State | Push body | Trigger |
+|-------|-----------|---------|
+| Initial | `"Your moment is ready! Capture within N minutes"` | Window opens (lazy compute or cron trigger) |
+| Expired | `"You missed today's moment, but you can still post to the feed like usual"` | Window closes (lazy compute or cron trigger) |
+| Dismissed | (notification marked read) | User captures a moment, or user manually dismisses |
+
+**Server behavior:**
+- **Window opens:** Creates an in-app notification and sends a push with the initial body. Uses the same `tag` for all updates, so the OS replaces rather than stacks.
+- **Window closes:** Finds all active (unread) moment notifications for today, updates the body to the expired message, marks them as read, and sends a replacement push.
+- **User captures:** The `POST /photos` endpoint with `isMoment=true` automatically dismisses (marks read) the user's active moment notification.
+- **User visits `GET /moments/today`:** If the user has already captured, their notification is dismissed. If the window has closed, expiry notifications are triggered.
+
+**Client handling:**
+- The client can display a local countdown using `momentTime` + `captureDuration` from the `GET /moments/today` response.
+- The push `data.status` field indicates `"active"` or `"expired"` — the client can use this to show/hide capture UI.
+- When the user dismisses the push notification, the service worker calls `DELETE /api/notifications/:id` to clean up.
 
 ### Get Blob File
 

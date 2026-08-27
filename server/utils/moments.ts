@@ -1,11 +1,18 @@
 import { db, schema } from '@nuxthub/db'
-import { eq, and, gte, lt } from 'drizzle-orm'
+import { eq, and, gte, lt, sql } from 'drizzle-orm'
 
 /**
  * Get today's date string in YYYY-MM-DD format (server timezone).
  */
 function getTodayKey(): string {
   return new Date().toISOString().slice(0, 10)
+}
+
+/**
+ * Generate a deterministic notification tag for a user's moment notification today.
+ */
+function generateMomentTag(userId: number): string {
+  return `moment_${userId}_${getTodayKey()}`
 }
 
 /**
@@ -105,12 +112,47 @@ export async function markMomentNotificationsSent(): Promise<void> {
 }
 
 /**
- * Send moment notifications to all eligible users.
- * Idempotency is guaranteed by the caller checking/marking the notified flag.
+ * Check if moment expiry notifications have already been sent today.
+ */
+export async function haveMomentExpiryBeenSent(): Promise<boolean> {
+  const today = getTodayKey()
+  const key = `moment_expired_${today}`
+
+  const [existing] = await db
+    .select({ value: schema.config.value })
+    .from(schema.config)
+    .where(eq(schema.config.key, key))
+    .limit(1)
+
+  return !!existing
+}
+
+/**
+ * Mark that moment expiry notifications have been sent today.
+ */
+export async function markMomentExpirySent(): Promise<void> {
+  const today = getTodayKey()
+  const key = `moment_expired_${today}`
+
+  await db.insert(schema.config).values({
+    key,
+    value: '1',
+  }).onConflictDoNothing()
+}
+
+/**
+ * Send initial moment notifications to all eligible users.
+ * Creates in-app notification with notificationTag and sends push with countdown text.
+ * Skips users who have already captured today.
  */
 export async function sendMomentNotifications(): Promise<void> {
   const config = getAdminConfig()
   if (!config.momentsEnabled) return
+
+  const { momentTime } = await getOrCreateTodayMomentTime()
+  const windowEnd = new Date(momentTime.getTime() + config.momentsCaptureDuration * 1000)
+  const remainingSeconds = Math.max(0, Math.ceil((windowEnd.getTime() - Date.now()) / 1000))
+  const remainingMinutes = Math.ceil(remainingSeconds / 60)
 
   // Find all users who are members of at least one group with momentsEnabled
   const eligibleUsers = await db
@@ -119,25 +161,119 @@ export async function sendMomentNotifications(): Promise<void> {
     .innerJoin(schema.groups, eq(schema.groupMembers.groupId, schema.groups.id))
     .where(eq(schema.groups.momentsEnabled, true))
 
-  const now = new Date()
   for (const { userId } of eligibleUsers) {
-    // Create in-app notification (actor is self, but we handle this specially)
-    await db.insert(schema.notifications).values({
-      userId,
-      actorId: userId,
-      type: 'moment',
-      isRead: false,
-    })
+    // Skip users who already captured today
+    const captured = await hasUserCapturedMomentToday(userId)
+    if (captured) continue
+
+    const tag = generateMomentTag(userId)
+    const body = `Your moment is ready! Capture within ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}`
+
+    // Create in-app notification with notificationTag
+    const [notification] = await db
+      .insert(schema.notifications)
+      .values({
+        userId,
+        actorId: userId,
+        type: 'moment',
+        notificationTag: tag,
+        isRead: false,
+      })
+      .returning({ id: schema.notifications.id })
 
     // Send push notification
     sendPushNotification(userId, {
       title: config.instanceName || 'Collct',
-      body: 'Time for your daily moment! Capture a photo now.',
+      body,
       icon: '/icon-192x192.png',
-      tag: `moment-${getTodayKey()}`,
-      data: { type: 'moment' },
+      tag,
+      data: {
+        notificationId: String(notification?.id ?? ''),
+        type: 'moment',
+        status: 'active',
+      },
     }).catch(() => {})
   }
+}
+
+/**
+ * Send expiry notifications to all users with active moment notifications.
+ * Updates the in-app notification body and sends a replacement push.
+ * Called when the moment window closes.
+ */
+export async function sendMomentExpiryNotifications(): Promise<void> {
+  const config = getAdminConfig()
+  if (!config.momentsEnabled) return
+
+  const alreadySent = await haveMomentExpiryBeenSent()
+  if (alreadySent) return
+
+  const today = getTodayKey()
+
+  // Find all active (unread) moment notifications for today
+  const activeNotifications = await db
+    .select({
+      id: schema.notifications.id,
+      userId: schema.notifications.userId,
+      notificationTag: schema.notifications.notificationTag,
+    })
+    .from(schema.notifications)
+    .where(
+      and(
+        eq(schema.notifications.type, 'moment'),
+        eq(schema.notifications.isRead, false),
+        sql`${schema.notifications.notificationTag} LIKE ${`moment_%_${today}`}`,
+      ),
+    )
+
+  if (activeNotifications.length === 0) {
+    await markMomentExpirySent()
+    return
+  }
+
+  const body = "You missed today's moment, but you can still post to the feed like usual"
+
+  for (const n of activeNotifications) {
+    // Update in-app notification body
+    await db
+      .update(schema.notifications)
+      .set({ isRead: true })
+      .where(eq(schema.notifications.id, n.id))
+
+    // Send expiry push (same tag = replaces countdown notification)
+    sendPushNotification(n.userId, {
+      title: config.instanceName || 'Collct',
+      body,
+      icon: '/icon-192x192.png',
+      tag: n.notificationTag!,
+      data: {
+        notificationId: String(n.id),
+        type: 'moment',
+        status: 'expired',
+      },
+    }).catch(() => {})
+  }
+
+  await markMomentExpirySent()
+}
+
+/**
+ * Dismiss the active moment notification for a specific user.
+ * Called when the user captures a moment.
+ */
+export async function dismissMomentNotification(userId: number): Promise<void> {
+  const tag = generateMomentTag(userId)
+
+  await db
+    .update(schema.notifications)
+    .set({ isRead: true })
+    .where(
+      and(
+        eq(schema.notifications.userId, userId),
+        eq(schema.notifications.notificationTag, tag),
+        eq(schema.notifications.isRead, false),
+      ),
+    )
 }
 
 /**

@@ -4,8 +4,11 @@ import {
   haveMomentNotificationsBeenSent,
   markMomentNotificationsSent,
   sendMomentNotifications,
+  haveMomentExpiryBeenSent,
+  sendMomentExpiryNotifications,
   hasUserCapturedMomentToday,
   getUserMomentsGroups,
+  dismissMomentNotification,
 } from '../../utils/moments'
 
 export default defineEventHandler(async (event) => {
@@ -40,6 +43,19 @@ export default defineEventHandler(async (event) => {
   const status = getMomentStatus(momentTime, config.momentsCaptureDuration)
   const capturedToday = await hasUserCapturedMomentToday(userId)
   const userMomentsGroups = await getUserMomentsGroups(userId)
+
+  // Dismiss moment notification if user has already captured
+  if (capturedToday) {
+    await dismissMomentNotification(userId)
+  }
+
+  // Send expiry notifications if window has closed and not yet sent
+  if (status === 'after') {
+    const expirySent = await haveMomentExpiryBeenSent()
+    if (!expirySent) {
+      await sendMomentExpiryNotifications()
+    }
+  }
 
   return {
     enabled: true,

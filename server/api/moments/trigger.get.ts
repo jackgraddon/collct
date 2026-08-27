@@ -1,8 +1,11 @@
 import {
   getOrCreateTodayMomentTime,
+  getMomentStatus,
   haveMomentNotificationsBeenSent,
   markMomentNotificationsSent,
   sendMomentNotifications,
+  haveMomentExpiryBeenSent,
+  sendMomentExpiryNotifications,
 } from '../../utils/moments'
 
 /**
@@ -42,9 +45,21 @@ export default defineEventHandler(async (event) => {
     await markMomentNotificationsSent()
   }
 
+  // If window has already closed, send expiry notifications
+  const status = getMomentStatus(momentTime, adminConfig.momentsCaptureDuration)
+  let expirySent = false
+  if (status === 'after') {
+    const alreadyExpired = await haveMomentExpiryBeenSent()
+    if (!alreadyExpired) {
+      await sendMomentExpiryNotifications()
+      expirySent = true
+    }
+  }
+
   return {
     ok: true,
     momentTime: momentTime.toISOString(),
     notificationsSent: !alreadySent,
+    expirySent,
   }
 })
