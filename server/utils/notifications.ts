@@ -179,8 +179,9 @@ async function sendPushForNotification(data: PushData) {
 
   let body = ''
   let tag = ''
-  const pushData: Record<string, string> = { type: data.type }
-  if (data.notificationId) pushData.notificationId = String(data.notificationId)
+  let navigate = '/'
+  const pushData: Record<string, string | number> = { type: data.type }
+  if (data.notificationId) pushData.notificationId = data.notificationId
 
   switch (data.type) {
     case 'like': {
@@ -191,27 +192,40 @@ async function sendPushForNotification(data: PushData) {
         body = `${count} people liked your photo`
       }
       tag = `like_${data.photoId}`
-      if (data.photoId) pushData.photoId = String(data.photoId)
+      if (data.photoId) {
+        pushData.photoId = data.photoId
+        navigate = `/post/${data.photoId}`
+      }
       break
     }
     case 'comment':
       body = `${actorName} commented on your photo`
       tag = `comment_${data.photoId}_${data.commentId}`
-      if (data.photoId) pushData.photoId = String(data.photoId)
+      if (data.photoId) {
+        pushData.photoId = data.photoId
+        navigate = `/post/${data.photoId}`
+      }
       break
     case 'group_join':
       body = `${actorName} joined your group`
       tag = `group_join_${data.groupIds?.[0] ?? ''}_${data.userId}`
-      if (data.groupIds?.length) pushData.groupId = String(data.groupIds[0])
+      if (data.groupIds?.length) {
+        pushData.groupId = data.groupIds[0]
+        navigate = `/groups/${data.groupIds[0]}`
+      }
       break
     case 'new_post':
       body = `${actorName} posted a new photo`
       tag = `new_post_${data.photoId}_${data.userId}`
-      if (data.photoId) pushData.photoId = String(data.photoId)
+      if (data.photoId) {
+        pushData.photoId = data.photoId
+        navigate = `/post/${data.photoId}`
+      }
       break
     case 'moment':
       body = 'Time for your daily moment! Capture a photo now.'
       tag = `moment_${data.userId}_${new Date().toISOString().slice(0, 10)}`
+      navigate = '/?moment=capture'
       break
   }
 
@@ -220,6 +234,7 @@ async function sendPushForNotification(data: PushData) {
     body,
     icon: '/icon-192x192.png',
     tag,
+    navigate,
     data: pushData,
   })
 }
@@ -289,16 +304,38 @@ async function deleteOrUpdateLikeNotification(userId: number, photoId: number) {
 }
 
 /**
- * Dismiss a notification: delete the row entirely.
- * Called by the client when the user swipes away a push notification.
+ * Dismiss a notification: soft-delete by setting dismissedAt.
+ * Called by the client when the user clears a notification from the in-app view.
+ * OS-level dismiss (notificationclose) does NOT call this.
  */
 export async function dismissNotification(notificationId: number, userId: number) {
   await db
-    .delete(schema.notifications)
+    .update(schema.notifications)
+    .set({ dismissedAt: new Date() })
     .where(
       and(
         eq(schema.notifications.id, notificationId),
         eq(schema.notifications.userId, userId),
       ),
     )
+}
+
+/**
+ * Clean up old dismissed notifications past the retention period.
+ * Called from the moment trigger cron. Retention configurable via
+ * COLLCT_NOTIFICATION_RETENTION_DAYS (default: 30).
+ */
+export async function cleanupDismissedNotifications(): Promise<number> {
+  const retentionDays = Number(process.env.COLLCT_NOTIFICATION_RETENTION_DAYS) || 30
+
+  const result = await db
+    .delete(schema.notifications)
+    .where(
+      and(
+        sql`${schema.notifications.dismissedAt} IS NOT NULL`,
+        sql`${schema.notifications.dismissedAt} < now() - interval '${retentionDays} days'`,
+      ),
+    )
+
+  return result.rowCount ?? 0
 }

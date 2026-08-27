@@ -145,7 +145,7 @@ function notificationText(n: Notification): string {
 }
 
 async function dismissNotification(n: Notification) {
-  await $fetch(`/api/notifications/${n.id}`, { method: 'DELETE' }).catch(() => {})
+  await $fetch(`/api/notifications/${n.id}/dismiss`, { method: 'PATCH' }).catch(() => {})
   refreshNotifications()
 }
 

@@ -7,7 +7,8 @@ interface PushMessage {
   body: string
   icon?: string
   tag?: string
-  data?: Record<string, string>
+  navigate: string
+  data?: Record<string, string | number>
 }
 
 let configured = false
@@ -24,6 +25,17 @@ async function configureVapid() {
   configured = true
 }
 
+/**
+ * Send a push notification using the W3C Declarative Web Push format.
+ *
+ * Browsers that support declarative push (Safari 18.4+) display the
+ * notification natively from the payload. Older browsers fall back to
+ * the service worker, which parses the same JSON and calls
+ * showNotification() manually.
+ *
+ * @see https://w3c.github.io/push-api/#declarative-push-message
+ * @see https://webkit.org/blog/16535/meet-declarative-web-push/
+ */
 export async function sendPushNotification(userId: number, message: PushMessage) {
   await configureVapid()
   if (!configured) return
@@ -35,7 +47,22 @@ export async function sendPushNotification(userId: number, message: PushMessage)
 
   if (!subscriptions.length) return
 
-  const payload = JSON.stringify(message)
+  // Declarative Web Push envelope
+  // web_push: 8030 — magic value that opts into declarative parsing
+  // mutable: true — fires push event to service worker for optional
+  //   enhancement (e.g. dismiss tracking via notificationclose)
+  const payload = JSON.stringify({
+    web_push: 8030,
+    mutable: true,
+    notification: {
+      title: message.title,
+      body: message.body,
+      icon: message.icon || '/icon-192x192.png',
+      tag: message.tag || 'collct-notification',
+      navigate: message.navigate,
+      data: message.data || {},
+    },
+  })
 
   for (const sub of subscriptions) {
     try {

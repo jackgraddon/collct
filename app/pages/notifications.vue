@@ -209,7 +209,7 @@ async function markAllRead() {
 }
 
 async function dismissNotification(n: NotificationItem) {
-  await $fetch(`/api/notifications/${n.id}`, { method: 'DELETE' }).catch(() => {})
+  await $fetch(`/api/notifications/${n.id}/dismiss`, { method: 'PATCH' }).catch(() => {})
   notifications.value = notifications.value.filter((item) => item.id !== n.id)
   refreshUnread()
 }

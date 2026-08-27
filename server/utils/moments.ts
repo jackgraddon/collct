@@ -187,8 +187,9 @@ export async function sendMomentNotifications(): Promise<void> {
       body,
       icon: '/icon-192x192.png',
       tag,
+      navigate: '/?moment=capture',
       data: {
-        notificationId: String(notification?.id ?? ''),
+        notificationId: notification?.id ?? 0,
         type: 'moment',
         status: 'active',
       },
@@ -246,8 +247,9 @@ export async function sendMomentExpiryNotifications(): Promise<void> {
       body,
       icon: '/icon-192x192.png',
       tag: n.notificationTag!,
+      navigate: '/?moment=capture',
       data: {
-        notificationId: String(n.id),
+        notificationId: n.id,
         type: 'moment',
         status: 'expired',
       },

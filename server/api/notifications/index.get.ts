@@ -10,7 +10,10 @@ export default defineEventHandler(async (event) => {
   const before = query.before ? Number(query.before) : null
 
   // Build base conditions
-  const conditions = [eq(schema.notifications.userId, userId)]
+  const conditions = [
+    eq(schema.notifications.userId, userId),
+    sql`${schema.notifications.dismissedAt} IS NULL`,
+  ]
   if (before) {
     conditions.push(sql`${schema.notifications.id} < ${before}`)
   }

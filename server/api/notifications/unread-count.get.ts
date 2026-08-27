@@ -1,5 +1,5 @@
 import { db, schema } from '@nuxthub/db'
-import { eq, and, count as drizzleCount } from 'drizzle-orm'
+import { eq, and, sql, count as drizzleCount } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -12,6 +12,7 @@ export default defineEventHandler(async (event) => {
       and(
         eq(schema.notifications.userId, userId),
         eq(schema.notifications.isRead, false),
+        sql`${schema.notifications.dismissedAt} IS NULL`,
       ),
     )
 

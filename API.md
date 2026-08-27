@@ -1954,9 +1954,9 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ### Dismiss Notification
 
-**Endpoint:** `DELETE /notifications/:id`
+**Endpoint:** `PATCH /notifications/:id/dismiss`
 
-**Description:** Permanently delete a notification. Used when the user dismisses a push notification (swipes away / taps X) or explicitly removes an in-app notification. Unlike marking as read, this removes the notification entirely — it will not appear in the notification list again.
+**Description:** Soft-delete a notification by setting `dismissedAt`. Used when the user explicitly clears a notification from the in-app notification view. The notification is hidden from the list but retained in the database until cleanup.
 
 **Authentication:** Required
 
@@ -1973,13 +1973,14 @@ Exactly one of `ids` or `all: true` must be provided.
 ```
 
 **Status codes:**
-- `200` — success (notification deleted or didn't exist)
+- `200` — success (notification dismissed or didn't exist)
 - `401` — not authenticated
 - `400` — invalid notification ID
 
 **Notes:**
-- The service worker's `notificationclose` event handler calls this endpoint automatically when a user dismisses a push notification.
-- Deleting a like notification frees its `notificationTag`, allowing a new like notification for the same photo to be created later.
+- OS-level dismiss (swiping away a push notification) does NOT call this endpoint. The server does not track OS-level dismiss — only explicit in-app dismissal.
+- Dismissed notifications are filtered from `GET /notifications` and `GET /notifications/unread-count`.
+- Old dismissed notifications are cleaned up automatically by the server (configurable retention, default 30 days).
 
 ---
 
@@ -2079,23 +2080,37 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ### Push Notification Payload Format
 
-When the server sends a push notification, the payload follows this structure:
+The server uses [Declarative Web Push](https://w3c.github.io/push-api/#declarative-push-message) (W3C draft). The browser displays the notification natively from the payload without running service worker JavaScript.
+
+**Payload structure:**
 
 ```json
 {
-  "title": "Collct",
-  "body": "Friend liked your photo",
-  "icon": "/icon-192x192.png",
-  "tag": "like_42",
-  "data": {
-    "notificationId": 1001,
-    "type": "like",
-    "photoId": "42"
+  "web_push": 8030,
+  "mutable": true,
+  "notification": {
+    "title": "Collct",
+    "body": "Friend liked your photo",
+    "icon": "/icon-192x192.png",
+    "tag": "like_42",
+    "navigate": "/post/42",
+    "data": {
+      "notificationId": 1001,
+      "type": "like",
+      "photoId": 42
+    }
   }
 }
 ```
 
-**Fields:**
+**Envelope fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `web_push` | number | Magic value `8030` — opts into declarative parsing. Browsers that don't recognize this field ignore it and fall back to the service worker. |
+| `mutable` | boolean | When `true`, fires a `push` event to the service worker for optional enhancement (e.g. dismiss tracking). |
+
+**Notification fields:**
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -2103,10 +2118,27 @@ When the server sends a push notification, the payload follows this structure:
 | `body` | string | Notification text. For likes: `"1 person liked your photo"` or `"N people liked your photo"` when consolidated. |
 | `icon` | string | App icon path |
 | `tag` | string | OS-level deduplication tag. Same tag = replacement, not stacking. |
-| `data.notificationId` | number | **Required for client dismiss handling.** The DB notification ID. Client must include this in `notificationclose` handler to call `DELETE /notifications/:id`. |
-| `data.type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"` |
-| `data.photoId` | string | Photo ID, if applicable |
-| `data.groupId` | string | Group ID, if applicable |
+| `navigate` | string | Deep-link URL opened when user taps the notification. Browser navigates natively. |
+| `data` | object | Opaque data passed through to the service worker (for dismiss handling). |
+
+**`data` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `notificationId` | number | The DB notification ID. Used by clients for in-app dismiss handling. |
+| `type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"` |
+| `photoId` | number | Photo ID, if applicable |
+| `groupId` | number | Group ID, if applicable |
+
+**`navigate` URLs by notification type:**
+
+| Type | Navigate URL |
+|------|-------------|
+| `like` | `/post/{photoId}` |
+| `comment` | `/post/{photoId}` |
+| `group_join` | `/groups/{groupId}` |
+| `new_post` | `/post/{photoId}` |
+| `moment` | `/?moment=capture` |
 
 **Tag format by notification type:**
 
@@ -2118,20 +2150,35 @@ When the server sends a push notification, the payload follows this structure:
 | `new_post` | `new_post_{photoId}_{userId}` | No |
 | `moment` | `moment_{userId}_{YYYY-MM-DD}` | No |
 
+**Browser compatibility:**
+
+| Browser | Behavior |
+|---------|----------|
+| Safari 18.4+ | Declarative display. `mutable: true` fires push event to service worker for dismiss tracking. |
+| Chrome, Firefox (current) | Ignores `web_push: 8030`. Falls back to service worker `push` handler. |
+| Chrome, Firefox (future) | Will adopt spec when standardized. |
+
 **Service worker requirements:**
 
-Third-party clients implementing a service worker must:
+Third-party clients implementing a service worker should:
 
-1. Pass the `tag` field through to `showNotification()` — this enables OS-level notification replacement for consolidated likes.
-2. Listen for `notificationclose` and call `DELETE /api/notifications/{notificationId}` using the `data.notificationId` value. This prevents the server from sending further updates for dismissed notifications.
+1. Always call `showNotification()` in the `push` handler — this works for both DWP (Safari replaces seamlessly) and legacy (Chrome/Firefox display).
+2. In `notificationclick`, use `data.navigate` if present, otherwise compute from `data.type`/`data.photoId`/`data.groupId`.
+3. OS-level dismiss (`notificationclose`) does NOT modify server state. In-app dismiss uses `PATCH /api/notifications/:id/dismiss`.
 
 ```js
-self.addEventListener('notificationclose', (event) => {
-  const notificationId = event.notification.data?.notificationId
-  if (!notificationId) return
-  event.waitUntil(
-    fetch(`/api/notifications/${notificationId}`, { method: 'DELETE' }).catch(() => {})
-  )
+self.addEventListener('push', (event) => {
+  const data = event.data?.json()
+  const isDwp = data?.web_push === 8030 && data?.notification
+  const notif = isDwp ? data.notification : data
+  const options = {
+    body: notif.body,
+    icon: notif.icon || '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: notif.tag || 'collct-notification',
+    data: { ...notif.data, navigate: notif.navigate },
+  }
+  event.waitUntil(self.registration.showNotification(notif.title || 'Collct', options))
 })
 ```
 
@@ -2334,7 +2381,7 @@ Moment notifications follow a lifecycle driven by the server. Each user receives
 **Client handling:**
 - The client can display a local countdown using `momentTime` + `captureDuration` from the `GET /moments/today` response.
 - The push `data.status` field indicates `"active"` or `"expired"` — the client can use this to show/hide capture UI.
-- When the user dismisses the push notification, the service worker calls `DELETE /api/notifications/:id` to clean up.
+- When the user dismisses the push notification, the service worker does nothing — OS-level dismiss does not modify server state.
 
 ### Get Blob File
 

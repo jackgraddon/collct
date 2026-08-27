@@ -7,6 +7,7 @@ import {
   haveMomentExpiryBeenSent,
   sendMomentExpiryNotifications,
 } from '../../utils/moments'
+import { cleanupDismissedNotifications } from '../../utils/notifications'
 
 /**
  * Server-side trigger for computing the daily moment time and sending notifications.
@@ -56,10 +57,14 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Clean up old dismissed notifications
+  const cleanedUp = await cleanupDismissedNotifications()
+
   return {
     ok: true,
     momentTime: momentTime.toISOString(),
     notificationsSent: !alreadySent,
     expirySent,
+    cleanedUp,
   }
 })

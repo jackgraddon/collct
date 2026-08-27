@@ -159,6 +159,7 @@ export const notifications = pgTable(
     groupId: text('group_id'),
     notificationTag: text('notification_tag'),
     isRead: boolean('is_read').notNull().default(false),
+    dismissedAt: timestamp('dismissed_at', { mode: 'date' }),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },
   (t) => [
