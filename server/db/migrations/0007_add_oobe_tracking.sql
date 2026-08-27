@@ -1,1 +1,0 @@
-ALTER TABLE "users" ADD COLUMN "tours_completed" text DEFAULT '[]';
