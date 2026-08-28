@@ -12,6 +12,12 @@
 - **Never commit** `server/db/migrations/postgresql/` or `server/db/migrations/sqlite/` — they're gitignored (generated output)
 - **Access DB**: `import { db, schema } from '@nuxthub/db'`
 
+## Environment Variables
+
+- **Documentation**: See `VARS.md` for all env vars with defaults and descriptions
+- **Source of truth**: `server/utils/config.ts` (runtime config) and `nuxt.config.ts` (build-time config)
+- **When adding new env vars**: Update `VARS.md`, `.env.example`, and `server/utils/config.ts`
+
 ## Build
 
 - Run `npx nuxi build` to verify before committing
