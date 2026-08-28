@@ -1,9 +1,13 @@
 function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
   try {
-    const originHost = new URL(origin).hostname
+    const originUrl = new URL(origin)
+    const originHost = originUrl.hostname
+    const isHttps = originUrl.protocol === 'https:'
+
     return allowedOrigins.some((allowed) => {
-      // Wildcard: *example.com matches example.com and all subdomains
+      // Wildcard: *example.com matches example.com and all subdomains (HTTPS only)
       if (allowed.startsWith('*')) {
+        if (!isHttps) return false
         const allowedHost = allowed.slice(1)
         return originHost === allowedHost || originHost.endsWith(`.${allowedHost}`)
       }
