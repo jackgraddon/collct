@@ -2011,16 +2011,17 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `POST /notifications/subscribe`
 
-**Description:** Register a push notification subscription. The server stores the subscription and uses it to send push notifications via Web Push (VAPID). If the subscription endpoint already exists for this user, it is updated.
+**Description:** Register a push notification subscription. Supports three platforms: Web Push (VAPID), APNs (iOS native), and FCM (Android native). The server routes notifications to the correct platform at send time based on the `platform` field. If the subscription endpoint already exists for this user, it is updated.
 
 **Note:** This endpoint is gated by the `COLLCT_NOTIFICATIONS_ENABLED` config variable. Returns `403` when notifications are disabled on the instance.
 
 **Authentication:** Required
 
-**Request:**
+**Request (Web):**
 
 ```json
 {
+  "platform": "web",
   "endpoint": "https://fcm.googleapis.com/fcm/send/...",
   "keys": {
     "auth": "abc123...",
@@ -2029,19 +2030,59 @@ Exactly one of `ids` or `all: true` must be provided.
 }
 ```
 
-- `endpoint` (required) — the push service endpoint URL.
-- `keys.auth` (required) — authentication secret.
-- `keys.p256dh` (required) — client public key.
+- `platform` (optional) — `"web"` (default), `"apns"`, or `"fcm"`
+- `endpoint` (required) — the push service endpoint URL (web) or device token (native)
+- `keys.auth` (required for web) — authentication secret
+- `keys.p256dh` (required for web) — client public key
+
+**Request (APNs — iOS native):**
+
+```json
+{
+  "platform": "apns",
+  "endpoint": "a1b2c3d4e5f6..."
+}
+```
+
+- `endpoint` (required) — 64-character hex APNs device token
+
+**Request (FCM — Android native):**
+
+```json
+{
+  "platform": "fcm",
+  "endpoint": "eJ0z_nHr7..."
+}
+```
+
+- `endpoint` (required) — FCM registration token
 
 **Response:**
 
 ```json
-{ "success": true }
+{
+  "subscribed": true,
+  "platform": "web",
+  "endpoint": "https://fcm.googleapis.com/fcm/send/..."
+}
 ```
+
+**Platform validation:**
+
+| Platform | Endpoint format | Required fields |
+|----------|----------------|-----------------|
+| `web` | Valid URL | `keys.auth`, `keys.p256dh` |
+| `apns` | 64-char hex string | — |
+| `fcm` | String, 10+ chars | — |
+
+**Behavior:**
+- A user can have subscriptions on multiple platforms simultaneously (e.g. one web + one APNs).
+- If another user already has the same endpoint registered, the request is rejected.
+- Native platform subscriptions are stored even if the server lacks credentials for that platform. Notifications will be skipped until credentials are configured.
 
 **Status codes:**
 - `200` — success
-- `400` — invalid subscription object
+- `400` — invalid subscription object, invalid platform, or endpoint registered to another user
 - `401` — not authenticated
 - `403` — notifications disabled on this instance
 
@@ -2051,7 +2092,7 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `POST /notifications/unsubscribe`
 
-**Description:** Remove a push notification subscription by endpoint URL.
+**Description:** Remove a push notification subscription by endpoint URL or device token. Works for all platforms (web, APNs, FCM).
 
 **Authentication:** Required
 
@@ -2063,7 +2104,7 @@ Exactly one of `ids` or `all: true` must be provided.
 }
 ```
 
-- `endpoint` (required) — the push service endpoint URL to remove.
+- `endpoint` (required) — the push endpoint URL or device token to remove.
 
 **Response:**
 
@@ -2080,7 +2121,11 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ### Push Notification Payload Format
 
-The server uses [Declarative Web Push](https://w3c.github.io/push-api/#declarative-push-message) (W3C draft). The browser displays the notification natively from the payload without running service worker JavaScript.
+The server sends notifications to all of a user's subscriptions, transforming the message for each platform.
+
+#### Web Push
+
+Uses [Declarative Web Push](https://w3c.github.io/push-api/#declarative-push-message) (W3C draft). The browser displays the notification natively from the payload without running service worker JavaScript.
 
 **Payload structure:**
 
@@ -2181,6 +2226,63 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(notif.title || 'Collct', options))
 })
 ```
+
+#### APNs (iOS Native)
+
+Sent via Apple Push Notification service using HTTP/2 and JWT authentication.
+
+**Payload structure:**
+
+```json
+{
+  "aps": {
+    "alert": {
+      "title": "Collct",
+      "body": "Friend liked your photo"
+    },
+    "sound": "default",
+    "mutable-content": 1,
+    "content-available": 1
+  },
+  "navigate": "/post/42",
+  "type": "like",
+  "notificationId": 1001,
+  "photoId": 42
+}
+```
+
+- Custom data (outside `aps`) is passed through to the iOS app.
+- `mutable-content: 1` allows the app's notification service extension to modify the notification before display.
+- `content-available: 1` enables background updates.
+
+**Required env vars:** `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_PATH`
+
+#### FCM (Android Native)
+
+Sent via Firebase Cloud Messaging HTTP v1 API with service account JWT authentication.
+
+**Payload structure:**
+
+```json
+{
+  "notification": {
+    "title": "Collct",
+    "body": "Friend liked your photo"
+  },
+  "data": {
+    "navigate": "/post/42",
+    "type": "like",
+    "notificationId": "1001",
+    "photoId": "42",
+    "tag": "like_42"
+  }
+}
+```
+
+- `data` values must be strings (FCM requirement). Numbers are stringified.
+- The Android app receives the payload via `FirebaseMessagingService`.
+
+**Required env vars:** `FCM_SERVICE_ACCOUNT`
 
 ---
 
