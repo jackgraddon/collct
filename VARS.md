@@ -64,12 +64,34 @@ All variables are optional and have sensible defaults. See `.env.example` for a 
 
 ---
 
-## Push Notifications (VAPID)
+## Push Notifications
+
+### Web Push (VAPID)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `VAPID_PUBLIC_KEY` | _(auto-generated)_ | VAPID public key for web push. Auto-generated on first run and stored in DB. |
 | `VAPID_PRIVATE_KEY` | _(auto-generated)_ | VAPID private key. Same as above. |
+
+### APNs (iOS native)
+
+All optional. If not configured, APNs subscriptions are stored but notifications are skipped.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `APNS_KEY_ID` | _(none)_ | Apple Push Notification key ID (from Apple Developer portal). |
+| `APNS_TEAM_ID` | _(none)_ | Apple Developer Team ID. |
+| `APNS_KEY_PATH` | _(none)_ | Path to `.p8` private key file. Never commit to git. |
+| `APNS_BUNDLE_ID` | `com.collct.app` | iOS app bundle ID (used as APNs topic). |
+| `APNS_PRODUCTION` | `false` | `true` for APNs production, `false` for sandbox. |
+
+### FCM (Android native)
+
+All optional. If not configured, FCM subscriptions are stored but notifications are skipped.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FCM_SERVICE_ACCOUNT` | _(none)_ | Firebase service account JSON — either inline JSON string or file path (starts with `/`). |
 
 ---
 

@@ -281,9 +281,10 @@ export const pushSubscriptions = pgTable(
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    platform: text('platform').notNull().default('web'), // 'web' | 'apns' | 'fcm'
     endpoint: text('endpoint').notNull(),
-    authKey: text('auth_key').notNull(),
-    p256dhKey: text('p256dh_key').notNull(),
+    authKey: text('auth_key'), // web only
+    p256dhKey: text('p256dh_key'), // web only
     userAgent: text('user_agent'),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },
