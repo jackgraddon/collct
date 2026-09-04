@@ -96,11 +96,21 @@ Docker health checks are configured automatically in the Dockerfile.
 
 #### Pre-built Image
 
+Images are built automatically on every release and published to both GHCR and Docker Hub:
+
 ```bash
+# GitHub Container Registry (GHCR)
+docker pull ghcr.io/jackgraddon/collct:latest
+
+# Docker Hub
 docker pull jackgraddon/collct:latest
 ```
 
-You can use this image with your own deployment methods or the provided Compose files.
+Pin to a specific version:
+
+```bash
+docker pull ghcr.io/jackgraddon/collct:1.1.0
+```
 
 ### Bare Metal (Self-Hosted)
 

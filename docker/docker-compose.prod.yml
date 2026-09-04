@@ -4,6 +4,11 @@
 # Usage:
 #   cp .env.example .env   # edit with your secrets
 #   docker compose -f docker/docker-compose.prod.yml up -d
+#
+# To use a pre-built image instead of building locally:
+#   1. Comment out the "build:" block below
+#   2. Uncomment "image:" and set your preferred registry:
+#      image: ghcr.io/jackgraddon/collct:latest
 
 services:
   db:
@@ -22,9 +27,11 @@ services:
       retries: 10
 
   app:
+    # To use a pre-built image, comment out "build:" and uncomment "image:"
     build:
       context: ..
       dockerfile: Dockerfile
+    # image: ghcr.io/jackgraddon/collct:latest
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
