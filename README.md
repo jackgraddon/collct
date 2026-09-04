@@ -82,6 +82,8 @@ pnpm db:seed:dev
 pnpm dev
 ```
 
+The `pnpm dev` command automatically starts the Postgres container if it's not running.
+
 If you have a `.env.local` with a `DATABASE_URL` pointing to a remote database (e.g., Neon), override it for local dev:
 
 ```bash
@@ -89,6 +91,57 @@ DATABASE_URL=postgresql://collct:collct@localhost:5432/collct pnpm dev
 ```
 
 Open `https://localhost:3000`.
+
+#### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Start dev server (auto-starts Postgres) |
+| `pnpm build` | Production build |
+| `pnpm start` | Run production build |
+| `pnpm db:generate` | Generate Drizzle migration from schema changes |
+| `pnpm db:migrate` | Apply migrations to local Postgres |
+| `pnpm db:seed:dev` | Wipe and recreate test data (users, groups, photos) |
+| `npx nuxi typecheck` | Run TypeScript type checking |
+
+#### Project Structure
+
+```
+collct/
+├── app/                    # Client-side (Vue/Nuxt)
+│   ├── components/         # Vue components
+│   ├── composables/        # Vue composables (useFeed, usePushNotifications, etc.)
+│   ├── layouts/            # Page layouts
+│   ├── pages/              # Route pages
+│   └── utils/              # Client utilities
+├── server/                 # Server-side (Nitro)
+│   ├── api/                # API endpoints (auto-routed)
+│   ├── db/                 # Schema and migrations
+│   ├── middleware/          # Server middleware
+│   ├── tasks/              # Background tasks (moments, cleanup)
+│   └── utils/              # Server utilities (auth, config, push, blob)
+├── modules/                # Nuxt modules
+├── public/                 # Static assets
+├── shared/                 # Shared types and utilities
+├── docker/                 # Docker configs (Dockerfile, Compose, entrypoint)
+└── scripts/                # Build/dev scripts (seed, etc.)
+```
+
+#### Database Migrations
+
+When you change `server/db/schema.ts`:
+
+```bash
+# 1. Generate the migration
+npx nuxt db generate
+
+# 2. Apply to local DB
+npx nuxt db migrate
+
+# 3. The migration file is gitignored — don't commit it
+```
+
+For production (existing database), apply schema changes via direct SQL (`ALTER TABLE`) since NuxtHub baseline migrations recreate all tables.
 
 #### DevTools Panel
 
@@ -108,6 +161,13 @@ These endpoints are structurally excluded from production builds (the module's `
 | Users | 3 | `test1`, `test2`, `test3` (no passwords — use DevTools login) |
 | Groups | 3 | "All Friends", "Close Friends", "Just Us" |
 | Photos | 16 | With likes and comments; images cached in `dev/seed-images/` |
+
+#### Code Conventions
+
+- **Server imports**: Use `~~/server/utils/db` for database access (not `@nuxthub/db` directly)
+- **Auto-imports**: Server utils in `server/utils/` are auto-imported — no need for explicit imports
+- **Env vars**: Document in `VARS.md` and `.env.example` when adding new ones
+- **Build check**: Run `npx nuxi build` before committing to verify no errors
 
 ### Docker
 
