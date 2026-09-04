@@ -26,5 +26,8 @@ export default defineEventHandler(async (event) => {
 
   await blob.delete(photo.blobPathname)
 
+  // Clear presigned URL cache for this blob
+  await invalidatePresignedUrl(photo.blobPathname).catch(() => {})
+
   return { success: true }
 })

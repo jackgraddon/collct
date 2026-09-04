@@ -293,6 +293,20 @@ export const pushSubscriptions = pgTable(
   ],
 )
 
+// Presigned URL Cache
+
+export const presignedUrlCache = pgTable('presigned_url_cache', {
+  id: serial('id').primaryKey(),
+  blobPathname: text('blob_pathname').notNull().unique(),
+  presignedUrl: text('presigned_url').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+  hitCount: integer('hit_count').notNull().default(0),
+  lastAccessedAt: timestamp('last_accessed_at', { mode: 'date' }),
+}, (t) => [
+  index('presigned_cache_expires_idx').on(t.expiresAt),
+])
+
 // Instance Config (key-value store for auto-generated secrets etc.)
 
 export const config = pgTable('config', {

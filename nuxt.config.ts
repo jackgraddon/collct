@@ -93,6 +93,8 @@ export default defineNuxtConfig({
       // Pre-computes daily moment time. Only fires on platforms with cron support
       // (Cloudflare Workers, etc.). On Vercel, lazy computation in GET /api/moments/today handles it.
       '0 0 * * *': ['moments:daily-compute'],
+      // Clean up expired presigned URL cache entries daily at 2 AM
+      '0 2 * * *': ['cleanup:presigned-cache'],
     },
   },
 
@@ -202,7 +204,7 @@ export default defineNuxtConfig({
       runtimeCaching: offlineModeEnabled ? [
         {
           // Avatars — StaleWhileRevalidate (change occasionally, small, accessed everywhere)
-          urlPattern: /\/_vercel\/image\?url=.*avatars/i,
+          urlPattern: /\/api\/blob\/avatars\//i,
           handler: 'StaleWhileRevalidate',
           options: {
             cacheName: 'collct-avatars-cache',
@@ -211,21 +213,11 @@ export default defineNuxtConfig({
           },
         },
         {
-          // All other proxied images (photos, thumbnails) — CacheFirst (immutable)
-          urlPattern: /\/_vercel\/image\?url=.*/i,
+          // All other images (photos, thumbnails) — CacheFirst (immutable)
+          urlPattern: /\/api\/blob\//i,
           handler: 'CacheFirst',
           options: {
             cacheName: 'collct-images-cache',
-            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
-        {
-          // Direct blob URLs — CacheFirst
-          urlPattern: /^https:\/\/.*\.blob\.vercel-storage\.com\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'collct-blob-cache',
             expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
             cacheableResponse: { statuses: [0, 200] },
           },
