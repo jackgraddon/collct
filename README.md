@@ -56,6 +56,8 @@ pnpm build
 pnpm start
 ```
 
+For Docker-based self-hosted deployment, see the [Docker section](#docker) below.
+
 ### Local Development
 
 Requires Docker for the database.
@@ -109,47 +111,74 @@ These endpoints are structurally excluded from production builds (the module's `
 
 ### Docker
 
-You can run Collct using Docker with the provided example compose file at [`examples/docker-compose.yml`](examples/docker-compose.yml).
+Collct provides a multi-stage Dockerfile and Compose files for self-hosted deployment.
 
-Generate a session password first:
-```bash
-openssl rand -hex 32
-```
-
-Then set the `NUXT_SESSION_PASSWORD` environment variable in the compose file or a `.env` file alongside it.
-
-#### Compose
+#### Quick Start (PostgreSQL)
 
 ```bash
 git clone https://github.com/jackgraddon/collct.git
-cd collct/examples
+cd collct
 
-# Start all services (database + app)
-docker compose up -d
+# Create your env file
+cp .env.example .env
+# Edit .env — at minimum, set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
 
-# Stop services
-docker compose down
+# Start with PostgreSQL
+docker compose -f docker/docker-compose.prod.yml up -d
+
+# View logs
+docker compose -f docker/docker-compose.prod.yml logs -f app
 ```
-
-The compose file sets up:
-- PostgreSQL database with persistent storage
-- Collct application container (latest image)
-- All required environment variables configured
-- Data persistence for both database and application data
 
 Open `http://localhost:3000`.
 
-#### Image
+#### Lightweight (SQLite)
 
-You can also use the image with your own deployment methods.
+No external database required — data stored in a Docker volume:
+
+```bash
+docker compose -f docker/docker-compose.sqlite.yml up -d
+```
+
+#### Environment Variables
+
+At minimum, set these in your `.env` file:
+
+```bash
+NUXT_SESSION_PASSWORD=$(openssl rand -hex 32)  # Required
+CRON_SECRET=$(openssl rand -hex 32)            # For moments trigger
+```
+
+See [VARS.md](VARS.md) for all available variables.
+
+#### Health Check
+
+The app exposes a health check at `GET /api/health`:
+
+```json
+{ "ok": true, "timestamp": "2026-09-04T02:54:23.481Z" }
+```
+
+Docker health checks are configured automatically in the Dockerfile.
+
+#### Pre-built Image
 
 ```bash
 docker pull jackgraddon/collct:latest
 ```
 
+You can use this image with your own deployment methods or the provided Compose files.
+
 ## Configuration
 
-Collct is configured via environment variables. All variables (excluding one) are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions.
+Collct is configured via environment variables. All variables (excluding one) are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions, or [VARS.md](VARS.md) for detailed documentation.
+
+### Database
+
+- `DATABASE_URL` — PostgreSQL connection string (default: `postgresql://collct:collct@localhost:5432/collct`)
+- `DATABASE_TYPE` — `"postgresql"` (default) or `"sqlite"`. When `sqlite`, uses `SQLITE_PATH`.
+- `SQLITE_PATH` — Path to SQLite database file (default: `./data/collct.db`). Only used when `DATABASE_TYPE=sqlite`.
+- `COLLCT_BLOB_DIR` — Local directory for blob storage. Required for self-hosted (photos stored on disk instead of Vercel Blob).
 
 ### Registration & Access
 
