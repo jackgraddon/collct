@@ -4,6 +4,7 @@ import { z } from 'zod'
 
 const bodySchema = z.object({
   code: z.string().min(1),
+  code_verifier: z.string().min(43).max(128).optional(),
 })
 
 export default defineEventHandler(async (event) => {
@@ -22,6 +23,17 @@ export default defineEventHandler(async (event) => {
 
   if (!auth || !auth.userId) {
     throw createError({ statusCode: 400, statusMessage: 'Invalid, expired, or unused authorization code' })
+  }
+
+  // PKCE validation: if a code_challenge was stored, verify the code_verifier
+  if (auth.codeChallenge) {
+    if (!body.code_verifier) {
+      throw createError({ statusCode: 400, statusMessage: 'code_verifier required for this authorization' })
+    }
+    const computed = hashCodeChallenge(body.code_verifier)
+    if (computed !== auth.codeChallenge) {
+      throw createError({ statusCode: 400, statusMessage: 'Invalid code_verifier' })
+    }
   }
 
   // Generate token

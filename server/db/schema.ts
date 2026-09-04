@@ -266,7 +266,10 @@ export const pendingAuthorizations = pgTable('pending_authorizations', {
   authorizationCode: text('authorization_code').unique(), // redirect flow only: exchanged for token
   appName: text('app_name'), // display name of the requesting app
   redirectUri: text('redirect_uri'), // redirect flow only
+  state: text('state'), // redirect flow: echoed back to client on redirect
   status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'denied' | 'expired'
+  codeChallenge: text('code_challenge'), // PKCE: base64url-encoded SHA-256 of code_verifier
+  codeChallengeMethod: text('code_challenge_method').default('S256'), // PKCE: only 'S256' supported
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
   approvedAt: timestamp('approved_at', { mode: 'date' }),

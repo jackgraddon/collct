@@ -23,6 +23,13 @@ export function generateAuthorizationCode(): string {
   return randomBytes(32).toString('base64url')
 }
 
+// ------- PKCE (Proof Key for Code Exchange) -------
+
+/** Hash a code_verifier to produce a code_challenge (S256 method). */
+export function hashCodeChallenge(verifier: string): string {
+  return createHash('sha256').update(verifier).digest('base64url')
+}
+
 // ------- API Tokens -------
 import * as OTPAuth from 'otpauth'
 import { getAdminConfig } from './config'

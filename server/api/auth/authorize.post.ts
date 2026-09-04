@@ -5,6 +5,8 @@ const bodySchema = z.object({
   redirect_uri: z.string().url('Invalid redirect URI'),
   app_name: z.string().min(1).max(100).optional(),
   state: z.string().max(2048).optional(),
+  code_challenge: z.string().min(43).max(128).optional(),
+  code_challenge_method: z.enum(['S256']).optional().default('S256'),
 })
 
 export default defineEventHandler(async (event) => {
@@ -22,6 +24,9 @@ export default defineEventHandler(async (event) => {
     authorizationCode,
     appName: body.app_name || 'Unknown App',
     redirectUri: body.redirect_uri,
+    state: body.state || null,
+    codeChallenge: body.code_challenge || null,
+    codeChallengeMethod: body.code_challenge || body.code_challenge_method || null,
     status: 'pending',
     expiresAt,
   })
