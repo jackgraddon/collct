@@ -1,5 +1,5 @@
-import { db, schema } from '@nuxthub/db'
-import { blob } from 'hub:blob'
+import { db, schema } from '~~/server/utils/db'
+import { putBlob } from '~~/server/utils/blob-driver'
 import { eq, and, inArray, gte, lte } from 'drizzle-orm'
 import { z } from 'zod'
 import { getOrCreateTodayMomentTime, getUserMomentsGroups, dismissMomentNotification } from '../../utils/moments'
@@ -133,9 +133,8 @@ export default defineEventHandler(async (event) => {
   const blobPathname = `photos/${userId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
 
-  await blob.put(blobPathname, arrayBuffer, {
+  await putBlob(blobPathname, arrayBuffer, {
     contentType: file.type,
-    addRandomSuffix: false,
   })
 
   const result = await db.transaction(async (tx) => {

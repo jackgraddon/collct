@@ -1,5 +1,5 @@
-import { db, schema } from '@nuxthub/db'
-import { blob } from 'hub:blob'
+import { db, schema } from '~~/server/utils/db'
+import { deleteBlob } from '~~/server/utils/blob-driver'
 import { eq, and } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     .delete(schema.photos)
     .where(and(eq(schema.photos.id, id), eq(schema.photos.userId, session.user.id)))
 
-  await blob.delete(photo.blobPathname)
+  await deleteBlob(photo.blobPathname)
 
   // Clear presigned URL cache for this blob
   await invalidatePresignedUrl(photo.blobPathname).catch(() => {})

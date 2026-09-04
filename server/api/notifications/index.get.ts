@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { desc, eq, and, sql, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {

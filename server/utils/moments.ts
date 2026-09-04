@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq, and, gte, lt, sql } from 'drizzle-orm'
 
 /**

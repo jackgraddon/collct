@@ -1,0 +1,15 @@
+node_modules
+.dev
+.data
+dist
+.nuxt
+.output
+.git
+*.md
+!README.md
+docker/
+examples/
+server/db/migrations/
+.vercel
+.env
+.env.*

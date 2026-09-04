@@ -33,6 +33,7 @@
     "@simplewebauthn/server": "^11.0.0",
     "@takumi-rs/core": "^1.6.0",
     "@vercel/blob": "^2.4.0",
+    "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.2",
     "nuxt": "^4.4.6",
     "nuxt-qrcode": "^0.4.10",

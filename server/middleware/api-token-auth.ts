@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq } from 'drizzle-orm'
 import { hashApiToken } from '../utils/auth'
 

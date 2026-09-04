@@ -1,5 +1,5 @@
 import { eq, and } from 'drizzle-orm'
-import { schema } from '@nuxthub/db'
+import { schema } from '~~/server/utils/db'
 import { z } from 'zod'
 
 type ReactionType = 'thumbs_up' | 'thumbs_down' | 'heart' | 'cry'

@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq, and, sql } from 'drizzle-orm'
 import { getAdminConfig } from './config'
 

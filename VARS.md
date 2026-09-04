@@ -9,6 +9,8 @@ All variables are optional and have sensible defaults. See `.env.example` for a 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `postgresql://collct:collct@localhost:5432/collct` | PostgreSQL connection string. Required for Docker/self-hosted. On Vercel, NuxtHub auto-configures via Neon integration. |
+| `DATABASE_TYPE` | `postgresql` | Database driver: `postgresql` or `sqlite`. When `sqlite`, uses `SQLITE_PATH`. |
+| `SQLITE_PATH` | `./data/collct.db` | Path to SQLite database file. Only used when `DATABASE_TYPE=sqlite`. |
 | `NUXT_SESSION_PASSWORD` | `collct-default-session-key-change-me` | Encryption key for session cookies. **Set this for production.** Generate with `openssl rand -hex 32`. |
 | `CRON_SECRET` | _(empty)_ | Bearer token for `/api/moments/trigger`. Required for server-side moment computation. Generate with `openssl rand -hex 32`. |
 | `COLLCT_BLOB_DIR` | _(none)_ | Local directory for blob storage (photos, avatars). When set, blobs stored on disk instead of Vercel Blob. Required for self-hosted. |

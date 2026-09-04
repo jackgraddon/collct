@@ -1,12 +1,9 @@
 # =============================================================================
-# Collct — Example Docker Compose (PostgreSQL)
+# Collct — Production Docker Compose (PostgreSQL)
 # =============================================================================
-# Quick-start for self-hosted deployment.
-#
-# 1. cp .env.example .env   (edit with your secrets)
-# 2. docker compose -f examples/docker-compose.yml up -d
-#
-# For production, use docker/docker-compose.prod.yml instead.
+# Usage:
+#   cp .env.example .env   # edit with your secrets
+#   docker compose -f docker/docker-compose.prod.yml up -d
 
 services:
   db:
@@ -37,14 +34,27 @@ services:
     environment:
       DATABASE_URL: postgresql://collct:${POSTGRES_PASSWORD:-collct}@db:5432/collct
       COLLCT_BLOB_DIR: /app/data/blobs
-      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:-change-me-in-production}
+      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:?Set NUXT_SESSION_PASSWORD}
       CRON_SECRET: ${CRON_SECRET}
       COLLCT_ALLOW_REGISTRATION: ${COLLCT_ALLOW_REGISTRATION:-yes}
       COLLCT_PUBLIC_GROUP_ENABLED: ${COLLCT_PUBLIC_GROUP_ENABLED:-true}
       COLLCT_INSTANCE_NAME: ${COLLCT_INSTANCE_NAME:-Collct}
+      COLLCT_INSTANCE_DESCRIPTION: ${COLLCT_INSTANCE_DESCRIPTION:-A friends-first photo sharing app.}
       COLLCT_SESSION_SECURE: ${COLLCT_SESSION_SECURE:-true}
+      COLLCT_SESSION_SAME_SITE: ${COLLCT_SESSION_SAME_SITE:-lax}
+      COLLCT_ALLOWED_ORIGINS: ${COLLCT_ALLOWED_ORIGINS}
+      COLLCT_APP_URL: ${COLLCT_APP_URL}
+      COLLCT_MOMENTS_ENABLED: ${COLLCT_MOMENTS_ENABLED:-false}
       COLLCT_NOTIFICATIONS_ENABLED: ${COLLCT_NOTIFICATIONS_ENABLED:-true}
       COLLCT_COMMENTS_ENABLED: ${COLLCT_COMMENTS_ENABLED:-true}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      APNS_KEY_ID: ${APNS_KEY_ID}
+      APNS_TEAM_ID: ${APNS_TEAM_ID}
+      APNS_KEY_PATH: ${APNS_KEY_PATH}
+      APNS_BUNDLE_ID: ${APNS_BUNDLE_ID:-com.collct.app}
+      APNS_PRODUCTION: ${APNS_PRODUCTION:-false}
+      FCM_SERVICE_ACCOUNT: ${FCM_SERVICE_ACCOUNT}
     volumes:
       - collct-blobs:/app/data/blobs
 

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
-import { db, schema } from '@nuxthub/db'
-import { blob } from 'hub:blob'
+import { db, schema } from '~~/server/utils/db'
+import { putBlob, deleteBlob } from '~~/server/utils/blob-driver'
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 const MAX_BYTES = 2 * 1024 * 1024
@@ -20,8 +20,7 @@ export default defineEventHandler(async (event) => {
 
   // Delete old avatar if exists
   if (user.avatarUrl) {
-    // Use the stored pathname to delete
-    await blob.delete(user.avatarUrl).catch((err) => {
+    await deleteBlob(user.avatarUrl).catch((err) => {
       console.error("Failed to delete old avatar:", err)
     })
   }
@@ -30,9 +29,8 @@ export default defineEventHandler(async (event) => {
   const blobPathname = `avatars/${user.id}-${Date.now()}.${ext}`
   const arrayBuffer = await file.arrayBuffer()
 
-  await blob.put(blobPathname, arrayBuffer, {
+  await putBlob(blobPathname, arrayBuffer, {
     contentType: file.type,
-    addRandomSuffix: false,
   })
 
   const [updated] = await db
