@@ -42,7 +42,67 @@ Or if you prefer the manual way:
 4. Add Vercel Blob storage from the Vercel dashboard
 5. Deploy
 
-### Self-Hosted
+### Docker (Self-Hosted)
+
+Collct provides a multi-stage Dockerfile and Compose files for self-hosted deployment.
+
+#### Quick Start (PostgreSQL)
+
+```bash
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+
+# Create your env file
+cp .env.example .env
+# Edit .env — at minimum, set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
+
+# Start with PostgreSQL
+docker compose -f docker/docker-compose.prod.yml up -d
+
+# View logs
+docker compose -f docker/docker-compose.prod.yml logs -f app
+```
+
+Open `http://localhost:3000`.
+
+#### Lightweight (SQLite)
+
+No external database required — data stored in a Docker volume:
+
+```bash
+docker compose -f docker/docker-compose.sqlite.yml up -d
+```
+
+#### Environment Variables
+
+At minimum, set these in your `.env` file:
+
+```bash
+NUXT_SESSION_PASSWORD=$(openssl rand -hex 32)  # Required
+CRON_SECRET=$(openssl rand -hex 32)            # For moments trigger
+```
+
+See [VARS.md](VARS.md) for all available variables.
+
+#### Health Check
+
+The app exposes a health check at `GET /api/health`:
+
+```json
+{ "ok": true, "timestamp": "2026-09-04T02:54:23.481Z" }
+```
+
+Docker health checks are configured automatically in the Dockerfile.
+
+#### Pre-built Image
+
+```bash
+docker pull jackgraddon/collct:latest
+```
+
+You can use this image with your own deployment methods or the provided Compose files.
+
+### Bare Metal (Self-Hosted)
 
 Install Node.js 20+, then:
 
@@ -55,8 +115,6 @@ cp .env.example .env
 pnpm build
 pnpm start
 ```
-
-For Docker-based self-hosted deployment, see the [Docker section](#docker) below.
 
 ### Local Development
 
@@ -168,66 +226,6 @@ These endpoints are structurally excluded from production builds (the module's `
 - **Auto-imports**: Server utils in `server/utils/` are auto-imported — no need for explicit imports
 - **Env vars**: Document in `VARS.md` and `.env.example` when adding new ones
 - **Build check**: Run `npx nuxi build` before committing to verify no errors
-
-### Docker
-
-Collct provides a multi-stage Dockerfile and Compose files for self-hosted deployment.
-
-#### Quick Start (PostgreSQL)
-
-```bash
-git clone https://github.com/jackgraddon/collct.git
-cd collct
-
-# Create your env file
-cp .env.example .env
-# Edit .env — at minimum, set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
-
-# Start with PostgreSQL
-docker compose -f docker/docker-compose.prod.yml up -d
-
-# View logs
-docker compose -f docker/docker-compose.prod.yml logs -f app
-```
-
-Open `http://localhost:3000`.
-
-#### Lightweight (SQLite)
-
-No external database required — data stored in a Docker volume:
-
-```bash
-docker compose -f docker/docker-compose.sqlite.yml up -d
-```
-
-#### Environment Variables
-
-At minimum, set these in your `.env` file:
-
-```bash
-NUXT_SESSION_PASSWORD=$(openssl rand -hex 32)  # Required
-CRON_SECRET=$(openssl rand -hex 32)            # For moments trigger
-```
-
-See [VARS.md](VARS.md) for all available variables.
-
-#### Health Check
-
-The app exposes a health check at `GET /api/health`:
-
-```json
-{ "ok": true, "timestamp": "2026-09-04T02:54:23.481Z" }
-```
-
-Docker health checks are configured automatically in the Dockerfile.
-
-#### Pre-built Image
-
-```bash
-docker pull jackgraddon/collct:latest
-```
-
-You can use this image with your own deployment methods or the provided Compose files.
 
 ## Configuration
 
