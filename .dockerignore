@@ -7,7 +7,6 @@ dist
 .git
 *.md
 !README.md
-docker/
 examples/
 server/db/migrations/
 .vercel
