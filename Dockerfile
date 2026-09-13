@@ -4,12 +4,13 @@
 # Stage 1: Build
 FROM node:22-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
 WORKDIR /app
 
 # Install dependencies
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+ENV CI=true
 RUN pnpm install --frozen-lockfile
 
 # Copy source and build
@@ -20,7 +21,7 @@ RUN pnpm build
 # Stage 2: Runtime
 FROM node:22-alpine AS runtime
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
 # Install pg_isready for PostgreSQL health checks
 RUN apk add --no-cache postgresql-client
@@ -35,7 +36,7 @@ COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 # Install production dependencies only
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
 # Create data directories
