@@ -6,6 +6,9 @@ FROM node:22-alpine AS builder
 
 RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
+# Install build tools for native modules (better-sqlite3 needs python + make + gcc)
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
 # Install dependencies
@@ -23,8 +26,8 @@ FROM node:22-alpine AS runtime
 
 RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
-# Install pg_isready for PostgreSQL health checks
-RUN apk add --no-cache postgresql-client
+# Install pg_isready + build tools for native modules
+RUN apk add --no-cache postgresql-client python3 make g++
 
 WORKDIR /app
 
@@ -37,6 +40,7 @@ RUN chmod +x /entrypoint.sh
 
 # Install production dependencies only
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+ENV CI=true
 RUN pnpm install --prod --frozen-lockfile
 
 # Create data directories

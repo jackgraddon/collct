@@ -36,12 +36,7 @@ export default defineNuxtConfig({
     blob: process.env.COLLCT_BLOB_DIR
       ? { driver: 'fs', dir: process.env.COLLCT_BLOB_DIR }
       : (process.env.NODE_ENV !== 'production' ? { driver: 'fs', dir: '.data/blob' } : { driver: 'vercel-blob', access: 'private' }),
-    db: {
-      dialect: 'postgresql',
-      connection: {
-        url: process.env.DATABASE_URL || 'postgresql://collct:collct@localhost:5432/collct',
-      },
-    },
+    db: false,
     kv: false,
   },
 
