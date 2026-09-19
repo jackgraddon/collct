@@ -4,17 +4,32 @@ set -e
 echo "🚀 Collct — Starting..."
 
 # ---------------------------------------------------------------------------
-# Wait for database (PostgreSQL only)
+# Wait for database (PostgreSQL only, with timeout)
 # ---------------------------------------------------------------------------
-if [ "${DATABASE_TYPE}" != "sqlite" ]; then
-  DB_HOST="${DATABASE_HOST:-postgres}"
-  DB_PORT="${DATABASE_PORT:-5432}"
-  echo "⏳ Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT}..."
-  
+if [ "${DATABASE_TYPE}" != "sqlite" ] && [ -n "$DATABASE_URL" ]; then
+  # Extract host and port from DATABASE_URL if available
+  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):\([0-9]*\).*|\1|p')
+  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):\([0-9]*\).*|\2|p')
+  DB_HOST="${DB_HOST:-localhost}"
+  DB_PORT="${DB_PORT:-5432}"
+
+  echo "⏳ Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT} (timeout: 30s)..."
+
+  WAIT=0
   until pg_isready -h "$DB_HOST" -p "$DB_PORT" -q 2>/dev/null; do
+    WAIT=$((WAIT + 1))
+    if [ "$WAIT" -ge 30 ]; then
+      echo "⚠️  PostgreSQL not reachable after 30s — starting anyway"
+      break
+    fi
     sleep 1
   done
-  echo "✅ PostgreSQL is ready"
+
+  if [ "$WAIT" -lt 30 ]; then
+    echo "✅ PostgreSQL is ready"
+  fi
+else
+  echo "ℹ️  No DATABASE_URL set — skipping DB wait"
 fi
 
 # ---------------------------------------------------------------------------
@@ -27,20 +42,6 @@ if [ "${DATABASE_TYPE}" = "sqlite" ]; then
   SQLITE_DIR=$(dirname "${SQLITE_PATH:-./data/collct.db}")
   mkdir -p "$SQLITE_DIR"
 fi
-
-# ---------------------------------------------------------------------------
-# Run database migrations
-# ---------------------------------------------------------------------------
-echo "📦 Running database migrations..."
-if [ "${DATABASE_TYPE}" = "sqlite" ]; then
-  echo "ℹ️  SQLite mode — migrations handled by NuxtHub at startup"
-else
-  # PostgreSQL: run migrations via drizzle-kit if DATABASE_URL is set
-  if [ -n "$DATABASE_URL" ]; then
-    npx drizzle-kit migrate --force 2>&1 || echo "⚠️  Migration step skipped (may already be applied)"
-  fi
-fi
-echo "✅ Migrations complete"
 
 # ---------------------------------------------------------------------------
 # Start the application
