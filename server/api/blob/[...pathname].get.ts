@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     return createReadStream(filePath)
   }
 
-  // Vercel Blob — proxy through server with stable URL and cache headers
+  // NuxtHub blob — proxy through server with stable URL and cache headers
   try {
     const presignedUrl = await getPresignedBlobUrl(pathname)
     const res = await fetch(presignedUrl)

@@ -1,8 +1,8 @@
 /**
  * Blob storage abstraction layer.
  *
- * - Vercel: uses hub:blob (NuxtHub)
- * - Docker/self-hosted: uses filesystem (COLLCT_BLOB_DIR)
+ * When COLLCT_BLOB_DIR is set, blobs are stored on the filesystem.
+ * Otherwise, uses NuxtHub's hub:blob.
  *
  * Provides put() and delete() operations with the same API.
  */

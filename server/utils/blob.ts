@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 // ---------------------------------------------------------------------------
 
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
-const PRESIGNED_EXPIRY_SECONDS = 7 * 24 * 60 * 60 // 7 days (Vercel max)
+const PRESIGNED_EXPIRY_SECONDS = 7 * 24 * 60 * 60 // 7 days
 
 // ---------------------------------------------------------------------------
 // In-memory cache (fast path, survives across requests in same process)

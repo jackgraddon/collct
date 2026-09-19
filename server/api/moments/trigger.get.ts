@@ -12,7 +12,7 @@ import { cleanupDismissedNotifications } from '../../utils/notifications'
 /**
  * Server-side trigger for computing the daily moment time and sending notifications.
  * Protected by CRON_SECRET — intended for external cron services (cron-job.org,
- * GitHub Actions) and Vercel Cron. No user authentication required.
+ * GitHub Actions, etc.). No user authentication required.
  *
  * Idempotent — safe to call multiple times. Notifications are sent at most once per day.
  */

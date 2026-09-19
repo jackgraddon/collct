@@ -2,12 +2,8 @@
  * Database abstraction layer.
  *
  * All server code imports `db` and `schema` from this module.
- * - PostgreSQL: used on Vercel and Docker with DATABASE_URL
+ * - PostgreSQL: used with DATABASE_URL
  * - SQLite: used for lightweight deployments with DATABASE_TYPE=sqlite
- *
- * This module directly creates Drizzle connections — no NuxtHub dependency
- * in server code. The `@nuxthub/core` module is still used for blob storage
- * and other Hub features, but the database is managed here.
  */
 
 import { drizzle as drizzlePg } from 'drizzle-orm/postgres-js/driver'
@@ -29,8 +25,7 @@ let _db: AnyDb | null = null
 function createDb(): AnyDb {
   if (_db) return _db
 
-  const isVercel = !!process.env.VERCEL
-  const dbType = process.env.DATABASE_TYPE || (isVercel ? 'postgresql' : 'postgresql')
+  const dbType = process.env.DATABASE_TYPE || 'postgresql'
 
   if (dbType === 'sqlite') {
     const dbPath = process.env.SQLITE_PATH || './data/collct.db'

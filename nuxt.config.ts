@@ -22,7 +22,7 @@ export default defineNuxtConfig({
   },
 
   site: {
-    url: "https://collct.vercel.app/",
+    url: process.env.COLLCT_APP_URL || 'http://localhost:3000',
     name: instanceName,
   },
 
@@ -35,14 +35,14 @@ export default defineNuxtConfig({
   hub: {
     blob: process.env.COLLCT_BLOB_DIR
       ? { driver: 'fs', dir: process.env.COLLCT_BLOB_DIR }
-      : (process.env.NODE_ENV !== 'production' ? { driver: 'fs', dir: '.data/blob' } : { driver: 'vercel-blob', access: 'private' }),
+      : { driver: 'fs', dir: '.data/blob' },
     db: process.env.DATABASE_URL
       ? { dialect: 'postgresql', connection: { url: process.env.DATABASE_URL } }
       : false,
     kv: false,
   },
 
-  image: { provider: 'vercel' },
+  image: { provider: 'ipx' },
 
   session: {
     maxAge: sessionMaxAge,
@@ -87,8 +87,8 @@ export default defineNuxtConfig({
 
   nitro: {
     scheduledTasks: {
-      // Pre-computes daily moment time. Only fires on platforms with cron support
-      // (Cloudflare Workers, etc.). On Vercel, lazy computation in GET /api/moments/today handles it.
+      // Pre-computes daily moment time. Fires on platforms with cron support.
+      // Falls back to lazy computation in GET /api/moments/today if not supported.
       '0 0 * * *': ['moments:daily-compute'],
       // Clean up expired presigned URL cache entries daily at 2 AM
       '0 2 * * *': ['cleanup:presigned-cache'],

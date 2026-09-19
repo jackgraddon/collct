@@ -206,8 +206,6 @@ async function auditServiceWorkerCache(): Promise<SWCacheAudit> {
     const imageKeys = keys.filter(r =>
       r.url.includes('/api/photos')
       || r.url.includes('/api/blob')
-      || r.url.includes('/api/blob')
-      || r.url.includes('/_vercel/image')
       || r.url.includes('/image'),
     )
 
@@ -243,7 +241,6 @@ async function auditNetworkActivity(durationMs = 10000): Promise<NetworkAudit> {
     const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input)
     const isImage = url.includes('/api/photos')
       || url.includes('/api/blob')
-      || url.includes('/_vercel/image')
 
     if (isImage) {
       const cacheHeader = typeof input === 'object' && input instanceof Request
