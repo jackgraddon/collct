@@ -29,6 +29,8 @@ services:
       resources:
         limits:
           memory: 512M
+    networks:
+      - collct-net
 
   app:
     image: ghcr.io/jackgraddon/collct:latest
@@ -76,6 +78,11 @@ services:
       resources:
         limits:
           memory: 512M
+    networks:
+      - collct-net
+
+networks:
+  collct-net:
 
 volumes:
   collct-pgdata:
