@@ -51,8 +51,28 @@ function createDb(): AnyDb {
   return _db
 }
 
-// Eagerly initialize on module load (server-side only, safe to block)
-export const db: AnyDb = createDb()
+// Lazy initialization — only connect on first actual use (not at import/build time)
+let _initialized = false
+
+function getDb(): AnyDb {
+  if (!_initialized) {
+    _db = createDb()
+    _initialized = true
+  }
+  return _db!
+}
+
+// Use a Proxy so `db.query.*`, `db.select()`, etc. work transparently
+export const db: AnyDb = new Proxy({} as AnyDb, {
+  get(_target, prop, receiver) {
+    const instance = getDb()
+    const value = Reflect.get(instance, prop, receiver)
+    if (typeof value === 'function') {
+      return value.bind(instance)
+    }
+    return value
+  },
+})
 
 // Graceful shutdown — close DB pool on SIGTERM/SIGINT
 if (typeof process !== 'undefined') {
