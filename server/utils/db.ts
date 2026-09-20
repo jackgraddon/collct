@@ -37,7 +37,13 @@ function createDb(): AnyDb {
     sqlite.pragma('foreign_keys = ON')
     _db = drizzleSqlite(sqlite, { schema: schemaModule })
   } else {
-    const url = process.env.DATABASE_URL || 'postgresql://collct:collct@localhost:5432/collct'
+    const url = process.env.DATABASE_URL
+    if (!url) {
+      throw new Error(
+        'DATABASE_URL is required when DATABASE_TYPE=postgresql. '
+        + 'Set it in your environment or .env file.',
+      )
+    }
     const client = postgres(url, { max: 10 })
     _db = drizzlePg(client, { schema: schemaModule })
   }
@@ -47,3 +53,16 @@ function createDb(): AnyDb {
 
 // Eagerly initialize on module load (server-side only, safe to block)
 export const db: AnyDb = createDb()
+
+// Graceful shutdown — close DB pool on SIGTERM/SIGINT
+if (typeof process !== 'undefined') {
+  const shutdown = () => {
+    console.log('[DB] Closing connections...')
+    // postgres package exposes .end(), better-sqlite3 exposes .close()
+    const client = (_db as any)?.$client
+    if (client?.end) client.end().catch(() => {})
+    process.exit(0)
+  }
+  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', shutdown)
+}

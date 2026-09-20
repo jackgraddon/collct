@@ -7,11 +7,19 @@ echo "🚀 Collct — Starting..."
 # Wait for database (PostgreSQL only, with timeout)
 # ---------------------------------------------------------------------------
 if [ "${DATABASE_TYPE}" != "sqlite" ] && [ -n "$DATABASE_URL" ]; then
-  # Extract host and port from DATABASE_URL if available
-  DB_HOST=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):\([0-9]*\).*|\1|p')
-  DB_PORT=$(echo "$DATABASE_URL" | sed -n 's|.*@\([^:]*\):\([0-9]*\).*|\2|p')
-  DB_HOST="${DB_HOST:-localhost}"
-  DB_PORT="${DB_PORT:-5432}"
+  # Extract host and port from DATABASE_URL using Node.js for robust parsing
+  DB_HOST=$(node -e "
+    try {
+      const u = new URL(process.argv[1]);
+      console.log(u.hostname.replace(/^\[/, '').replace(/\]$/, ''));
+    } catch { console.log('localhost'); }
+  " "$DATABASE_URL")
+  DB_PORT=$(node -e "
+    try {
+      const u = new URL(process.argv[1]);
+      console.log(u.port || '5432');
+    } catch { console.log('5432'); }
+  " "$DATABASE_URL")
 
   echo "⏳ Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT} (timeout: 30s)..."
 

@@ -1,5 +1,5 @@
 import { eq, inArray } from 'drizzle-orm'
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 
 const ALLOWED_USERNAMES = ['test1', 'test2', 'test3'] as const
 

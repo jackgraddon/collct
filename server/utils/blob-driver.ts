@@ -11,11 +11,11 @@ import { createReadStream, existsSync, mkdirSync, unlinkSync, writeFileSync } fr
 import { dirname, join } from 'node:path'
 
 function getBlobDir(): string {
-  return process.env.COLLCT_BLOB_DIR || '.data/blob'
+  return process.env.COLLCT_BLOB_DIR || '.data/blobs'
 }
 
 function isFilesystem(): boolean {
-  return !!process.env.COLLCT_BLOB_DIR || process.env.BLOB_TYPE === 'fs'
+  return !!process.env.COLLCT_BLOB_DIR
 }
 
 export async function putBlob(

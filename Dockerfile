@@ -26,8 +26,8 @@ FROM node:22-alpine AS runtime
 
 RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
-# Install pg_isready + build tools for native modules
-RUN apk add --no-cache postgresql-client python3 make g++
+# Install pg_isready for DB health check
+RUN apk add --no-cache postgresql-client
 
 WORKDIR /app
 
@@ -38,10 +38,12 @@ COPY --from=builder /app/.output ./.output
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Install production dependencies only
+# Install build tools, then production deps, then remove build tools
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 ENV CI=true
-RUN pnpm install --prod --frozen-lockfile
+RUN apk add --no-cache python3 make g++ \
+    && pnpm install --prod --frozen-lockfile \
+    && apk del python3 make g++
 
 # Create data directories
 RUN mkdir -p /app/data/blobs /app/data/db

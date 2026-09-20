@@ -52,12 +52,14 @@ export function rateLimit(key: string, config: RateLimitConfig): { ok: true; rem
   return { ok: true, remaining: config.max - entry.count }
 }
 
-/** Get client IP from request headers (Vercel sets x-forwarded-for). */
+/** Get client IP from request headers, falling back to socket remote address. */
 export function getClientIp(event: any): string {
   const header = getRequestHeader(event, 'x-forwarded-for')
   if (header) return header.split(',')[0]!.trim()
   const realIp = getRequestHeader(event, 'x-real-ip')
-  return realIp || 'unknown'
+  if (realIp) return realIp
+  // Fall back to direct socket address (no reverse proxy)
+  return event.node?.req?.socket?.remoteAddress || 'unknown'
 }
 
 // Preset configurations for common scenarios
