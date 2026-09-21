@@ -34,7 +34,7 @@ export default defineNitroPlugin(async () => {
   const client = postgres(process.env.DATABASE_URL, { max: 1 })
 
   try {
-    // Create tracking table
+    // Create tracking table (same as NuxtHub's _hub_migrations)
     await client.unsafe(`
       CREATE TABLE IF NOT EXISTS _hub_migrations (
         "id" integer PRIMARY KEY,
@@ -46,6 +46,20 @@ export default defineNitroPlugin(async () => {
     // Get applied migrations
     const applied = await client.unsafe(`SELECT name FROM _hub_migrations`)
     const appliedNames = new Set(applied.map((r: any) => r.name))
+
+    // Check if schema already exists (tables created by another means)
+    const tablesExist = await client.unsafe(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'users'
+      ) AS exists
+    `)
+
+    // If schema exists AND all migrations are applied, skip
+    if (tablesExist[0]?.exists && appliedNames.size === journal.entries.length) {
+      console.log('[Collct] Database up to date — no migrations needed')
+      return
+    }
 
     // Run pending migrations
     let ran = 0
