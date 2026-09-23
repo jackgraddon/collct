@@ -8,7 +8,7 @@ function isOriginAllowed(origin: string, allowedOrigins: string[]): boolean {
       // Wildcard: *example.com matches example.com and all subdomains (HTTPS only)
       if (allowed.startsWith('*')) {
         if (!isHttps) return false
-        const allowedHost = allowed.slice(1)
+        const allowedHost = allowed.slice(1).replace(/^\./, '')
         return originHost === allowedHost || originHost.endsWith(`.${allowedHost}`)
       }
       // Exact match
