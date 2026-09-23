@@ -52,6 +52,14 @@ if [ "${DATABASE_TYPE}" = "sqlite" ]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Apply database migrations
+# ---------------------------------------------------------------------------
+if [ -n "$DATABASE_URL" ] && [ -f "/app/docker/migrate.mjs" ]; then
+  echo "🔄 Applying database migrations..."
+  node /app/docker/migrate.mjs
+fi
+
+# ---------------------------------------------------------------------------
 # Start the application
 # ---------------------------------------------------------------------------
 echo "🎯 Starting Collct server..."

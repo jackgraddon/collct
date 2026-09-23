@@ -34,8 +34,12 @@ WORKDIR /app
 # Copy built output
 COPY --from=builder /app/.output ./.output
 
-# Copy entrypoint
+# Copy migration files for runtime migration support
+COPY --from=builder /app/server/db/migrations ./migrations
+
+# Copy entrypoint and migration script
 COPY docker/entrypoint.sh /entrypoint.sh
+COPY docker/migrate.mjs /app/docker/migrate.mjs
 RUN chmod +x /entrypoint.sh
 
 # Install build tools, then production deps, then remove build tools

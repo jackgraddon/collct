@@ -36,9 +36,12 @@ export default defineNuxtConfig({
     blob: process.env.COLLCT_BLOB_DIR
       ? { driver: 'fs', dir: process.env.COLLCT_BLOB_DIR }
       : { driver: 'fs', dir: '.data/blob' },
-    db: process.env.DATABASE_URL
-      ? { dialect: 'postgresql', connection: { url: process.env.DATABASE_URL } }
-      : false,
+    db: {
+      dialect: 'postgresql',
+      driver: 'postgres-js',
+      applyMigrationsDuringBuild: false,
+      applyMigrationsDuringDev: false,
+    },
     kv: false,
   },
 
