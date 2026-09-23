@@ -5,17 +5,22 @@ import { db, schema } from '~~/server/utils/db'
 export default defineEventHandler(async (event) => {
   const { user } = await requireUserSession(event)
   
-  const { name, email } = await readValidatedBody(event, z.object({
-    name: z.string().min(1).max(100),
-    email: z.string().email().max(255),
+  const body = await readValidatedBody(event, z.object({
+    name: z.string().min(1).max(100).optional(),
+    email: z.string().email().max(255).optional(),
   }).parse)
+
+  const updates: Record<string, any> = {}
+  if (body.name !== undefined) updates.name = body.name
+  if (body.email !== undefined) updates.email = body.email
+
+  if (Object.keys(updates).length === 0) {
+    throw createError({ statusCode: 400, statusMessage: 'No fields to update' })
+  }
 
   const [updated] = await db
     .update(schema.users)
-    .set({
-      name,
-      email,
-    })
+    .set(updates)
     .where(eq(schema.users.id, user.id))
     .returning()
 

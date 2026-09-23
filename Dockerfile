@@ -49,16 +49,13 @@ RUN apk add --no-cache python3 make g++ \
     && pnpm install --prod --frozen-lockfile \
     && apk del python3 make g++
 
-# Create data directories
-RUN mkdir -p /app/data/blobs /app/data/db
-
-# Non-root user
-RUN addgroup -g 1001 -S collct && \
+# Create data directories and user
+RUN mkdir -p /app/data/blobs /app/data/db && \
+    addgroup -g 1001 -S collct && \
     adduser -S collct -u 1001 -G collct && \
-    chown -R collct:collct /app
-USER collct
+    chown -R collct:collct /app/data /app/.output
 
-# Environment defaults
+# Entrypoint runs as root to fix volume permissions, then drops to collct
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \

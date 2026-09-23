@@ -4,10 +4,22 @@ set -e
 echo "🚀 Collct — Starting..."
 
 # ---------------------------------------------------------------------------
+# Fix volume permissions (runs as root before dropping privileges)
+# ---------------------------------------------------------------------------
+BLOB_DIR="${COLLCT_BLOB_DIR:-/app/data/blobs}"
+mkdir -p "$BLOB_DIR"
+chown -R 1001:1001 /app/data 2>/dev/null || true
+
+if [ "${DATABASE_TYPE}" = "sqlite" ]; then
+  SQLITE_DIR=$(dirname "${SQLITE_PATH:-./data/collct.db}")
+  mkdir -p "$SQLITE_DIR"
+  chown -R 1001:1001 "$SQLITE_DIR" 2>/dev/null || true
+fi
+
+# ---------------------------------------------------------------------------
 # Wait for database (PostgreSQL only, with timeout)
 # ---------------------------------------------------------------------------
 if [ "${DATABASE_TYPE}" != "sqlite" ] && [ -n "$DATABASE_URL" ]; then
-  # Extract host and port from DATABASE_URL using Node.js for robust parsing
   DB_HOST=$(node -e "
     try {
       const u = new URL(process.argv[1]);
@@ -41,17 +53,6 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Ensure data directories exist
-# ---------------------------------------------------------------------------
-BLOB_DIR="${COLLCT_BLOB_DIR:-./data/blobs}"
-mkdir -p "$BLOB_DIR"
-
-if [ "${DATABASE_TYPE}" = "sqlite" ]; then
-  SQLITE_DIR=$(dirname "${SQLITE_PATH:-./data/collct.db}")
-  mkdir -p "$SQLITE_DIR"
-fi
-
-# ---------------------------------------------------------------------------
 # Apply database migrations
 # ---------------------------------------------------------------------------
 if [ -n "$DATABASE_URL" ] && [ -f "/app/docker/migrate.mjs" ]; then
@@ -60,7 +61,7 @@ if [ -n "$DATABASE_URL" ] && [ -f "/app/docker/migrate.mjs" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# Start the application
+# Drop privileges and start the application
 # ---------------------------------------------------------------------------
 echo "🎯 Starting Collct server..."
-exec node .output/server/index.mjs
+exec su -s /bin/sh -c "exec node .output/server/index.mjs" collct
