@@ -26,6 +26,7 @@ info:
     ## CORS
 
     Cross-origin requests are allowed by default for all `/api/*` routes. To restrict CORS to specific origins, set the `COLLCT_ALLOWED_ORIGINS` environment variable (comma-separated).
+    Entries may be exact origins (`https://app.example.com`) or wildcards (`*.example.com`, also written `*example.com`), which match the bare domain and all subdomains over HTTPS only.
 
     ## Versioning
 
@@ -478,6 +479,7 @@ paths:
   /user/update:
     patch:
       summary: Update user profile
+      description: Partial update — send only the fields to change. At least one field is required.
       tags: [User]
       requestBody:
         required: true
@@ -485,7 +487,6 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name, email]
               properties:
                 name: { type: string, minLength: 1, maxLength: 100 }
                 email: { type: string, format: email, maxLength: 255 }
@@ -607,6 +608,13 @@ paths:
                 groupIds:
                   type: string
                   description: 'JSON array of group IDs, e.g. "[10, 11]"'
+                isMoment:
+                  type: string
+                  description: 'Set to "true" to flag as a moment capture. Requires an active moment window.'
+                momentCapturedAt:
+                  type: string
+                  format: date-time
+                  description: ISO timestamp of shutter-tap time. Validated against the capture window; allows late uploads of in-time captures.
       responses:
         "200":
           description: Photo created
@@ -616,6 +624,7 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
         "413": { $ref: "#/components/responses/PayloadTooLarge" }
         "415": { $ref: "#/components/responses/UnsupportedMediaType" }
         "429": { $ref: "#/components/responses/RateLimited" }
@@ -1108,6 +1117,84 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /blob/{pathname}:
+    get:
+      summary: Serve a blob file
+      description: |
+        Serves photos, avatars, and other blobs by pathname (e.g. `/blob/photos/1/1720000000000-abc123.webp`).
+        Responses carry `Cache-Control: public, max-age=31536000, immutable` — blob content never changes, so clients should cache permanently.
+      tags: [Blobs]
+      security: []
+      parameters:
+        - name: pathname
+          in: path
+          required: true
+          schema: { type: string }
+          description: Blob pathname as returned in `blobPathname` fields
+      responses:
+        "200":
+          description: Blob file bytes
+          content:
+            image/jpeg: {}
+            image/png: {}
+            image/webp: {}
+            image/gif: {}
+            image/avif: {}
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /moments/today:
+    get:
+      summary: Get today's moment state
+      description: Idempotent — safe to poll. Lazily computes the daily moment time and fans out notifications on first request.
+      tags: [Moments]
+      responses:
+        "200":
+          description: Moment state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  enabled: { type: boolean }
+                  windowStart: { type: string }
+                  windowEnd: { type: string }
+                  momentTime: { type: string, format: date-time, nullable: true }
+                  captureDuration: { type: integer }
+                  allowPostToAll: { type: boolean }
+                  allowLibraryFallback: { type: boolean }
+                  status: { type: string, enum: [before, active, after, disabled] }
+                  capturedToday: { type: boolean }
+                  userMomentsGroups:
+                    type: array
+                    items: { $ref: "#/components/schemas/GroupSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /moments/trigger:
+    get:
+      summary: Server-side moment trigger (cron)
+      description: Computes the daily moment time and sends notifications. No user session required — protected by the CRON_SECRET bearer token. Idempotent.
+      tags: [Moments]
+      security: []
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string }
+          description: "Bearer <CRON_SECRET>"
+      responses:
+        "200":
+          description: Trigger result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  momentTime: { type: string, format: date-time }
+                  notificationsSent: { type: boolean }
+                  expirySent: { type: boolean }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /version:
     get:
       summary: Get application version and uptime
@@ -1280,7 +1367,7 @@ components:
               editedAt: { type: string }
         blobPathname: { type: string, description: "Internal blob path (returned by single photo endpoint)" }
         createdAt: { type: string, format: date-time }
-        url: { type: string, description: "Presigned blob URL (~1h TTL)" }
+        url: { type: string, description: "Stable image URL (/api/blob/...) with immutable caching — safe to cache permanently" }
         user:
           type: object
           properties:
@@ -1345,13 +1432,13 @@ components:
       type: object
       properties:
         id: { type: integer }
-        type: { type: string, enum: [like, comment, group_join] }
+        type: { type: string, enum: [like, comment, group_join, new_post, moment] }
         isRead: { type: boolean }
         photoId: { type: integer, nullable: true }
         commentId: { type: integer, nullable: true }
         groupId: { type: integer, nullable: true }
         createdAt: { type: string, format: date-time }
-        photoUrl: { type: string, nullable: true }
+        photoUrl: { type: string, nullable: true, description: "Stable image URL (/api/blob/...) for the associated photo, if applicable" }
         actor:
           type: object
           properties:

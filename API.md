@@ -695,12 +695,12 @@ A session cookie is set with recovery scope. The client should then call `POST /
   "id": 1,
   "name": "Jack",
   "username": "jack",
-  "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?...",
+  "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp",
   "hasSeenOobe": false
 }
 ```
 
-Note: `avatarUrl` is a presigned blob URL that expires. It is resolved from the stored pathname at response time.
+Note: `avatarUrl` is a stable `/api/blob/...` path with immutable caching. It is resolved from the stored pathname at response time.
 
 **Status codes:**
 - `200` — success
@@ -712,7 +712,7 @@ Note: `avatarUrl` is a presigned blob URL that expires. It is resolved from the 
 
 **Endpoint:** `PATCH /user/update`
 
-**Description:** Update the authenticated user's name and email.
+**Description:** Update the authenticated user's name and email. Partial update — send only the fields to change. At least one field is required.
 
 **Authentication:** Required
 
@@ -725,8 +725,8 @@ Note: `avatarUrl` is a presigned blob URL that expires. It is resolved from the 
 }
 ```
 
-- `name` (required) — 1–100 characters
-- `email` (required) — valid email, max 255 characters
+- `name` (optional) — 1–100 characters
+- `email` (optional) — valid email, max 255 characters
 
 **Response:**
 
@@ -738,7 +738,7 @@ The session cookie is resealed with the updated values.
 
 **Status codes:**
 - `200` — success
-- `400` — invalid input
+- `400` — invalid input, or no fields to update
 - `401` — not authenticated
 - `404` — user not found
 
@@ -762,11 +762,11 @@ The session cookie is resealed with the updated values.
 
 ```json
 {
-  "avatarUrl": "https://<presigned-url>/avatars/1-1720000000000.jpg?..."
+  "avatarUrl": "/api/blob/avatars/1-1720000000000.webp"
 }
 ```
 
-Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is automatically deleted.
+Returns the stable avatar URL (same form as `GET /user/me`). The previous avatar is automatically deleted.
 
 **Rate Limit:** 30 uploads per hour per user.
 
@@ -817,7 +817,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
     "id": 1,
     "username": "jack",
     "name": "Jack",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?...",
+    "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp",
     "createdAt": "2026-01-15T10:00:00.000Z"
   },
   "stats": {
@@ -880,11 +880,11 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
         }
       ],
       "createdAt": "2026-07-15T12:00:00.000Z",
-      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "url": "/api/blob/photos/1/1720000000000-abc123.webp",
       "user": {
         "id": 1,
         "name": "Jack",
-        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
       },
       "groups": [
         {
@@ -938,11 +938,11 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
       "createdAt": "2026-07-15T12:00:00.000Z",
       "isMoment": false,
       "momentCapturedAt": null,
-      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "url": "/api/blob/photos/1/1720000000000-abc123.webp",
       "user": {
         "id": 1,
         "name": "Jack",
-        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
       },
       "groups": [
         {
@@ -959,7 +959,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 ```
 
 - `nextCursor` — a Unix timestamp in milliseconds to pass as `before` for the next page. `null` when there are no more results.
-- `url` — presigned blob URL for the photo image.
+- `url` — stable blob URL for the photo image (immutable, cache permanently).
 - `groups` — only includes groups that the viewer is a member of (visibility-filtered).
 
 **Status codes:**
@@ -993,11 +993,11 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
   "createdAt": "2026-07-15T12:00:00.000Z",
   "isMoment": false,
   "momentCapturedAt": null,
-  "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+  "url": "/api/blob/photos/1/1720000000000-abc123.webp",
   "user": {
     "id": 1,
     "name": "Jack",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+    "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
   },
   "groups": [
     {
@@ -1039,6 +1039,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 | `groupIds` | string | No | JSON array of group IDs (e.g. `"[10, 11]"`). Defaults to `[publicGroupId]` |
 | `isMoment` | string | No | Set to `"true"` to flag as a moment capture. Requires active moment window. |
 
+**Upload guidance:** The server stores the file as-is with no resizing or transcoding — there is no server-side image optimization. Clients SHOULD convert to WebP (longest edge ≤ 2048px, quality ~0.85) on-device before uploading, e.g. via `canvas.toBlob(blob, 'image/webp', 0.85)`. This keeps uploads small and fast. GIFs must be uploaded unmodified to preserve animation.
+
 **Response:**
 
 ```json
@@ -1052,7 +1054,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
   "captionHistory": null,
   "isMoment": false,
   "momentCapturedAt": null,
-  "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+  "url": "/api/blob/photos/1/1720000000000-abc123.webp"
 }
 ```
 
@@ -1172,11 +1174,11 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
         }
       ],
       "createdAt": "2026-07-15T12:00:00.000Z",
-      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "url": "/api/blob/photos/1/1720000000000-abc123.webp",
       "user": {
         "id": 1,
         "name": "Jack",
-        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
       }
     }
   ],
@@ -1272,7 +1274,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
       "id": 2,
       "name": "Friend",
       "username": "friend",
-      "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+      "avatarUrl": "/api/blob/avatars/2-<timestamp>.webp"
     },
     "reactions": {
       "counts": {
@@ -1328,7 +1330,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
     "id": 1,
     "name": "Jack",
     "username": "jack",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+    "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
   },
   "reactions": {
     "counts": {
@@ -1528,7 +1530,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "joinedAt": "2026-07-15T10:00:00.000Z",
       "username": "jack",
       "name": "Jack",
-      "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+      "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
     },
     {
       "id": 2,
@@ -1537,7 +1539,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "joinedAt": "2026-07-15T10:05:00.000Z",
       "username": "friend",
       "name": "Friend",
-      "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+      "avatarUrl": "/api/blob/avatars/2-<timestamp>.webp"
     }
   ]
 }
@@ -1868,9 +1870,9 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
         "id": 2,
         "name": "Friend",
         "username": "friend",
-        "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/2-<timestamp>.webp"
       },
-      "photoUrl": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+      "photoUrl": "/api/blob/photos/1/1720000000000-abc123.webp"
     }
   ],
   "nextCursor": 1001
@@ -1878,7 +1880,7 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
 ```
 
 - `type` — notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"`.
-- `photoUrl` — presigned thumbnail URL for the associated photo, if applicable.
+- `photoUrl` — stable blob URL for the associated photo thumbnail, if applicable.
 - `nextCursor` — notification ID to pass as `before` for the next page. `null` when there are no more results.
 
 **Like notification consolidation:** Multiple likes on the same photo are consolidated into a single notification. When a new like arrives on a photo that already has an active (unread) like notification, the existing notification is updated with the new like count rather than creating a duplicate. The `actor` field reflects the most recent liker. Push notifications for consolidated likes use the same `tag` value, so the OS replaces the previous notification in-place.
@@ -2456,7 +2458,7 @@ Moment uploads use the same `POST /photos` endpoint as regular uploads, with add
   "captionHistory": null,
   "isMoment": true,
   "momentCapturedAt": "2026-08-15T19:25:00.000Z",
-  "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+  "url": "/api/blob/photos/1/1720000000000-abc123.webp"
 }
 ```
 
@@ -2485,20 +2487,6 @@ Moment notifications follow a lifecycle driven by the server. Each user receives
 - The push `data.status` field indicates `"active"` or `"expired"` — the client can use this to show/hide capture UI.
 - When the user dismisses the push notification, the service worker does nothing — OS-level dismiss does not modify server state.
 
-### Get Blob File
-
-**Endpoint:** `GET /blob/*`
-
-**Description:** Serve a blob file by pathname. Only available in development — returns 404 in production. In production, clients should use the presigned URLs returned by other endpoints.
-
-**Authentication:** None
-
-**Status codes:**
-- `200` — success (dev only)
-- `404` — not found (always in production)
-
----
-
 ### Get Version
 
 **Endpoint:** `GET /version`
@@ -2516,6 +2504,26 @@ Moment notifications follow a lifecycle driven by the server. Each user receives
   "uptime": 3600
 }
 ```
+
+---
+
+## Blob Files
+
+Image `url` fields returned by the API (photos, avatars, notification thumbnails) are stable paths served by this endpoint — not expiring presigned URLs.
+
+### Get Blob File
+
+**Endpoint:** `GET /blob/:pathname`
+
+**Description:** Serve a blob file by pathname, e.g. `GET /api/blob/photos/1/1720000000000-abc123.webp`. Available in all environments. Responses carry `Cache-Control: public, max-age=31536000, immutable` — blob content never changes once written, so clients should cache permanently (including in service workers / offline caches).
+
+There is no server-side image optimization or resizing proxy — the original uploaded bytes are served. Clients render these URLs directly in `<img>` tags.
+
+**Authentication:** None
+
+**Status codes:**
+- `200` — success (image bytes with appropriate `Content-Type`)
+- `404` — not found
 
 ---
 
@@ -2556,6 +2564,8 @@ To **restrict** CORS to specific origins, set `COLLCT_ALLOWED_ORIGINS` (comma-se
 ```
 COLLCT_ALLOWED_ORIGINS=https://collct.vercel.app,https://localhost:3000
 ```
+
+Each entry is either an exact origin (`https://app.example.com`) or a wildcard (`*.example.com`, also accepted as `*example.com`). A wildcard matches the bare domain **and** all subdomains, HTTPS only — e.g. `*.collct.ing` allows `https://collct.ing` and `https://app.collct.ing` but not `http://collct.ing`.
 
 **Headers:**
 
@@ -2619,9 +2629,10 @@ Feed and user-photo endpoints support cursor-based pagination:
 
 ### Blob Storage
 
-- Image URLs returned by endpoints are presigned Vercel Blob URLs with time-limited delegation tokens (valid for ~1 hour).
-- Clients should not cache these URLs long-term; re-fetch them frequently.
-- In development, blob URLs are served via the `/api/blob/*` proxy endpoint instead.
+- Image URLs returned by endpoints (`url`, `avatarUrl`, `photoUrl`) are stable `/api/blob/<pathname>` paths, served by `GET /api/blob/*` with `Cache-Control: public, max-age=31536000, immutable`. They never expire.
+- Clients should cache these URLs permanently — in-memory, HTTP cache, and service-worker/offline caches. Re-fetching metadata endpoints to "refresh" URLs is unnecessary.
+- There is no image-resizing or format-conversion proxy. Render blob URLs directly in `<img>` tags.
+- The server stores uploads as-is. Clients SHOULD convert photos to WebP (longest edge ≤ 2048px, quality ~0.85) on-device before upload. Upload GIFs unmodified to preserve animation.
 
 ### Rate Limiting
 
