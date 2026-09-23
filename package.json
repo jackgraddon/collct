@@ -48,7 +48,6 @@
     "@nuxt/eslint": "^1.15.2",
     "@nuxt/fonts": "^0.14.0",
     "@nuxt/icon": "^2.2.2",
-    "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.8.1",
     "@vite-pwa/nuxt": "^1.1.1",
     "@vercel/blob": "^2.4.0",

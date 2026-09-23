@@ -68,12 +68,13 @@
                   </p>
                   <p class="text-xs text-muted mt-0.5">{{ formatRelativeTime(n.createdAt) }}</p>
                 </div>
-                <NuxtImg
+                <img
                   v-if="n.photoUrl"
                   :src="n.photoUrl"
                   width="36"
                   height="36"
-                  format="webp"
+                  loading="lazy"
+                  decoding="async"
                   class="w-9 h-9 rounded object-cover shrink-0"
                 />
               </NuxtLink>

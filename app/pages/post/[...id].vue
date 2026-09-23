@@ -238,12 +238,10 @@ onUnmounted(() => {
 
       <!-- Photo column -->
       <div class="lg:flex-1 lg:min-w-0 order-2 lg:order-1 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100dvh-8rem)]">
-        <NuxtImg
+        <img
           v-if="post"
           :src="freshPost ? post.url : (thumbnailUrl || post.url)"
           :alt="post.caption || `Photo by ${post.user.name}`"
-          sizes="sm:100vw md:800px lg:50vw"
-          format="webp"
           class="max-h-[calc(100dvh-12rem)] lg:max-h-full w-auto max-w-full object-contain rounded-xl mx-auto block"
           :style="{ viewTransitionName: `photo-${post.id}` }"
         />

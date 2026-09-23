@@ -45,8 +45,6 @@ export default defineNuxtConfig({
     kv: false,
   },
 
-  image: { provider: 'ipx' },
-
   session: {
     maxAge: sessionMaxAge,
     password: process.env.NUXT_SESSION_PASSWORD || 'collct-default-session-key-change-me',
@@ -270,7 +268,6 @@ export default defineNuxtConfig({
     '@nuxt/fonts',
     '@vite-pwa/nuxt',
     '@nuxt/eslint',
-    '@nuxt/image',
     '@nuxt/icon',
     'nuxt-auth-utils',
     '@nuxtjs/seo',

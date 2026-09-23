@@ -9,14 +9,12 @@
       class="absolute inset-0 w-full h-full min-h-[120px]"
     />
 
-    <NuxtImg
+    <img
       ref="imgEl"
       :src="postData.url"
       :alt="postData.caption ?? `Photo by ${postData.user.name}`"
       width="400"
       height="400"
-      sizes="sm:120px md:200px lg:300px"
-      format="webp"
       loading="lazy"
       decoding="async"
       class="w-full h-auto block hover:scale-[1.05] transition-[300ms]"
@@ -82,8 +80,8 @@ const momentBorder = computed(() => {
 })
 
 function navigateToPost() {
-  const el = imgEl.value?.$el as HTMLElement | undefined
-  const thumbnailUrl = (el as HTMLImageElement | undefined)?.currentSrc || props.postData.url
+  const el = imgEl.value as HTMLImageElement | undefined
+  const thumbnailUrl = el?.currentSrc || props.postData.url
   const isSafari = navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')
   if (el && document.startViewTransition && !isSafari) {
     el.style.viewTransitionName = `photo-${props.postData.id}`

@@ -84,12 +84,13 @@
           </div>
 
           <!-- Photo thumbnail -->
-          <NuxtImg
+          <img
             v-if="n.photoUrl"
             :src="n.photoUrl"
             width="44"
             height="44"
-            format="webp"
+            loading="lazy"
+            decoding="async"
             class="w-11 h-11 rounded-md object-cover shrink-0"
           />
         </NuxtLink>
