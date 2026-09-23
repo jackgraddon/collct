@@ -471,7 +471,7 @@ async function onAvatarChange(e: Event) {
   uploadingAvatar.value = true
   try {
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', await convertToWebp(file, { maxDimension: 512 }))
 
     const { avatarUrl } = await $fetch<{ avatarUrl: string }>('/api/user/avatar', {
       method: 'PATCH',

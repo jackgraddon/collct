@@ -346,7 +346,7 @@ async function onAction() {
   uploading.value = true
   try {
     const form = new FormData()
-    form.append('photo', file.value)
+    form.append('photo', await convertToWebp(file.value))
     if (caption.value.trim()) form.append('caption', caption.value.trim())
     form.append('groupIds', JSON.stringify(selectedGroupIds.value))
 

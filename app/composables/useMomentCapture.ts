@@ -125,7 +125,7 @@ export function useMomentCapture() {
 
     try {
       const form = new FormData()
-      form.append('photo', capturedBlob.value, `moment-${Date.now()}.jpg`)
+      form.append('photo', capturedBlob.value, `moment-${Date.now()}.${extensionForType(capturedBlob.value.type)}`)
       form.append('groupIds', JSON.stringify(selectedGroupIds.value))
       form.append('isMoment', 'true')
       form.append('momentCapturedAt', capturedAt.value.toISOString())
@@ -177,7 +177,7 @@ export function useMomentCapture() {
     try {
       const blob = dataUrlToBlob(draft.photoDataUrl, draft.photoType)
       const form = new FormData()
-      form.append('photo', blob, `moment-${Date.now()}.jpg`)
+      form.append('photo', blob, `moment-${Date.now()}.${extensionForType(blob.type)}`)
       form.append('groupIds', JSON.stringify(draft.groupIds))
       form.append('isMoment', 'true')
       form.append('momentCapturedAt', draft.capturedAt)

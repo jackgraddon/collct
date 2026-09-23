@@ -207,10 +207,12 @@ async function onShutter() {
     const ctx = canvas.getContext('2d')!
     ctx.drawImage(video, 0, 0)
 
-    canvas.toBlob((blob) => {
+    canvas.toBlob(async (blob) => {
       if (blob) {
-        const previewUrl = URL.createObjectURL(blob)
-        emit('capture', blob, previewUrl)
+        // Single conversion path: cap + WebP (fail-soft to the JPEG capture)
+        const converted = await convertToWebp(blob)
+        const previewUrl = URL.createObjectURL(converted)
+        emit('capture', converted, previewUrl)
       }
       capturing.value = false
     }, 'image/jpeg', 0.92)
@@ -223,12 +225,13 @@ function triggerLibraryFallback() {
   libraryInput.value?.click()
 }
 
-function onLibraryFile(e: Event) {
+async function onLibraryFile(e: Event) {
   const input = e.target as HTMLInputElement
   const selected = input.files?.[0]
   if (!selected) return
-  const previewUrl = URL.createObjectURL(selected)
-  emit('capture', selected, previewUrl)
+  const converted = await convertToWebp(selected)
+  const previewUrl = URL.createObjectURL(converted)
+  emit('capture', converted, previewUrl)
   input.value = ''
 }
 
