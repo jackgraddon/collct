@@ -9,8 +9,8 @@
   2. Run `npx nuxt db generate` — generates migration in `server/db/migrations/postgresql/`
   3. Run `npx nuxt db migrate` — applies to local DB (or `npx nuxt dev` auto-applies)
 - **On existing production DB**: apply schema changes via direct SQL (`ALTER TABLE`) since NuxtHub baseline migrations recreate all tables
-- **Never commit** `server/db/migrations/postgresql/` or `server/db/migrations/sqlite/` — they're gitignored (generated output)
-- **Access DB**: `import { db, schema } from '@nuxthub/db'`
+- **Always commit** `server/db/migrations/postgresql/` — needed for Docker builds (GitHub Actions can't access gitignored files)
+- **Access DB**: `import { db, schema } from '~~/server/utils/db'`
 
 ## Environment Variables
 
