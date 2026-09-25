@@ -66,12 +66,6 @@ services:
       COLLCT_OFFLINE_MODE_ENABLED: ${COLLCT_OFFLINE_MODE_ENABLED:-true}
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
-      APNS_KEY_ID: ${APNS_KEY_ID}
-      APNS_TEAM_ID: ${APNS_TEAM_ID}
-      APNS_KEY_PATH: ${APNS_KEY_PATH}
-      APNS_BUNDLE_ID: ${APNS_BUNDLE_ID:-com.collct.app}
-      APNS_PRODUCTION: ${APNS_PRODUCTION:-false}
-      FCM_SERVICE_ACCOUNT: ${FCM_SERVICE_ACCOUNT}
     volumes:
       - collct-blobs:/app/data/blobs
     deploy:

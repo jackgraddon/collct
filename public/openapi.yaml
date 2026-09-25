@@ -1079,6 +1079,10 @@ paths:
   /notifications/subscribe:
     post:
       summary: Subscribe to push notifications
+      description: |
+        Web Push (VAPID) is the only platform with a server-side sender.
+        `platform` accepts `ios` / `android` for future native clients;
+        those rows are stored and skipped at send time.
       tags: [Notifications]
       requestBody:
         required: true
@@ -1086,11 +1090,16 @@ paths:
           application/json:
             schema:
               type: object
-              required: [endpoint, keys]
+              required: [endpoint]
               properties:
+                platform:
+                  type: string
+                  enum: [web, ios, android]
+                  default: web
                 endpoint: { type: string }
                 keys:
                   type: object
+                  description: Required for web subscriptions.
                   properties:
                     auth: { type: string }
                     p256dh: { type: string }

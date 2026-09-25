@@ -1,7 +1,14 @@
 import { db, schema } from '~~/server/utils/db'
 import { eq } from 'drizzle-orm'
 
-const VALID_PLATFORMS = ['web', 'apns', 'fcm'] as const
+// The platform column is intentionally left open for future native clients.
+// Today only 'web' has a sender (Web Push via VAPID, serving both classic
+// service-worker push and Declarative Web Push from one subscription).
+// 'ios' / 'android' rows are accepted and stored (APNs/FCM token as the
+// endpoint) so clients can register ahead of server-side sender support;
+// notifyUser() skips them with a warning until a sender exists.
+
+const NATIVE_PLATFORMS = ['ios', 'android'] as const
 
 export default defineEventHandler(async (event) => {
   const config = getAdminConfig()
@@ -18,19 +25,15 @@ export default defineEventHandler(async (event) => {
 
   const platform = (body.platform || 'web') as string
 
-  if (!VALID_PLATFORMS.includes(platform as any)) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Invalid platform. Must be web, apns, or fcm.',
-    })
-  }
-
   if (!body.endpoint || typeof body.endpoint !== 'string') {
     throw createError({
       statusCode: 400,
       statusMessage: 'Endpoint is required',
     })
   }
+
+  let authKey: string | null = null
+  let p256dhKey: string | null = null
 
   if (platform === 'web') {
     if (!body.keys?.auth || !body.keys?.p256dh) {
@@ -48,21 +51,22 @@ export default defineEventHandler(async (event) => {
         statusMessage: 'Invalid endpoint URL for web subscription',
       })
     }
-  } else if (platform === 'apns') {
-    // APNs tokens are hex strings, typically 64 chars
-    if (!/^[a-f0-9]{64}$/i.test(body.endpoint)) {
+    authKey = body.keys.auth
+    p256dhKey = body.keys.p256dh
+  } else if ((NATIVE_PLATFORMS as readonly string[]).includes(platform)) {
+    // Native push token (APNs device token / FCM registration token).
+    // Stored for future use — no sender is configured server-side yet.
+    if (body.endpoint.length < 10) {
       throw createError({
         statusCode: 400,
-        statusMessage: 'Invalid APNs device token format',
+        statusMessage: `Invalid ${platform} push token`,
       })
     }
-  } else if (platform === 'fcm') {
-    if (typeof body.endpoint !== 'string' || body.endpoint.length < 10) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid FCM registration token',
-      })
-    }
+  } else {
+    throw createError({
+      statusCode: 400,
+      statusMessage: 'Invalid platform. Must be web, ios, or android.',
+    })
   }
 
   // Check if another user already has this endpoint
@@ -85,16 +89,16 @@ export default defineEventHandler(async (event) => {
       userId,
       platform,
       endpoint: body.endpoint,
-      authKey: body.keys?.auth || null,
-      p256dhKey: body.keys?.p256dh || null,
+      authKey,
+      p256dhKey,
       userAgent: getRequestHeaders(event)['user-agent'] || null,
     })
     .onConflictDoUpdate({
       target: [schema.pushSubscriptions.userId, schema.pushSubscriptions.endpoint],
       set: {
         platform,
-        authKey: body.keys?.auth || null,
-        p256dhKey: body.keys?.p256dh || null,
+        authKey,
+        p256dhKey,
       },
     })
 

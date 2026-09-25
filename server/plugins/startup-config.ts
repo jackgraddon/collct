@@ -3,14 +3,9 @@ import { getAdminConfig } from '../utils/config'
 const DEFAULT_SESSION_PASSWORD = 'collct-default-session-key-change-me'
 
 function platformStatus(): string {
-  const platforms = ['web']
-  if (process.env.APNS_KEY_ID && process.env.APNS_TEAM_ID && process.env.APNS_KEY_PATH) {
-    platforms.push('apns')
-  }
-  if (process.env.FCM_SERVICE_ACCOUNT) {
-    platforms.push('fcm')
-  }
-  return platforms.join(', ')
+  // Web Push (VAPID) serves both classic service-worker push and
+  // Declarative Web Push from a single subscription type.
+  return 'web'
 }
 
 export default defineNitroPlugin(() => {

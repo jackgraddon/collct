@@ -182,7 +182,7 @@ export async function sendMomentNotifications(): Promise<void> {
       .returning({ id: schema.notifications.id })
 
     // Send push notification
-    sendPushNotification(userId, {
+    notifyUser(userId, {
       title: config.instanceName || 'Collct',
       body,
       icon: '/icon-192x192.png',
@@ -242,7 +242,7 @@ export async function sendMomentExpiryNotifications(): Promise<void> {
       .where(eq(schema.notifications.id, n.id))
 
     // Send expiry push (same tag = replaces countdown notification)
-    sendPushNotification(n.userId, {
+    notifyUser(n.userId, {
       title: config.instanceName || 'Collct',
       body,
       icon: '/icon-192x192.png',

@@ -2013,7 +2013,7 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `POST /notifications/subscribe`
 
-**Description:** Register a push notification subscription. Supports three platforms: Web Push (VAPID), APNs (iOS native), and FCM (Android native). The server routes notifications to the correct platform at send time based on the `platform` field. If the subscription endpoint already exists for this user, it is updated.
+**Description:** Register a push notification subscription. Web Push (VAPID) is the only platform with a server-side sender — one subscription serves both classic service-worker push and Declarative Web Push. The `platform` field is left open (`ios` / `android`) so future native clients can register ahead of sender support. If the subscription endpoint already exists for this user, it is updated.
 
 **Note:** This endpoint is gated by the `COLLCT_NOTIFICATIONS_ENABLED` config variable. Returns `403` when notifications are disabled on the instance.
 
@@ -2032,32 +2032,22 @@ Exactly one of `ids` or `all: true` must be provided.
 }
 ```
 
-- `platform` (optional) — `"web"` (default), `"apns"`, or `"fcm"`
-- `endpoint` (required) — the push service endpoint URL (web) or device token (native)
+- `platform` (optional) — `"web"` (default), `"ios"`, or `"android"`
+- `endpoint` (required) — the push service endpoint URL (web) or push token (native)
 - `keys.auth` (required for web) — authentication secret
 - `keys.p256dh` (required for web) — client public key
 
-**Request (APNs — iOS native):**
+**Request (native — future):**
 
 ```json
 {
-  "platform": "apns",
+  "platform": "ios",
   "endpoint": "a1b2c3d4e5f6..."
 }
 ```
 
-- `endpoint` (required) — 64-character hex APNs device token
-
-**Request (FCM — Android native):**
-
-```json
-{
-  "platform": "fcm",
-  "endpoint": "eJ0z_nHr7..."
-}
-```
-
-- `endpoint` (required) — FCM registration token
+- `endpoint` (required) — APNs device token (`ios`) or FCM registration token (`android`), 10+ chars
+- Native rows are accepted and stored but skipped at send time — no sender is configured server-side yet.
 
 **Response:**
 
@@ -2074,13 +2064,12 @@ Exactly one of `ids` or `all: true` must be provided.
 | Platform | Endpoint format | Required fields |
 |----------|----------------|-----------------|
 | `web` | Valid URL | `keys.auth`, `keys.p256dh` |
-| `apns` | 64-char hex string | — |
-| `fcm` | String, 10+ chars | — |
+| `ios` / `android` | String, 10+ chars | — (stored, skipped at send time) |
 
 **Behavior:**
-- A user can have subscriptions on multiple platforms simultaneously (e.g. one web + one APNs).
+- A user can have multiple subscriptions (e.g. laptop + phone web push).
 - If another user already has the same endpoint registered, the request is rejected.
-- Native platform subscriptions are stored even if the server lacks credentials for that platform. Notifications will be skipped until credentials are configured.
+- Dead subscriptions are pruned automatically: endpoints that return `410`/`404` are deleted at send time.
 
 **Status codes:**
 - `200` — success
@@ -2094,7 +2083,7 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `POST /notifications/unsubscribe`
 
-**Description:** Remove a push notification subscription by endpoint URL or device token. Works for all platforms (web, APNs, FCM).
+**Description:** Remove a push notification subscription by endpoint URL or push token.
 
 **Authentication:** Required
 
@@ -2176,6 +2165,7 @@ Uses [Declarative Web Push](https://w3c.github.io/push-api/#declarative-push-mes
 | `type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"` |
 | `photoId` | number | Photo ID, if applicable |
 | `groupId` | number | Group ID, if applicable |
+| `status` | string | Moment pushes only: `"active"` (window open) or `"expired"` (window closed). Use to show/hide capture UI. |
 
 **`navigate` URLs by notification type:**
 
@@ -2229,62 +2219,12 @@ self.addEventListener('push', (event) => {
 })
 ```
 
-#### APNs (iOS Native)
+#### Native (iOS / Android — future)
 
-Sent via Apple Push Notification service using HTTP/2 and JWT authentication.
-
-**Payload structure:**
-
-```json
-{
-  "aps": {
-    "alert": {
-      "title": "Collct",
-      "body": "Friend liked your photo"
-    },
-    "sound": "default",
-    "mutable-content": 1,
-    "content-available": 1
-  },
-  "navigate": "/post/42",
-  "type": "like",
-  "notificationId": 1001,
-  "photoId": 42
-}
-```
-
-- Custom data (outside `aps`) is passed through to the iOS app.
-- `mutable-content: 1` allows the app's notification service extension to modify the notification before display.
-- `content-available: 1` enables background updates.
-
-**Required env vars:** `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_KEY_PATH`
-
-#### FCM (Android Native)
-
-Sent via Firebase Cloud Messaging HTTP v1 API with service account JWT authentication.
-
-**Payload structure:**
-
-```json
-{
-  "notification": {
-    "title": "Collct",
-    "body": "Friend liked your photo"
-  },
-  "data": {
-    "navigate": "/post/42",
-    "type": "like",
-    "notificationId": "1001",
-    "photoId": "42",
-    "tag": "like_42"
-  }
-}
-```
-
-- `data` values must be strings (FCM requirement). Numbers are stringified.
-- The Android app receives the payload via `FirebaseMessagingService`.
-
-**Required env vars:** `FCM_SERVICE_ACCOUNT`
+Native push senders are not implemented. Clients may register with
+`platform: "ios"` / `"android"` (push token as `endpoint`); those rows are
+stored and skipped at send time until a sender exists. When senders are
+added, dispatch will route by `platform` in `notifyUser()`.
 
 ---
 
@@ -2614,7 +2554,7 @@ The OpenAPI 3.1 specification for the full API is available at `/openapi.yaml` o
 - When `status` is `"active"`, the client should show the capture UI with a countdown timer (`captureDuration` seconds remaining).
 - When `status` is `"before"`, the client can show "Today's moment window: HH:MM – HH:MM" without revealing the exact time.
 - When `status` is `"after"`, the client should indicate the window has passed.
-- Push notifications with `type: "moment"` should deep-link to `/?upload=moment` to auto-open the upload modal in moment mode.
+- Push notifications with `type: "moment"` deep-link to `/?moment=capture` (the canonical URL the server sends) to auto-open the upload modal in moment mode.
 - Moment uploads use `POST /photos` with `isMoment=true` in the form data. The server validates the capture window server-side.
 - Photo responses include `isMoment` and `momentCapturedAt` fields for display in feeds and detail views.
 - Groups include a `momentsEnabled` field. Group admins can toggle this via `PATCH /groups/:id`.

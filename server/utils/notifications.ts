@@ -229,7 +229,7 @@ async function sendPushForNotification(data: PushData) {
       break
   }
 
-  await sendPushNotification(data.userId, {
+  await notifyUser(data.userId, {
     title: getAdminConfig().instanceName || 'Collct',
     body,
     icon: '/icon-192x192.png',
