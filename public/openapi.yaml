@@ -1181,7 +1181,7 @@ paths:
   /moments/trigger:
     get:
       summary: Server-side moment trigger (cron)
-      description: Computes the daily moment time and sends notifications. No user session required — protected by the CRON_SECRET bearer token. Idempotent.
+      description: Computes the daily moment time and sends notifications. No user session required — protected by the CRON_SECRET bearer token. Idempotent. The external delivery path (COLLCT_MOMENTS_MODE=external); in internal mode the server ticks itself instead.
       tags: [Moments]
       security: []
       parameters:

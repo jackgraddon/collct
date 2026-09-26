@@ -13,7 +13,7 @@ export interface AdminConfig {
   offlineModeEnabled: boolean
   appUrl: string | null
   momentsEnabled: boolean
-  momentsScheduler: boolean
+  momentsMode: 'external' | 'internal'
   momentsWindowStart: string
   momentsWindowEnd: string
   momentsCaptureDuration: number
@@ -41,7 +41,7 @@ export const getAdminConfig = (): AdminConfig => {
     offlineModeEnabled: process.env.COLLCT_OFFLINE_MODE_ENABLED !== 'false',
     appUrl: process.env.COLLCT_APP_URL || null,
     momentsEnabled: process.env.COLLCT_MOMENTS_ENABLED === 'true',
-    momentsScheduler: process.env.COLLCT_MOMENTS_SCHEDULER === 'true',
+    momentsMode: process.env.COLLCT_MOMENTS_MODE === 'internal' ? 'internal' : 'external',
     momentsWindowStart: process.env.COLLCT_MOMENTS_WINDOW_START || '18:00',
     momentsWindowEnd: process.env.COLLCT_MOMENTS_WINDOW_END || '20:00',
     momentsCaptureDuration: parseInt(process.env.COLLCT_MOMENTS_CAPTURE_DURATION || '300', 10),

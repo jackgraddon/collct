@@ -2345,7 +2345,7 @@ GET https://<your-instance>/api/moments/trigger
 Authorization: Bearer <your-CRON_SECRET>
 ```
 
-**Timing:** Poll every minute during the configured moment window — this external trigger is the primary delivery path (and the only one on serverless/Vercel, which has no persistent process). Docker/bare-Node deployments can additionally enable the built-in backup scheduler (`COLLCT_MOMENTS_SCHEDULER=true`), which ticks in-process on the same cadence. A once-daily tick is NOT sufficient — a tick before the random moment time sends nothing, and the push only fires on a tick (or app open) inside the window. The trigger is idempotent, and overlapping triggers can't double-send (atomic per-day claim) — so running the scheduler and an external cron together is safe.
+**Timing / delivery mode (`COLLCT_MOMENTS_MODE`, default `external`):** in `external` mode, poll this endpoint every minute during the configured moment window — required on serverless (Vercel has no persistent process). In `internal` mode (Docker/bare-Node), the server ticks itself on the same cadence and no cron is needed. A once-daily tick is NOT sufficient in either mode — a tick before the random moment time sends nothing, and the push only fires on a tick (or app open) inside the window. The trigger is idempotent, and overlapping triggers can't double-send (atomic per-day claim) — so running the scheduler and an external cron together is safe.
 
 **Status codes:**
 - `200` — success

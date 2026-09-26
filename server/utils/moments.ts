@@ -3,9 +3,15 @@ import { eq, and, gte, lt, sql } from 'drizzle-orm'
 
 /**
  * Get today's date string in YYYY-MM-DD format (server timezone).
+ * Server-local (not UTC) to match the local-hour window logic — a UTC date
+ * here would misattribute the day near midnight for non-UTC servers.
  */
 function getTodayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /**
