@@ -29,6 +29,9 @@ importers:
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.4.6)(@neondatabase/serverless@1.1.0)(better-sqlite3@13.0.3)(postgres@3.4.9)
+      node-cron:
+        specifier: ^4.6.0
+        version: 4.6.0
       nuxt:
         specifier: ^4.4.6
         version: 4.5.0(447681b9248e98eb55db136d7d6664c4)
@@ -6974,6 +6977,10 @@ packages:
   node-addon-api@8.9.2:
     resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
     engines: {node: ^18 || ^20 || >= 21}
+
+  node-cron@4.6.0:
+    resolution: {integrity: sha512-Si/bzYiKRHOB8/a99T2+SDGN582ONDMSTlJr5oCkT6GtnqPjZ2s10eoQRYkW9ZHwjVxONL+W8Fb+qR0AHMQsdg==}
+    engines: {node: '>=20'}
 
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
@@ -16541,6 +16548,8 @@ snapshots:
       - webpack
 
   node-addon-api@8.9.2: {}
+
+  node-cron@4.6.0: {}
 
   node-fetch-native@1.6.7: {}
 

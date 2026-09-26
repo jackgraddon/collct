@@ -62,6 +62,7 @@ All variables are optional and have sensible defaults. See `.env.example` for a 
 | `COLLCT_MOMENTS_CAPTURE_DURATION` | `300` | Seconds users have to capture and post once notified. |
 | `COLLCT_MOMENTS_ALLOW_POST_TO_ALL` | `true` | Allow posting to all moment groups at once. `false` = require per-group selection. |
 | `COLLCT_MOMENTS_ALLOW_LIBRARY_FALLBACK` | `false` | Allow photo library selection as fallback. `false` = camera-only on all devices. |
+| `COLLCT_MOMENTS_SCHEDULER` | `true` | In-process per-minute scheduler that fires moment notifications during the window. Docker/bare-Node need nothing else. Set `false` when an external cron owns the job. |
 | `COLLCT_NOTIFICATION_RETENTION_DAYS` | `30` | Days to keep dismissed notifications before cleanup. |
 
 ---

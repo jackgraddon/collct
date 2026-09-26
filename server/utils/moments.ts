@@ -83,61 +83,21 @@ export async function getOrCreateTodayMomentTime(): Promise<{ momentTime: Date; 
 }
 
 /**
- * Check if moment notifications have already been sent today.
+ * Atomically claim a once-per-day key. Returns true if this caller won the
+ * claim, false if another instance (or an earlier tick) already claimed it.
+ * The INSERT ... ON CONFLICT DO NOTHING ... RETURNING round-trips as a
+ * single statement, so concurrent schedulers / cron ticks / app opens can't
+ * double-send. Used for both the start (`moment_notified_*`) and expiry
+ * (`moment_expired_*`) markers.
  */
-export async function haveMomentNotificationsBeenSent(): Promise<boolean> {
-  const today = getTodayKey()
-  const key = `moment_notified_${today}`
+export async function tryClaimDailyKey(key: string): Promise<boolean> {
+  const [row] = await db
+    .insert(schema.config)
+    .values({ key, value: '1' })
+    .onConflictDoNothing()
+    .returning({ key: schema.config.key })
 
-  const [existing] = await db
-    .select({ value: schema.config.value })
-    .from(schema.config)
-    .where(eq(schema.config.key, key))
-    .limit(1)
-
-  return !!existing
-}
-
-/**
- * Mark that moment notifications have been sent today.
- */
-export async function markMomentNotificationsSent(): Promise<void> {
-  const today = getTodayKey()
-  const key = `moment_notified_${today}`
-
-  await db.insert(schema.config).values({
-    key,
-    value: '1',
-  }).onConflictDoNothing()
-}
-
-/**
- * Check if moment expiry notifications have already been sent today.
- */
-export async function haveMomentExpiryBeenSent(): Promise<boolean> {
-  const today = getTodayKey()
-  const key = `moment_expired_${today}`
-
-  const [existing] = await db
-    .select({ value: schema.config.value })
-    .from(schema.config)
-    .where(eq(schema.config.key, key))
-    .limit(1)
-
-  return !!existing
-}
-
-/**
- * Mark that moment expiry notifications have been sent today.
- */
-export async function markMomentExpirySent(): Promise<void> {
-  const today = getTodayKey()
-  const key = `moment_expired_${today}`
-
-  await db.insert(schema.config).values({
-    key,
-    value: '1',
-  }).onConflictDoNothing()
+  return !!row
 }
 
 /**
@@ -201,13 +161,15 @@ export async function sendMomentNotifications(): Promise<void> {
  * Send expiry notifications to all users with active moment notifications.
  * Updates the in-app notification body and sends a replacement push.
  * Called when the moment window closes.
+ *
+ * Claims the day's expiry key atomically first — concurrent ticks/instances
+ * can't double-send. Safe to call repeatedly; subsequent calls no-op.
  */
-export async function sendMomentExpiryNotifications(): Promise<void> {
+export async function sendMomentExpiryNotifications(): Promise<boolean> {
   const config = getAdminConfig()
-  if (!config.momentsEnabled) return
+  if (!config.momentsEnabled) return false
 
-  const alreadySent = await haveMomentExpiryBeenSent()
-  if (alreadySent) return
+  if (!(await tryClaimDailyKey(`moment_expired_${getTodayKey()}`))) return false
 
   const today = getTodayKey()
 
@@ -228,8 +190,7 @@ export async function sendMomentExpiryNotifications(): Promise<void> {
     )
 
   if (activeNotifications.length === 0) {
-    await markMomentExpirySent()
-    return
+    return true
   }
 
   const body = "You missed today's moment, but you can still post to the feed like usual"
@@ -256,7 +217,7 @@ export async function sendMomentExpiryNotifications(): Promise<void> {
     }).catch(() => {})
   }
 
-  await markMomentExpirySent()
+  return true
 }
 
 /**
@@ -296,19 +257,21 @@ export function getMomentStatus(
 /**
  * Process moment notification fan-out for today, gated on window status.
  *
- * This is the single entry point all triggers (lazy `GET /moments/today`,
- * cron `GET /moments/trigger`, scheduled `moments:daily-compute`) must use.
- * Sending is gated on the random moment time having arrived — calling early
- * (midnight task, first app open of the day, early cron tick) only computes
- * and stores the time without notifying:
+ * This is the single entry point all triggers (in-process scheduler, lazy
+ * `GET /moments/today`, cron `GET /moments/trigger`, scheduled
+ * `moments:daily-compute`) must use. Sending is gated on the random moment
+ * time having arrived — calling early (first app open of the day, early
+ * cron/scheduler tick) only computes and stores the time without notifying.
+ * All sends are claim-first (`tryClaimDailyKey`), so concurrent ticks,
+ * overlapping triggers, and multi-instance deployments can't double-send:
  *
- * - `before` → do nothing. Crucially the day is NOT marked as sent, so a
- *   later call during the window still fires.
- * - `active` → send start notifications once (idempotent per day).
- * - `after` → send expiry notifications once, but only if the start
- *   notification actually went out. If the window passed with no start
- *   push (no cron, no app opens), stay silent and just mark the day sent —
- *   a "you missed it" push with no preceding "ready" push is noise.
+ * - `before` → do nothing. Crucially the day is NOT claimed, so a later
+ *   call during the window still fires.
+ * - `active` → claim the day, then send start notifications once.
+ * - `after` → if the start push went out, send expiry once (claimed
+ *   internally). If the window passed with no start push, claim the day
+ *   and stay silent — a "you missed it" push with no preceding "ready"
+ *   push is noise.
  */
 export async function processMomentFanout(
   momentTime: Date,
@@ -319,17 +282,16 @@ export async function processMomentFanout(
   let expirySent = false
 
   if (status === 'active') {
-    if (!(await haveMomentNotificationsBeenSent())) {
+    if (await tryClaimDailyKey(`moment_notified_${getTodayKey()}`)) {
       await sendMomentNotifications()
-      await markMomentNotificationsSent()
       notificationsSent = true
     }
   } else if (status === 'after') {
-    if (!(await haveMomentNotificationsBeenSent())) {
-      await markMomentNotificationsSent()
-    } else if (!(await haveMomentExpiryBeenSent())) {
-      await sendMomentExpiryNotifications()
-      expirySent = true
+    if (await tryClaimDailyKey(`moment_notified_${getTodayKey()}`)) {
+      // Window passed with no start push — claim stands as the day's
+      // marker, stay silent.
+    } else {
+      expirySent = await sendMomentExpiryNotifications()
     }
   }
 
