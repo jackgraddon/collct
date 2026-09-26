@@ -13,10 +13,10 @@ import { getAdminConfig } from '../utils/config'
  * external cron + lazy app opens) and multi-instance deployments can't
  * double-send.
  *
- * External cron via GET /api/moments/trigger remains the path for
- * serverless deployments (Vercel — no persistent process) and works as a
- * backup everywhere else. Set COLLCT_MOMENTS_SCHEDULER=false to disable
- * this scheduler when an external cron owns the job.
+ * External cron via GET /api/moments/trigger remains the primary path for
+ * serverless deployments (Vercel — no persistent process). This scheduler is
+ * an opt-in backup for Docker/bare-Node: set COLLCT_MOMENTS_SCHEDULER=true
+ * to enable it alongside (or instead of) external cron.
  */
 
 function parseHm(hm: string): number {
@@ -40,7 +40,7 @@ function withinFanoutBand(): boolean {
 
 export default defineNitroPlugin(() => {
   if (!getAdminConfig().momentsScheduler) {
-    console.log('[Collct] Moment scheduler disabled (COLLCT_MOMENTS_SCHEDULER=false)')
+    console.log('[Collct] Moment scheduler disabled (set COLLCT_MOMENTS_SCHEDULER=true to enable the backup scheduler)')
     return
   }
 
