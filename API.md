@@ -1990,7 +1990,9 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `GET /notifications/vapid-key`
 
-**Description:** Returns the VAPID public key needed to subscribe to push notifications. Third-party clients use this key when calling `PushManager.subscribe()` (web) or equivalent platform push APIs.
+**Description:** Returns the VAPID public key needed to subscribe to push notifications. Third-party clients use this key when calling `PushManager.subscribe()` (web) or equivalent platform push APIs. Fetch it live at subscribe time — it is not baked into the web client build.
+
+**Key rotation:** the server operator may rotate VAPID keys. Subscriptions are bound to the key they were created with and stop delivering after a rotation. Clients should store the key used at subscribe time, re-fetch this endpoint on launch, and resubscribe (unsubscribe old endpoint + subscribe new) when it differs. The official web client implements this pattern — mirror it.
 
 **Authentication:** None
 
