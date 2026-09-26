@@ -1,11 +1,6 @@
 import {
   getOrCreateTodayMomentTime,
-  getMomentStatus,
-  haveMomentNotificationsBeenSent,
-  markMomentNotificationsSent,
-  sendMomentNotifications,
-  haveMomentExpiryBeenSent,
-  sendMomentExpiryNotifications,
+  processMomentFanout,
   hasUserCapturedMomentToday,
   getUserMomentsGroups,
   dismissMomentNotification,
@@ -33,28 +28,17 @@ export default defineEventHandler(async (event) => {
   // Compute/get today's moment time (lazy primary mechanism)
   const { momentTime, windowStart, windowEnd } = await getOrCreateTodayMomentTime()
 
-  // Idempotent notification fan-out (first request of the day triggers this)
-  const alreadySent = await haveMomentNotificationsBeenSent()
-  if (!alreadySent) {
-    await sendMomentNotifications()
-    await markMomentNotificationsSent()
-  }
+  // Window-gated notification fan-out: sends the start push only while the
+  // window is active, the expiry push once it closes. A first request before
+  // the random moment time sends nothing (and stays eligible to send later).
+  const { status } = await processMomentFanout(momentTime, config.momentsCaptureDuration)
 
-  const status = getMomentStatus(momentTime, config.momentsCaptureDuration)
   const capturedToday = await hasUserCapturedMomentToday(userId)
   const userMomentsGroups = await getUserMomentsGroups(userId)
 
   // Dismiss moment notification if user has already captured
   if (capturedToday) {
     await dismissMomentNotification(userId)
-  }
-
-  // Send expiry notifications if window has closed and not yet sent
-  if (status === 'after') {
-    const expirySent = await haveMomentExpiryBeenSent()
-    if (!expirySent) {
-      await sendMomentExpiryNotifications()
-    }
   }
 
   return {

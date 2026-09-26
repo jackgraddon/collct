@@ -2278,8 +2278,8 @@ Moments is a BeReal-style feature: once per day, during a randomly-chosen time w
 
 **Notes:**
 - The first request each day lazily computes the random moment time and persists it. All subsequent requests (and clients) see the same time.
-- The first request triggers idempotent notification fan-out to all eligible users. Notifications use a deterministic tag (`moment_{userId}_{date}`) so each user has at most one active moment notification per day.
-- When the window closes, the first request also triggers expiry notifications — updating the notification body to "You missed today's moment..." and marking it as read.
+- Notification fan-out is gated on the window: a request before the moment time sends nothing (and stays eligible); the first request inside the window sends the start push. Notifications use a deterministic tag (`moment_{userId}_{date}`) so each user has at most one active moment notification per day.
+- When the window closes, the first request also triggers expiry notifications — updating the notification body to "You missed today's moment..." and marking it as read — but only if the start push went out. If the window passed with no activity at all, the day is silently marked sent.
 - If the user has already captured today, their moment notification is automatically dismissed on this request.
 - On platforms with cron support (Cloudflare Workers), a scheduled task pre-computes the time at midnight.
 - **Recommended:** Use the `GET /moments/trigger` endpoint with an external cron service or Vercel Cron so notifications fire regardless of user activity. The lazy path here serves as a fallback.
@@ -2294,7 +2294,7 @@ Moments is a BeReal-style feature: once per day, during a randomly-chosen time w
 
 **Endpoint:** `GET /moments/trigger`
 
-**Description:** Compute the daily moment time and send notifications. Intended for external cron services and Vercel Cron — no user authentication required. Protected by a shared secret token.
+**Description:** Compute the daily moment time and send notifications when the capture window is active. Intended for external cron services and Vercel Cron — no user authentication required. Protected by a shared secret token. Fan-out is gated on the random moment time: ticks before it only compute/store the time and send nothing; the start push fires on the first tick inside the window.
 
 **Authentication:** Bearer token (`CRON_SECRET` env var)
 
@@ -2316,8 +2316,8 @@ Authorization: Bearer <CRON_SECRET>
 }
 ```
 
-- `notificationsSent` — `true` if this was the first trigger of the day (initial notifications were sent), `false` if already sent (idempotent).
-- `expirySent` — `true` if this trigger also sent expiry notifications (window had already closed), `false` if the window is still open or expiry was already sent.
+- `notificationsSent` — `true` if this tick sent the start notifications (first tick inside the window), `false` if the window hasn't opened yet or they were already sent (idempotent).
+- `expirySent` — `true` if this trigger also sent expiry notifications (window had already closed and the start push went out earlier), `false` otherwise.
 
 **Setup (Vercel):**
 
@@ -2328,13 +2328,13 @@ Add a `vercel.json` to your project root:
   "crons": [
     {
       "path": "/api/moments/trigger",
-      "schedule": "5 0 * * *"
+      "schedule": "* * * * *"
     }
   ]
 }
 ```
 
-Set `CRON_SECRET` as an environment variable in your Vercel dashboard. Vercel automatically injects this as a Bearer token on cron-triggered requests.
+Set `CRON_SECRET` as an environment variable in your Vercel dashboard. Vercel automatically injects this as a Bearer token on cron-triggered requests. (Note: per-minute schedules require a paid plan; on Hobby, use the longest cadence available — the lazy `GET /moments/today` path covers gaps when users open the app.)
 
 **Setup (external cron service):**
 
@@ -2345,7 +2345,7 @@ GET https://<your-instance>/api/moments/trigger
 Authorization: Bearer <your-CRON_SECRET>
 ```
 
-**Timing:** The cron should fire before the earliest reasonable `COLLCT_MOMENTS_WINDOW_START`. The default `0 0 * * *` (midnight UTC) works for most configurations, but if your window starts early in the server timezone, adjust accordingly. The trigger is idempotent — safe to run multiple times.
+**Timing:** Poll every minute during the configured moment window (e.g. restrict the cron schedule to the window hours in server timezone). A once-daily tick is NOT sufficient — a tick before the random moment time sends nothing, and the push only fires on a tick (or app open) inside the window. The trigger is idempotent — safe to run multiple times.
 
 **Status codes:**
 - `200` — success

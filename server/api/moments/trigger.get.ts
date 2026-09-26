@@ -1,11 +1,6 @@
 import {
   getOrCreateTodayMomentTime,
-  getMomentStatus,
-  haveMomentNotificationsBeenSent,
-  markMomentNotificationsSent,
-  sendMomentNotifications,
-  haveMomentExpiryBeenSent,
-  sendMomentExpiryNotifications,
+  processMomentFanout,
 } from '../../utils/moments'
 import { cleanupDismissedNotifications } from '../../utils/notifications'
 
@@ -14,7 +9,10 @@ import { cleanupDismissedNotifications } from '../../utils/notifications'
  * Protected by CRON_SECRET — intended for external cron services (cron-job.org,
  * GitHub Actions, etc.). No user authentication required.
  *
- * Idempotent — safe to call multiple times. Notifications are sent at most once per day.
+ * Idempotent — safe to call multiple times. Because fan-out is gated on the
+ * random moment time, poll frequently (every minute during the configured
+ * window) rather than once per day: early ticks only compute/store the time,
+ * and the start push fires on the first tick inside the window.
  */
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
@@ -39,23 +37,11 @@ export default defineEventHandler(async (event) => {
   // Compute/get today's moment time
   const { momentTime } = await getOrCreateTodayMomentTime()
 
-  // Idempotent notification fan-out
-  const alreadySent = await haveMomentNotificationsBeenSent()
-  if (!alreadySent) {
-    await sendMomentNotifications()
-    await markMomentNotificationsSent()
-  }
-
-  // If window has already closed, send expiry notifications
-  const status = getMomentStatus(momentTime, adminConfig.momentsCaptureDuration)
-  let expirySent = false
-  if (status === 'after') {
-    const alreadyExpired = await haveMomentExpiryBeenSent()
-    if (!alreadyExpired) {
-      await sendMomentExpiryNotifications()
-      expirySent = true
-    }
-  }
+  // Window-gated fan-out (no-op before the moment time, expiry after close)
+  const { notificationsSent, expirySent } = await processMomentFanout(
+    momentTime,
+    adminConfig.momentsCaptureDuration,
+  )
 
   // Clean up old dismissed notifications
   const cleanedUp = await cleanupDismissedNotifications()
@@ -63,7 +49,7 @@ export default defineEventHandler(async (event) => {
   return {
     ok: true,
     momentTime: momentTime.toISOString(),
-    notificationsSent: !alreadySent,
+    notificationsSent,
     expirySent,
     cleanedUp,
   }

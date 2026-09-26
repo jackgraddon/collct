@@ -3,6 +3,11 @@ import { eq } from 'drizzle-orm'
 import { hashApiToken } from '../utils/auth'
 
 export default defineEventHandler(async (event) => {
+  // Routes with their own bearer-token schemes (cron secrets) must not be
+  // treated as user API tokens — otherwise the middleware 401s before the
+  // route handler ever sees the request.
+  if (event.path.startsWith('/api/moments/trigger')) return
+
   const session = await getUserSession(event)
   if (session?.user) return
 

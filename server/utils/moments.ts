@@ -294,6 +294,49 @@ export function getMomentStatus(
 }
 
 /**
+ * Process moment notification fan-out for today, gated on window status.
+ *
+ * This is the single entry point all triggers (lazy `GET /moments/today`,
+ * cron `GET /moments/trigger`, scheduled `moments:daily-compute`) must use.
+ * Sending is gated on the random moment time having arrived — calling early
+ * (midnight task, first app open of the day, early cron tick) only computes
+ * and stores the time without notifying:
+ *
+ * - `before` → do nothing. Crucially the day is NOT marked as sent, so a
+ *   later call during the window still fires.
+ * - `active` → send start notifications once (idempotent per day).
+ * - `after` → send expiry notifications once, but only if the start
+ *   notification actually went out. If the window passed with no start
+ *   push (no cron, no app opens), stay silent and just mark the day sent —
+ *   a "you missed it" push with no preceding "ready" push is noise.
+ */
+export async function processMomentFanout(
+  momentTime: Date,
+  captureDuration: number,
+): Promise<{ status: 'before' | 'active' | 'after'; notificationsSent: boolean; expirySent: boolean }> {
+  const status = getMomentStatus(momentTime, captureDuration)
+  let notificationsSent = false
+  let expirySent = false
+
+  if (status === 'active') {
+    if (!(await haveMomentNotificationsBeenSent())) {
+      await sendMomentNotifications()
+      await markMomentNotificationsSent()
+      notificationsSent = true
+    }
+  } else if (status === 'after') {
+    if (!(await haveMomentNotificationsBeenSent())) {
+      await markMomentNotificationsSent()
+    } else if (!(await haveMomentExpiryBeenSent())) {
+      await sendMomentExpiryNotifications()
+      expirySent = true
+    }
+  }
+
+  return { status, notificationsSent, expirySent }
+}
+
+/**
  * Check if a user has already captured a moment today.
  */
 export async function hasUserCapturedMomentToday(userId: number): Promise<boolean> {

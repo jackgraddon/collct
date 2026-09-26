@@ -333,7 +333,7 @@ export async function cleanupDismissedNotifications(): Promise<number> {
     .where(
       and(
         sql`${schema.notifications.dismissedAt} IS NOT NULL`,
-        sql`${schema.notifications.dismissedAt} < now() - interval '${retentionDays} days'`,
+        sql`${schema.notifications.dismissedAt} < now() - (${retentionDays}::integer * interval '1 day')`,
       ),
     )
 
