@@ -26,8 +26,9 @@ FROM node:22-alpine AS runtime
 
 RUN corepack enable && corepack prepare pnpm@11.13.1 --activate
 
-# Install pg_isready for DB health check
-RUN apk add --no-cache postgresql-client
+# Install pg_isready for DB health check, tzdata so TZ= is honored (Alpine
+# ships no zoneinfo database — without this, all times silently stay UTC)
+RUN apk add --no-cache postgresql-client tzdata
 
 WORKDIR /app
 
