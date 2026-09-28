@@ -397,8 +397,12 @@ async function sendTestPush() {
         ? `Delivery issue: ${failed.map(r => `${r.platform}: ${r.status}${r.error ? ` (${r.error})` : ''}`).join('; ')}`
         : `Test push sent to ${res.results.length} subscription(s) — check your device.`
     }
-  } catch {
-    testPushResult.value = 'Test failed — are notifications enabled on this instance?'
+  } catch (err: any) {
+    if (err?.statusCode === 429 || err?.data?.statusCode === 429) {
+      testPushResult.value = err?.data?.statusMessage || 'Too many test pushes — try again shortly.'
+    } else {
+      testPushResult.value = 'Test failed — are notifications enabled on this instance?'
+    }
   } finally {
     testingPush.value = false
   }

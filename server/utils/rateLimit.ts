@@ -80,4 +80,6 @@ export const RATE_LIMITS = {
   devicePoll: { windowMs: 10 * 60 * 1000, max: 30 },
   /** Authorization code exchange: 10 per 15 minutes (per IP) */
   tokenExchange: { windowMs: 15 * 60 * 1000, max: 10 },
+  /** Test push: 5 per 10 minutes (per user) */
+  testPush: { windowMs: 10 * 60 * 1000, max: 5 },
 } as const

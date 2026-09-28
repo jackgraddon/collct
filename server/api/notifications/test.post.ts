@@ -16,6 +16,10 @@ export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
   const userId: number = session.user.id
 
+  // Self-only endpoint, but rate-limit per user so it can't be hammered.
+  // Placed after auth so logged-out requests 401 without filling buckets.
+  rateLimit(`test-push:${userId}`, RATE_LIMITS.testPush)
+
   const results = await notifyUser(userId, {
     title: config.instanceName || 'Collct',
     body: 'Test notification — push delivery works.',

@@ -2138,6 +2138,7 @@ Exactly one of `ids` or `all: true` must be provided.
 - `200` — success (even if individual deliveries failed — check `results`)
 - `401` — not authenticated
 - `403` — notifications disabled on this instance
+- `429` — rate-limited (5 per 10 minutes per user)
 
 ---
 
