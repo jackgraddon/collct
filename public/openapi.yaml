@@ -1126,6 +1126,19 @@ paths:
         "200": { $ref: "#/components/responses/Ok" }
         "401": { $ref: "#/components/responses/Unauthorized" }
 
+  /notifications/test:
+    post:
+      summary: Send yourself a test push notification
+      description: |
+        Returns per-endpoint delivery results (unlike fire-and-forget event
+        pushes) for debugging delivery. Endpoint suffixes only.
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Test attempted — check results for per-endpoint status
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /blob/{pathname}:
     get:
       summary: Serve a blob file

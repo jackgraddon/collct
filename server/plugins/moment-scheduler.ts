@@ -58,6 +58,10 @@ export default defineNitroPlugin((nitroApp) => {
 
   const band = fanoutBand()
 
+  // Last logged tick outcome — log only actions and state transitions,
+  // not every quiet minute, so logs stay readable.
+  let lastTickSummary: string | null = null
+
   const task = cron.schedule('* * * * *', async () => {
     try {
       const config = getAdminConfig()
@@ -65,7 +69,20 @@ export default defineNitroPlugin((nitroApp) => {
       if (!withinFanoutBand()) return
 
       const { momentTime } = await getOrCreateTodayMomentTime()
-      await processMomentFanout(momentTime, config.momentsCaptureDuration)
+      const { status, notificationsSent, expirySent } = await processMomentFanout(
+        momentTime,
+        config.momentsCaptureDuration,
+      )
+
+      const summary = notificationsSent
+        ? `sent(start@${momentTime.toISOString()})`
+        : expirySent
+          ? 'sent(expiry)'
+          : `idle(${status})`
+      if (summary !== lastTickSummary) {
+        console.log(`[moments] Tick: ${summary}`)
+        lastTickSummary = summary
+      }
     } catch (err) {
       console.error('[moments] Scheduled fan-out failed:', err)
     }

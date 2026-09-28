@@ -127,6 +127,12 @@ export async function sendMomentNotifications(): Promise<void> {
     .innerJoin(schema.groups, eq(schema.groupMembers.groupId, schema.groups.id))
     .where(eq(schema.groups.momentsEnabled, true))
 
+  if (eligibleUsers.length === 0) {
+    console.warn('[moments] Start push: no eligible users in moments-enabled groups; nothing to send')
+  } else {
+    console.log(`[moments] Start push: sending to ${eligibleUsers.length} eligible user(s)`)
+  }
+
   for (const { userId } of eligibleUsers) {
     // Skip users who already captured today
     const captured = await hasUserCapturedMomentToday(userId)
@@ -147,7 +153,8 @@ export async function sendMomentNotifications(): Promise<void> {
       })
       .returning({ id: schema.notifications.id })
 
-    // Send push notification
+    // Send push notification. Log outcomes — never swallow: a silent
+    // failure here is indistinguishable from "scheduler never fired".
     notifyUser(userId, {
       title: config.instanceName || 'Collct',
       body,
@@ -159,7 +166,19 @@ export async function sendMomentNotifications(): Promise<void> {
         type: 'moment',
         status: 'active',
       },
-    }).catch(() => {})
+    }).then((results) => {
+      if (results.length === 0) {
+        console.warn(`[moments] Start push to user ${userId}: no subscriptions, skipped`)
+        return
+      }
+      for (const r of results) {
+        if (r.status !== 'sent' && r.status !== 'deleted') {
+          console.warn(`[moments] Start push to user ${userId} ${r.status}: ${r.error || 'unknown error'} (${r.platform} ...${r.endpoint.slice(-8)})`)
+        }
+      }
+    }).catch((err) => {
+      console.error(`[moments] Start push dispatch failed for user ${userId}:`, err?.message || err)
+    })
   }
 }
 
@@ -196,8 +215,11 @@ export async function sendMomentExpiryNotifications(): Promise<boolean> {
     )
 
   if (activeNotifications.length === 0) {
+    console.log('[moments] Expiry push: no active moment notifications; nothing to send')
     return true
   }
+
+  console.log(`[moments] Expiry push: sending to ${activeNotifications.length} user(s) with active notifications`)
 
   const body = "You missed today's moment, but you can still post to the feed like usual"
 
@@ -208,7 +230,8 @@ export async function sendMomentExpiryNotifications(): Promise<boolean> {
       .set({ isRead: true })
       .where(eq(schema.notifications.id, n.id))
 
-    // Send expiry push (same tag = replaces countdown notification)
+    // Send expiry push (same tag = replaces countdown notification).
+    // Log outcomes — never swallow (see start push above).
     notifyUser(n.userId, {
       title: config.instanceName || 'Collct',
       body,
@@ -220,7 +243,19 @@ export async function sendMomentExpiryNotifications(): Promise<boolean> {
         type: 'moment',
         status: 'expired',
       },
-    }).catch(() => {})
+    }).then((results) => {
+      if (results.length === 0) {
+        console.warn(`[moments] Expiry push to user ${n.userId}: no subscriptions, skipped`)
+        return
+      }
+      for (const r of results) {
+        if (r.status !== 'sent' && r.status !== 'deleted') {
+          console.warn(`[moments] Expiry push to user ${n.userId} ${r.status}: ${r.error || 'unknown error'} (${r.platform} ...${r.endpoint.slice(-8)})`)
+        }
+      }
+    }).catch((err) => {
+      console.error(`[moments] Expiry push dispatch failed for user ${n.userId}:`, err?.message || err)
+    })
   }
 
   return true

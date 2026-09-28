@@ -98,6 +98,25 @@
               Disable
             </UButton>
           </div>
+
+          <div v-if="isPushGranted" class="flex items-center gap-3 p-3 rounded-lg border border-(--ui-border)">
+            <UIcon name="i-lucide-send" class="w-5 h-5 shrink-0 text-muted" />
+            <div class="flex-1">
+              <p class="text-sm font-medium">Test push delivery</p>
+              <p class="text-xs text-muted mt-0.5">
+                {{ testPushResult || 'Send yourself a test notification to verify delivery without waiting for an event.' }}
+              </p>
+            </div>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="xs"
+              :loading="testingPush"
+              @click="sendTestPush"
+            >
+              Send test
+            </UButton>
+          </div>
         </div>
       </template>
 
@@ -358,6 +377,31 @@ async function enableNotifications() {
 async function disableNotifications() {
   await unsubscribe()
   toast.add({ title: 'Notifications disabled', color: 'success' })
+}
+
+const testingPush = ref(false)
+const testPushResult = ref<string | null>(null)
+
+async function sendTestPush() {
+  testingPush.value = true
+  testPushResult.value = null
+  try {
+    const res = await $fetch<{ results: Array<{ platform: string; status: string; error: string | null }> }>('/api/notifications/test', {
+      method: 'POST',
+    })
+    if (!res.results.length) {
+      testPushResult.value = 'No subscriptions found for this account.'
+    } else {
+      const failed = res.results.filter(r => r.status !== 'sent' && r.status !== 'deleted')
+      testPushResult.value = failed.length
+        ? `Delivery issue: ${failed.map(r => `${r.platform}: ${r.status}${r.error ? ` (${r.error})` : ''}`).join('; ')}`
+        : `Test push sent to ${res.results.length} subscription(s) — check your device.`
+    }
+  } catch {
+    testPushResult.value = 'Test failed — are notifications enabled on this instance?'
+  } finally {
+    testingPush.value = false
+  }
 }
 
 // TOTP

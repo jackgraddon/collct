@@ -2112,6 +2112,35 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ---
 
+### Send Test Push Notification
+
+**Endpoint:** `POST /notifications/test`
+
+**Description:** Send yourself a test push notification. Unlike event pushes (fire-and-forget), this returns the per-endpoint delivery results — use it to distinguish "timing never fired" from "delivery failed" when debugging. Endpoint suffixes (last 8 chars) are returned instead of full URLs.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "tested": true,
+  "results": [
+    { "platform": "web", "status": "sent", "error": null, "endpointSuffix": "abc123xy" }
+  ]
+}
+```
+
+- `status` per endpoint: `"sent"`, `"deleted"` (dead subscription pruned), `"failed"` (with `error`), or `"skipped"` (no sender for platform).
+- Empty `results` means the account has no subscriptions.
+
+**Status codes:**
+- `200` — success (even if individual deliveries failed — check `results`)
+- `401` — not authenticated
+- `403` — notifications disabled on this instance
+
+---
+
 ### Push Notification Payload Format
 
 The server sends notifications to all of a user's subscriptions, transforming the message for each platform.
