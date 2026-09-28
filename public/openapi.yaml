@@ -1458,7 +1458,10 @@ components:
         isRead: { type: boolean }
         photoId: { type: integer, nullable: true }
         commentId: { type: integer, nullable: true }
-        groupId: { type: integer, nullable: true }
+        groupId:
+          type: array
+          items: { type: integer }
+          description: Group IDs (populated on group_join). Always present; [] when none.
         createdAt: { type: string, format: date-time }
         photoUrl: { type: string, nullable: true, description: "Stable image URL (/api/blob/...) for the associated photo, if applicable" }
         actor:

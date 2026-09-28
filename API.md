@@ -1864,7 +1864,7 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
       "isRead": false,
       "photoId": 42,
       "commentId": null,
-      "groupId": 10,
+      "groupId": [],
       "createdAt": "2026-07-15T12:00:00.000Z",
       "actor": {
         "id": 2,
@@ -1880,6 +1880,7 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
 ```
 
 - `type` — notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"`.
+- `groupId` — array of group IDs (`[]` when none). Populated on `group_join` notifications; empty for likes, comments, posts, and moments. Always an array, never null.
 - `photoUrl` — stable blob URL for the associated photo thumbnail, if applicable.
 - `nextCursor` — notification ID to pass as `before` for the next page. `null` when there are no more results.
 
@@ -2194,7 +2195,7 @@ Uses [Declarative Web Push](https://w3c.github.io/push-api/#declarative-push-mes
 | Field | Type | Description |
 |-------|------|-------------|
 | `notificationId` | number | The DB notification ID. Used by clients for in-app dismiss handling. |
-| `type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"` |
+| `type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"`. Self test-pushes carry `"test"`. Clients should degrade gracefully on unknown types rather than failing the whole payload. |
 | `photoId` | number | Photo ID, if applicable |
 | `groupId` | number | Group ID, if applicable |
 | `status` | string | Moment pushes only: `"active"` (window open) or `"expired"` (window closed). Use to show/hide capture UI. |
