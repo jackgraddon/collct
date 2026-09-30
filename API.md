@@ -712,7 +712,7 @@ Note: `avatarUrl` is a stable `/api/blob/...` path with immutable caching. It is
 
 **Endpoint:** `PATCH /user/update`
 
-**Description:** Update the authenticated user's name and email. Partial update — send only the fields to change. At least one field is required.
+**Description:** Update the authenticated user's name, email, and username. Partial update — send only the fields to change. At least one field is required.
 
 **Authentication:** Required
 
@@ -721,12 +721,14 @@ Note: `avatarUrl` is a stable `/api/blob/...` path with immutable caching. It is
 ```json
 {
   "name": "Jack Graddon",
-  "email": "newemail@example.com"
+  "email": "newemail@example.com",
+  "username": "jack"
 }
 ```
 
 - `name` (optional) — 1–100 characters
 - `email` (optional) — valid email, max 255 characters
+- `username` (optional) — 1–30 characters, letters, numbers, dots, underscores, and hyphens only. Must be unique.
 
 **Response:**
 
@@ -741,6 +743,7 @@ The session cookie is resealed with the updated values.
 - `400` — invalid input, or no fields to update
 - `401` — not authenticated
 - `404` — user not found
+- `409` — username is already taken
 
 ---
 

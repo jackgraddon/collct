@@ -31,6 +31,9 @@
               <UFormField label="Full Name" name="name">
                 <UInput v-model="accountState.name" class="w-full" />
               </UFormField>
+              <UFormField label="Username" name="username" hint="Letters, numbers, dots, underscores, hyphens">
+                <UInput v-model="accountState.username" maxlength="30" class="w-full" />
+              </UFormField>
               <UFormField label="Email" name="email">
                 <UInput v-model="accountState.email" type="email" class="w-full" />
               </UFormField>
@@ -504,6 +507,7 @@ const uploadingAvatar = ref(false)
 
 const accountState = reactive({
   name: user.value?.name ?? '',
+  username: user.value?.username ?? '',
   email: user.value?.email ?? '',
   avatarUrl: user.value?.avatarUrl ?? '',
 })
@@ -540,6 +544,7 @@ async function onAvatarChange(e: Event) {
 
 function onResetAccount() {
   accountState.name = user.value?.name ?? ''
+  accountState.username = user.value?.username ?? ''
   accountState.email = user.value?.email ?? ''
   accountState.avatarUrl = user.value?.avatarUrl ?? ''
 }
@@ -551,6 +556,7 @@ async function onSaveAccount() {
       method: 'PATCH',
       body: {
         name: accountState.name,
+        username: accountState.username || undefined,
         email: accountState.email,
         avatarUrl: accountState.avatarUrl || null,
       },
