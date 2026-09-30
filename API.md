@@ -1402,6 +1402,31 @@ Returns the stable avatar URL (same form as `GET /user/me`). The previous avatar
 
 ---
 
+### Delete a Comment
+
+**Endpoint:** `DELETE /comments/:id`
+
+**Description:** Delete a comment. Only the comment author can delete. Reactions on the comment are removed automatically. Notifications referencing the comment keep working via their photo link.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid comment ID
+- `401` — not authenticated
+- `403` — not the comment author
+- `404` — comment not found
+
+---
+
 ### Toggle Comment Reaction
 
 **Endpoint:** `POST /comments/:id/reactions`
