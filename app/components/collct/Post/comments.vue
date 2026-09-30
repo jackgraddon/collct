@@ -80,6 +80,7 @@ const commentHistoryItem = ref<CommentItem | null>(null)
 function startEditComment(comment: CommentItem) {
   editingCommentId.value = comment.id
   editedCommentBody.value = comment.body
+  confirmDeleteId.value = null
 }
 
 function cancelEditComment() {
@@ -110,6 +111,29 @@ async function saveComment(commentId: number) {
     toast.add({ title: 'Could not update comment', color: 'error', icon: 'i-lucide-triangle-alert' })
   } finally {
     savingCommentId.value = null
+  }
+}
+
+// ─── Comment deletion (two-tap confirm, author-only) ─────────────────────────
+const confirmDeleteId = ref<number | null>(null)
+const deletingCommentId = ref<number | null>(null)
+
+async function deleteComment(commentId: number) {
+  if (confirmDeleteId.value !== commentId) {
+    confirmDeleteId.value = commentId
+    return
+  }
+  confirmDeleteId.value = null
+  deletingCommentId.value = commentId
+  try {
+    await $fetch(`/api/comments/${commentId}`, { method: 'DELETE' })
+    commentList.value = commentList.value.filter(c => c.id !== commentId)
+    if (editingCommentId.value === commentId) cancelEditComment()
+    toast.add({ title: 'Comment deleted', color: 'success', icon: 'i-lucide-circle-check' })
+  } catch {
+    toast.add({ title: 'Could not delete comment', color: 'error', icon: 'i-lucide-triangle-alert' })
+  } finally {
+    deletingCommentId.value = null
   }
 }
 
@@ -297,13 +321,21 @@ function totalReactions(counts: ReactionCounts) {
           <template v-if="editingCommentId !== comment.id">
             <p class="text-sm text-default mt-0.5 break-words">{{ comment.body }}</p>
 
-            <button
-              v-if="sessionUserId === comment.user.id"
-              class="text-xs text-primary hover:text-primary/80 transition-colors mt-0.5"
-              @click="startEditComment(comment)"
-            >
-              Edit
-            </button>
+            <div v-if="sessionUserId === comment.user.id" class="flex items-center gap-2 mt-0.5">
+              <button
+                class="text-xs text-primary hover:text-primary/80 transition-colors"
+                @click="startEditComment(comment)"
+              >
+                Edit
+              </button>
+              <button
+                class="text-xs text-muted hover:text-error transition-colors"
+                :disabled="deletingCommentId === comment.id"
+                @click="deleteComment(comment.id)"
+              >
+                {{ deletingCommentId === comment.id ? 'Deleting…' : confirmDeleteId === comment.id ? 'Confirm delete?' : 'Delete' }}
+              </button>
+            </div>
           </template>
 
           <!-- Comment edit mode -->
