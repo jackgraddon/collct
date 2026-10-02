@@ -36,6 +36,13 @@
       "when": 1788490785056,
       "tag": "0004_little_nekra",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790980981238,
+      "tag": "0005_lethal_cannonball",
+      "breakpoints": true
     }
   ]
 }

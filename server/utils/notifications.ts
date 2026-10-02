@@ -11,6 +11,14 @@ interface CreateNotificationData {
   groupIds?: number[]
 }
 
+const PREF_COLUMNS = {
+  like: schema.users.notifyLike,
+  comment: schema.users.notifyComment,
+  group_join: schema.users.notifyGroupJoin,
+  new_post: schema.users.notifyNewPost,
+  moment: schema.users.notifyMoment,
+} as const
+
 function generateNotificationTag(type: string, data: CreateNotificationData): string | null {
   switch (type) {
     case 'like':
@@ -36,6 +44,15 @@ function generateNotificationTag(type: string, data: CreateNotificationData): st
  */
 export async function createNotification(data: CreateNotificationData) {
   if (data.userId === data.actorId) return
+
+  // Per-type preference: a disabled type suppresses the notification
+  // entirely (no in-app row, no push).
+  const [pref] = await db
+    .select({ enabled: PREF_COLUMNS[data.type] })
+    .from(schema.users)
+    .where(eq(schema.users.id, data.userId))
+    .limit(1)
+  if (pref && pref.enabled === false) return
 
   if (data.type === 'like' && data.photoId) {
     await createOrUpdateLikeNotification(data)

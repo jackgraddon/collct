@@ -12,6 +12,12 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   lastLoginAt: timestamp('last_login_at', { mode: 'date' }),
   toursCompleted: text('tours_completed').default('[]'),
+  // Per-type notification preferences (full suppression: no push, no in-app row)
+  notifyLike: boolean('notify_like').notNull().default(true),
+  notifyComment: boolean('notify_comment').notNull().default(true),
+  notifyGroupJoin: boolean('notify_group_join').notNull().default(true),
+  notifyNewPost: boolean('notify_new_post').notNull().default(true),
+  notifyMoment: boolean('notify_moment').notNull().default(true),
 });
 
 // Security and Authentication

@@ -121,11 +121,18 @@ export async function sendMomentNotifications(): Promise<void> {
   const remainingMinutes = Math.ceil(remainingSeconds / 60)
 
   // Find all users who are members of at least one group with momentsEnabled
+  // and have moment notifications enabled
   const eligibleUsers = await db
     .selectDistinct({ userId: schema.groupMembers.userId })
     .from(schema.groupMembers)
     .innerJoin(schema.groups, eq(schema.groupMembers.groupId, schema.groups.id))
-    .where(eq(schema.groups.momentsEnabled, true))
+    .innerJoin(schema.users, eq(schema.users.id, schema.groupMembers.userId))
+    .where(
+      and(
+        eq(schema.groups.momentsEnabled, true),
+        eq(schema.users.notifyMoment, true),
+      ),
+    )
 
   if (eligibleUsers.length === 0) {
     console.warn('[moments] Start push: no eligible users in moments-enabled groups; nothing to send')

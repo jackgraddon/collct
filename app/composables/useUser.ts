@@ -14,6 +14,13 @@ export function useUser() {
       email: s.email,
       avatarUrl: resolved?.avatarUrl ?? null,
       hasSeenOobe: resolved?.hasSeenOobe ?? false,
+      notificationPrefs: resolved?.notificationPrefs ?? {
+        like: true,
+        comment: true,
+        groupJoin: true,
+        newPost: true,
+        moment: true,
+      },
     }
   })
 

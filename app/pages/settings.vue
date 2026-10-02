@@ -60,7 +60,7 @@
 
       <template #notifications>
         <div class="my-4 space-y-4">
-          <p class="text-sm text-muted">Control whether you receive push notifications when friends interact with your photos.</p>
+          <p class="text-sm text-muted">Control which notifications you receive — push and in-app — and test delivery.</p>
 
           <div class="flex items-center gap-3 p-3 rounded-lg border border-(--ui-border)">
             <UIcon
@@ -119,6 +119,25 @@
             >
               Send test
             </UButton>
+          </div>
+
+          <div class="p-3 rounded-lg border border-(--ui-border)">
+            <p class="text-sm font-medium">Notify me about</p>
+            <p class="text-xs text-muted mt-0.5 mb-1">Turning a type off suppresses both the push and the in-app entry.</p>
+            <div
+              v-for="t in NOTIF_TYPES"
+              :key="t.key"
+              class="flex items-center justify-between gap-3 py-1.5"
+            >
+              <div class="flex-1">
+                <p class="text-sm">{{ t.label }}</p>
+                <p class="text-xs text-muted">{{ t.hint }}</p>
+              </div>
+              <USwitch
+                :model-value="notifPrefs[t.key]"
+                @update:model-value="(v) => setNotifPref(t.key, v)"
+              />
+            </div>
           </div>
         </div>
       </template>
@@ -380,6 +399,44 @@ async function enableNotifications() {
 async function disableNotifications() {
   await unsubscribe()
   toast.add({ title: 'Notifications disabled', color: 'success' })
+}
+
+// Per-type notification preferences (push + in-app). A disabled type
+// suppresses new notifications of that type entirely.
+type NotifPrefKey = 'like' | 'comment' | 'groupJoin' | 'newPost' | 'moment'
+
+const NOTIF_TYPES: Array<{ key: NotifPrefKey; label: string; hint: string }> = [
+  { key: 'like', label: 'Likes', hint: 'When someone likes your photo.' },
+  { key: 'comment', label: 'Comments', hint: 'When someone comments on your photo.' },
+  { key: 'groupJoin', label: 'Group joins', hint: 'When someone joins your group.' },
+  { key: 'newPost', label: 'New posts', hint: 'When friends post new photos.' },
+  { key: 'moment', label: 'Moments', hint: 'Daily capture prompts and reminders.' },
+]
+
+const notifPrefs = reactive<Record<NotifPrefKey, boolean>>({
+  like: true,
+  comment: true,
+  groupJoin: true,
+  newPost: true,
+  moment: true,
+})
+
+watch(() => user.value?.notificationPrefs, (prefs) => {
+  if (prefs) Object.assign(notifPrefs, prefs)
+}, { immediate: true })
+
+async function setNotifPref(key: NotifPrefKey, value: boolean) {
+  const prev = notifPrefs[key]
+  notifPrefs[key] = value
+  try {
+    await $fetch('/api/user/notification-prefs', {
+      method: 'PATCH',
+      body: { [key]: value },
+    })
+  } catch {
+    notifPrefs[key] = prev
+    toast.add({ title: 'Could not update preference', color: 'error' })
+  }
 }
 
 const testingPush = ref(false)

@@ -498,6 +498,36 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { $ref: "#/components/responses/Conflict" }
 
+  /user/notification-prefs:
+    patch:
+      summary: Update notification preferences
+      description: Partial update — send only the keys to change. A disabled type suppresses both push and in-app entries for new notifications of that type.
+      tags: [User]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                like: { type: boolean }
+                comment: { type: boolean }
+                groupJoin: { type: boolean }
+                newPost: { type: boolean }
+                moment: { type: boolean }
+      responses:
+        "200":
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  notificationPrefs: { $ref: "#/components/schemas/NotificationPrefs" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /user/avatar:
     patch:
       summary: Upload avatar
@@ -1315,6 +1345,17 @@ components:
         username: { type: string }
         avatarUrl: { type: string, nullable: true }
         hasSeenOobe: { type: boolean }
+        notificationPrefs: { $ref: "#/components/schemas/NotificationPrefs" }
+
+    NotificationPrefs:
+      type: object
+      description: Per-type notification preferences. A disabled type suppresses both push and in-app entries for new notifications.
+      properties:
+        like: { type: boolean }
+        comment: { type: boolean }
+        groupJoin: { type: boolean }
+        newPost: { type: boolean }
+        moment: { type: boolean }
 
     UserPublic:
       type: object

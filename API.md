@@ -696,7 +696,14 @@ A session cookie is set with recovery scope. The client should then call `POST /
   "name": "Jack",
   "username": "jack",
   "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp",
-  "hasSeenOobe": false
+  "hasSeenOobe": false,
+  "notificationPrefs": {
+    "like": true,
+    "comment": true,
+    "groupJoin": true,
+    "newPost": true,
+    "moment": true
+  }
 }
 ```
 
@@ -744,6 +751,48 @@ The session cookie is resealed with the updated values.
 - `401` — not authenticated
 - `404` — user not found
 - `409` — username is already taken
+
+---
+
+### Update Notification Preferences
+
+**Endpoint:** `PATCH /user/notification-prefs`
+
+**Description:** Update per-type notification preferences. Partial update — send only the keys to change. A disabled type suppresses both the push and the in-app entry for new notifications of that type (applies going forward; already-created rows are untouched).
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "like": true,
+  "comment": true,
+  "groupJoin": true,
+  "newPost": true,
+  "moment": false
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "notificationPrefs": {
+    "like": true,
+    "comment": true,
+    "groupJoin": true,
+    "newPost": true,
+    "moment": false
+  }
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid input, or no fields to update
+- `401` — not authenticated
 
 ---
 

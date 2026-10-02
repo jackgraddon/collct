@@ -13,7 +13,14 @@ export default defineEventHandler(async (event) => {
 
   const dbUser = await db.query.users.findFirst({
     where: eq(schema.users.id, user.id),
-    columns: { toursCompleted: true },
+    columns: {
+      toursCompleted: true,
+      notifyLike: true,
+      notifyComment: true,
+      notifyGroupJoin: true,
+      notifyNewPost: true,
+      notifyMoment: true,
+    },
   })
 
   const toursCompleted: string[] = dbUser?.toursCompleted
@@ -26,5 +33,12 @@ export default defineEventHandler(async (event) => {
     username: user.username,
     avatarUrl,
     hasSeenOobe: toursCompleted.includes('oobe-v1'),
+    notificationPrefs: {
+      like: dbUser?.notifyLike ?? true,
+      comment: dbUser?.notifyComment ?? true,
+      groupJoin: dbUser?.notifyGroupJoin ?? true,
+      newPost: dbUser?.notifyNewPost ?? true,
+      moment: dbUser?.notifyMoment ?? true,
+    },
   }
 })
