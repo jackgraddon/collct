@@ -4,12 +4,14 @@ import { db, schema } from '~~/server/utils/db'
 
 const KEYS = ['like', 'comment', 'groupJoin', 'newPost', 'moment'] as const
 
-const COLUMNS = {
-  like: schema.users.notifyLike,
-  comment: schema.users.notifyComment,
-  groupJoin: schema.users.notifyGroupJoin,
-  newPost: schema.users.notifyNewPost,
-  moment: schema.users.notifyMoment,
+// TypeScript property names (NOT DB column names) — drizzle's .set() matches
+// keys against the table definition, and DB names silently produce an empty SET.
+const TS_COLUMNS = {
+  like: 'notifyLike',
+  comment: 'notifyComment',
+  groupJoin: 'notifyGroupJoin',
+  newPost: 'notifyNewPost',
+  moment: 'notifyMoment',
 } as const
 
 /**
@@ -29,9 +31,15 @@ export default defineEventHandler(async (event) => {
     moment: z.boolean().optional(),
   }).parse)
 
-  const updates: Record<string, boolean> = {}
+  const updates: {
+    notifyLike?: boolean
+    notifyComment?: boolean
+    notifyGroupJoin?: boolean
+    notifyNewPost?: boolean
+    notifyMoment?: boolean
+  } = {}
   for (const key of KEYS) {
-    if (body[key] !== undefined) updates[COLUMNS[key].name] = body[key] as boolean
+    if (body[key] !== undefined) updates[TS_COLUMNS[key]] = body[key]
   }
 
   if (Object.keys(updates).length === 0) {
