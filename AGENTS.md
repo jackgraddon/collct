@@ -1,0 +1,23 @@
+# Agent Instructions
+
+## Database (NuxtHub)
+
+- **Schema file**: `server/db/schema.ts` (and `server/db/schema/*.ts`)
+- **Never write manual SQL migrations** in `server/db/migrations/`
+- **Always use NuxtHub CLI** for schema changes:
+  1. Edit `server/db/schema.ts`
+  2. Run `npx nuxt db generate` — generates migration in `server/db/migrations/postgresql/`
+  3. Run `npx nuxt db migrate` — applies to local DB (or `npx nuxt dev` auto-applies)
+- **On existing production DB**: apply schema changes via direct SQL (`ALTER TABLE`) since NuxtHub baseline migrations recreate all tables
+- **Always commit** `server/db/migrations/postgresql/` — needed for Docker builds (GitHub Actions can't access gitignored files)
+- **Access DB**: `import { db, schema } from '~~/server/utils/db'`
+
+## Environment Variables
+
+- **Documentation**: See `VARS.md` for all env vars with defaults and descriptions
+- **Source of truth**: `server/utils/config.ts` (runtime config) and `nuxt.config.ts` (build-time config)
+- **When adding new env vars**: Update `VARS.md`, `.env.example`, and `server/utils/config.ts`
+
+## Build
+
+- Run `npx nuxi build` to verify before committing

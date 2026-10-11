@@ -1,0 +1,53 @@
+# =============================================================================
+# Collct — Example Docker Compose (PostgreSQL)
+# =============================================================================
+# Quick-start for self-hosted deployment.
+#
+# 1. cp .env.example .env   (edit with your secrets)
+# 2. docker compose -f examples/docker-compose.yml up -d
+#
+# For production, use docker/docker-compose.prod.yml instead.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - collct-pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: collct
+      POSTGRES_USER: collct
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-collct}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collct -d collct"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://collct:${POSTGRES_PASSWORD:-collct}@db:5432/collct
+      COLLCT_BLOB_DIR: /app/data/blobs
+      NUXT_SESSION_PASSWORD: ${NUXT_SESSION_PASSWORD:-change-me-in-production}
+      CRON_SECRET: ${CRON_SECRET}
+      COLLCT_ALLOW_REGISTRATION: ${COLLCT_ALLOW_REGISTRATION:-yes}
+      COLLCT_PUBLIC_GROUP_ENABLED: ${COLLCT_PUBLIC_GROUP_ENABLED:-true}
+      COLLCT_INSTANCE_NAME: ${COLLCT_INSTANCE_NAME:-Collct}
+      COLLCT_SESSION_SECURE: ${COLLCT_SESSION_SECURE:-true}
+      COLLCT_NOTIFICATIONS_ENABLED: ${COLLCT_NOTIFICATIONS_ENABLED:-true}
+      COLLCT_COMMENTS_ENABLED: ${COLLCT_COMMENTS_ENABLED:-true}
+    volumes:
+      - collct-blobs:/app/data/blobs
+
+volumes:
+  collct-pgdata:
+  collct-blobs:

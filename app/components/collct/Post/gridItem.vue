@@ -1,7 +1,7 @@
 <template>
   <div
     class="relative rounded-lg border-4 overflow-hidden cursor-pointer"
-    :class="activeBorder"
+    :class="postData.isMoment ? momentBorder : activeBorder"
     @click="navigateToPost"
   >
     <USkeleton
@@ -9,14 +9,12 @@
       class="absolute inset-0 w-full h-full min-h-[120px]"
     />
 
-    <NuxtImg
+    <img
       ref="imgEl"
       :src="postData.url"
       :alt="postData.caption ?? `Photo by ${postData.user.name}`"
       width="400"
       height="400"
-      sizes="sm:120px md:200px lg:300px"
-      format="webp"
       loading="lazy"
       decoding="async"
       class="w-full h-auto block hover:scale-[1.05] transition-[300ms]"
@@ -40,6 +38,16 @@
       :groups="postData.groups"
       class="absolute bottom-2 left-2 right-2"
     />
+
+    <!-- Like count overlay (if synced from detail page) -->
+    <div
+      v-if="postData.isLiked"
+      class="absolute top-2 right-2 z-10"
+    >
+      <div class="w-6 h-6 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center">
+        <UIcon name="i-lucide-heart" class="w-3.5 h-3.5 fill-current text-red-500" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -62,9 +70,18 @@ const activeBorder = computed(() => {
   return themeBorders[colorMode.value] || themeBorders.light
 })
 
+const momentBorders: Record<string, string> = {
+  light: 'border-jungle-teal-400',
+  dark: 'border-jungle-teal-500',
+}
+
+const momentBorder = computed(() => {
+  return momentBorders[colorMode.value] || momentBorders.light
+})
+
 function navigateToPost() {
-  const el = imgEl.value?.$el as HTMLElement | undefined
-  const thumbnailUrl = (el as HTMLImageElement | undefined)?.currentSrc || props.postData.url
+  const el = imgEl.value as HTMLImageElement | undefined
+  const thumbnailUrl = el?.currentSrc || props.postData.url
   const isSafari = navigator.userAgent.includes('Safari') && !navigator.userAgent.includes('Chrome')
   if (el && document.startViewTransition && !isSafari) {
     el.style.viewTransitionName = `photo-${props.postData.id}`

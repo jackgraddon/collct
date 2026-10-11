@@ -12,6 +12,13 @@ export interface AdminConfig {
   commentsEnabled: boolean
   offlineModeEnabled: boolean
   appUrl: string | null
+  momentsEnabled: boolean
+  momentsMode: 'external' | 'internal'
+  momentsWindowStart: string
+  momentsWindowEnd: string
+  momentsCaptureDuration: number
+  momentsAllowPostToAll: boolean
+  momentsAllowLibraryFallback: boolean
 }
 
 export const getAdminConfig = (): AdminConfig => {
@@ -33,5 +40,12 @@ export const getAdminConfig = (): AdminConfig => {
     commentsEnabled: process.env.COLLCT_COMMENTS_ENABLED !== 'false',
     offlineModeEnabled: process.env.COLLCT_OFFLINE_MODE_ENABLED !== 'false',
     appUrl: process.env.COLLCT_APP_URL || null,
+    momentsEnabled: process.env.COLLCT_MOMENTS_ENABLED === 'true',
+    momentsMode: process.env.COLLCT_MOMENTS_MODE === 'internal' ? 'internal' : 'external',
+    momentsWindowStart: process.env.COLLCT_MOMENTS_WINDOW_START || '18:00',
+    momentsWindowEnd: process.env.COLLCT_MOMENTS_WINDOW_END || '20:00',
+    momentsCaptureDuration: parseInt(process.env.COLLCT_MOMENTS_CAPTURE_DURATION || '300', 10),
+    momentsAllowPostToAll: process.env.COLLCT_MOMENTS_ALLOW_POST_TO_ALL !== 'false',
+    momentsAllowLibraryFallback: process.env.COLLCT_MOMENTS_ALLOW_LIBRARY_FALLBACK === 'true',
   }
 }

@@ -1,9 +1,11 @@
 export const usePushNotifications = () => {
   const config = useRuntimeConfig()
-  const vapidPublicKey = config.public.vapidPublicKey
 
   const DISMISS_KEY = 'collct-push-prompt-dismissed'
   const DISMISS_DAYS = 7
+  // Key the current subscription was created with. Compared against the
+  // server key on init so VAPID rotations self-heal via resubscribe.
+  const SUBSCRIBED_KEY = 'collct-vapid-key'
 
   const isSupported = computed(() => {
     return import.meta.client
@@ -15,9 +17,25 @@ export const usePushNotifications = () => {
   const isSubscribed = ref(false)
   const permission = ref<NotificationPermission>('default')
   const dismissed = ref(false)
+  const keyAvailable = ref(false)
+
+  /**
+   * Resolve the VAPID public key: baked-in runtime config if present,
+   * otherwise fetched live from the server (keys are auto-generated and
+   * DB-backed since the server no longer bakes them into the build).
+   */
+  async function getServerKey(): Promise<string | null> {
+    if (config.public.vapidPublicKey) return config.public.vapidPublicKey as string
+    try {
+      const res = await $fetch<{ vapidPublicKey: string }>('/api/notifications/vapid-key')
+      return res?.vapidPublicKey || null
+    } catch {
+      return null
+    }
+  }
 
   const shouldPrompt = computed(() => {
-    if (!isSupported.value || !vapidPublicKey) return false
+    if (!isSupported.value || !keyAvailable.value) return false
     if (permission.value === 'denied') return false
     if (permission.value === 'granted') return false
     if (dismissed.value) return false
@@ -61,16 +79,24 @@ export const usePushNotifications = () => {
   }
 
   async function subscribe() {
-    if (!isSupported.value || !vapidPublicKey) return
+    if (!isSupported.value) return
 
     permission.value = Notification.permission
     if (permission.value !== 'granted') return
+
+    const vapidPublicKey = await getServerKey()
+    if (!vapidPublicKey) {
+      console.warn('[push] No VAPID key available; skipping subscribe')
+      return
+    }
+    keyAvailable.value = true
 
     try {
       const registration = await navigator.serviceWorker.ready
       const existing = await registration.pushManager.getSubscription()
 
       if (existing) {
+        localStorage.setItem(SUBSCRIBED_KEY, vapidPublicKey)
         isSubscribed.value = true
         return existing
       }
@@ -85,11 +111,21 @@ export const usePushNotifications = () => {
         body: subscription.toJSON(),
       })
 
+      localStorage.setItem(SUBSCRIBED_KEY, vapidPublicKey)
       isSubscribed.value = true
       return subscription
     } catch (err) {
       console.error('[push] Subscribe failed:', err)
     }
+  }
+
+  async function removeSubscription(registration: ServiceWorkerRegistration, subscription: PushSubscription) {
+    await $fetch('/api/notifications/unsubscribe', {
+      method: 'POST',
+      body: { endpoint: subscription.endpoint },
+    }).catch(() => {})
+    await subscription.unsubscribe().catch(() => {})
+    isSubscribed.value = false
   }
 
   async function unsubscribe() {
@@ -100,13 +136,7 @@ export const usePushNotifications = () => {
       const subscription = await registration.pushManager.getSubscription()
 
       if (subscription) {
-        await $fetch('/api/notifications/unsubscribe', {
-          method: 'POST',
-          body: { endpoint: subscription.endpoint },
-        })
-
-        await subscription.unsubscribe()
-        isSubscribed.value = false
+        await removeSubscription(registration, subscription)
       }
     } catch (err) {
       console.error('[push] Unsubscribe failed:', err)
@@ -123,8 +153,30 @@ export const usePushNotifications = () => {
     try {
       const registration = await navigator.serviceWorker.ready
       const subscription = await registration.pushManager.getSubscription()
-      isSubscribed.value = !!subscription
       permission.value = Notification.permission
+      if (!subscription) {
+        isSubscribed.value = false
+        return
+      }
+
+      // Detect server VAPID rotation: the subscription is bound to the old
+      // key and will never deliver again — drop it and resubscribe.
+      // Skipped when the server key is unreachable (offline) to avoid
+      // destroying a working subscription on a failed fetch.
+      const serverKey = await getServerKey()
+      keyAvailable.value = !!serverKey
+      if (serverKey) {
+        const subscribedKey = localStorage.getItem(SUBSCRIBED_KEY)
+        if (subscribedKey && subscribedKey !== serverKey) {
+          console.log('[push] VAPID key changed; resubscribing')
+          await removeSubscription(registration, subscription)
+          await subscribe()
+          return
+        }
+        localStorage.setItem(SUBSCRIBED_KEY, serverKey)
+      }
+
+      isSubscribed.value = true
     } catch {
       // SW not ready yet
     }

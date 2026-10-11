@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 
 export default defineWebAuthnAuthenticateEventHandler({
   async storeChallenge(event, challenge, attemptId) {

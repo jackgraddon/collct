@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { desc, lt, gt, eq, and, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -24,6 +24,8 @@ export default defineEventHandler(async (event) => {
       caption: schema.photos.caption,
       captionEditedAt: schema.photos.captionEditedAt,
       blobPathname: schema.photos.blobPathname,
+      isMoment: schema.photos.isMoment,
+      momentCapturedAt: schema.photos.momentCapturedAt,
       createdAt: schema.photos.createdAt,
       user: {
         id: schema.users.id,

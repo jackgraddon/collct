@@ -42,7 +42,77 @@ Or if you prefer the manual way:
 4. Add Vercel Blob storage from the Vercel dashboard
 5. Deploy
 
-### Self-Hosted
+### Docker (Self-Hosted)
+
+Collct provides a multi-stage Dockerfile and Compose files for self-hosted deployment.
+
+#### Quick Start (PostgreSQL)
+
+```bash
+git clone https://github.com/jackgraddon/collct.git
+cd collct
+
+# Create your env file
+cp .env.example .env
+# Edit .env — at minimum, set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
+
+# Start with PostgreSQL
+docker compose -f docker/docker-compose.prod.yml up -d
+
+# View logs
+docker compose -f docker/docker-compose.prod.yml logs -f app
+```
+
+Open `http://localhost:3000`.
+
+#### Lightweight (SQLite)
+
+No external database required — data stored in a Docker volume:
+
+```bash
+docker compose -f docker/docker-compose.sqlite.yml up -d
+```
+
+#### Environment Variables
+
+At minimum, set these in your `.env` file:
+
+```bash
+NUXT_SESSION_PASSWORD=$(openssl rand -hex 32)  # Required
+CRON_SECRET=$(openssl rand -hex 32)            # For moments trigger
+```
+
+See [VARS.md](VARS.md) for all available variables.
+
+#### Health Check
+
+The app exposes a health check at `GET /api/health`:
+
+```json
+{ "ok": true, "timestamp": "2026-09-04T02:54:23.481Z" }
+```
+
+Docker health checks are configured automatically in the Dockerfile.
+
+#### Pre-built Image
+
+Images are built automatically on every release and published to both GHCR and Docker Hub:
+
+```bash
+# GitHub Container Registry (GHCR)
+docker pull ghcr.io/jackgraddon/collct:latest
+
+# Docker Hub
+docker pull jackgraddon/collct:latest
+```
+
+Pin to a specific version:
+
+```bash
+docker pull ghcr.io/jackgraddon/collct:1.1.0
+```
+
+### Bare Metal (Self-Hosted)
 
 Install Node.js 20+, then:
 
@@ -56,81 +126,127 @@ pnpm build
 pnpm start
 ```
 
-### Docker
+### Local Development
 
-You can also run Collct using Docker with our provided docker-compose.yml file:
+Requires Docker for the database.
 
 ```bash
-# Clone and navigate to the repository
 git clone https://github.com/jackgraddon/collct.git
 cd collct
+pnpm install
+cp .env.example .env
+# Edit .env — set NUXT_SESSION_PASSWORD (openssl rand -hex 32)
 
-# Start all services (database + app)
-docker-compose up -d
+# Start Postgres
+docker compose -f docker-compose.dev.yml up -d
 
-# Stop services
-docker-compose down
+# Run migrations
+pnpm db:migrate
+
+# (Optional) Seed test users, groups, and photos
+pnpm db:seed:dev
+
+# Start dev server
+pnpm dev
 ```
 
-The docker-compose.yml file sets up:
-- PostgreSQL database with persistent storage
-- Collct application container
-- All required environment variables configured
-- Data persistence for both database and application data
+The `pnpm dev` command automatically starts the Postgres container if it's not running.
 
-Important: You'll need to generate a session password before running the application:
-```bash
-openssl rand -hex 32
-```
-
-Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
-
-Open `http://localhost:3000`.
-
-### Docker
-
-You can run Collct using Docker with the image or with the docker-compose.yml file.
-
-Important: You'll need to generate a session password before running the application:
-```bash
-openssl rand -hex 32
-```
-
-Then set the `NUXT_SESSION_PASSWORD` environment variable in your .env file or directly in the compose file.
-
-#### Compose
-
-Using the docker-compose.yml file:
+If you have a `.env.local` with a `DATABASE_URL` pointing to a remote database (e.g., Neon), override it for local dev:
 
 ```bash
-# Clone and navigate to the repository
-git clone https://github.com/jackgraddon/collct.git
-cd collct
-
-# Start all services (database + app)
-docker-compose up -d
-
-# Stop services
-docker-compose down
+DATABASE_URL=postgresql://collct:collct@localhost:5432/collct pnpm dev
 ```
 
-The docker-compose.yml file sets up:
-- PostgreSQL database with persistent storage
-- Collct application container
-- All required environment variables configured
-- Data persistence for both database and application data
+Open `https://localhost:3000`.
 
-#### Image
+#### Available Scripts
 
-You can also use the image with your own deployment methods.
+| Script | Description |
+|--------|-------------|
+| `pnpm dev` | Start dev server (auto-starts Postgres) |
+| `pnpm build` | Production build |
+| `pnpm start` | Run production build |
+| `pnpm db:generate` | Generate Drizzle migration from schema changes |
+| `pnpm db:migrate` | Apply migrations to local Postgres |
+| `pnpm db:seed:dev` | Wipe and recreate test data (users, groups, photos) |
+| `npx nuxi typecheck` | Run TypeScript type checking |
+
+#### Project Structure
+
+```
+collct/
+├── app/                    # Client-side (Vue/Nuxt)
+│   ├── components/         # Vue components
+│   ├── composables/        # Vue composables (useFeed, usePushNotifications, etc.)
+│   ├── layouts/            # Page layouts
+│   ├── pages/              # Route pages
+│   └── utils/              # Client utilities
+├── server/                 # Server-side (Nitro)
+│   ├── api/                # API endpoints (auto-routed)
+│   ├── db/                 # Schema and migrations
+│   ├── middleware/          # Server middleware
+│   ├── tasks/              # Background tasks (moments, cleanup)
+│   └── utils/              # Server utilities (auth, config, push, blob)
+├── modules/                # Nuxt modules
+├── public/                 # Static assets
+├── shared/                 # Shared types and utilities
+├── docker/                 # Docker configs (Dockerfile, Compose, entrypoint)
+└── scripts/                # Build/dev scripts (seed, etc.)
+```
+
+#### Database Migrations
+
+When you change `server/db/schema.ts`:
 
 ```bash
-docker pull jackgraddon/collct:latest
+# 1. Generate the migration
+npx nuxt db generate
+
+# 2. Apply to local DB
+npx nuxt db migrate
+
+# 3. The migration file is gitignored — don't commit it
 ```
+
+For production (existing database), apply schema changes via direct SQL (`ALTER TABLE`) since NuxtHub baseline migrations recreate all tables.
+
+#### DevTools Panel
+
+When running `pnpm dev`, a **Dev Tools** tab appears in Nuxt DevTools (open with `Shift+Option+D` in the browser). It provides:
+
+- **One-click login** — Log in as `test1`, `test2`, or `test3` without needing a passkey
+- **Moments controls** — Open/close/reset the moment window, clear captured-today flags per user
+
+These endpoints are structurally excluded from production builds (the module's `setup()` returns early when `nuxt.options.dev` is false, so no routes are registered).
+
+#### Seed Script
+
+`pnpm db:seed:dev` wipes and recreates test data:
+
+| Resource | Count | Details |
+|----------|-------|---------|
+| Users | 3 | `test1`, `test2`, `test3` (no passwords — use DevTools login) |
+| Groups | 3 | "All Friends", "Close Friends", "Just Us" |
+| Photos | 16 | With likes and comments; images cached in `dev/seed-images/` |
+
+#### Code Conventions
+
+- **Server imports**: Use `~~/server/utils/db` for database access (not `@nuxthub/db` directly)
+- **Auto-imports**: Server utils in `server/utils/` are auto-imported — no need for explicit imports
+- **Env vars**: Document in `VARS.md` and `.env.example` when adding new ones
+- **Build check**: Run `npx nuxi build` before committing to verify no errors
 
 ## Configuration
 
-Collct is configured via environment variables. All variables (excluding one) are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions.
+Collct is configured via environment variables. All variables (excluding one) are optional and have sensible defaults. See [`.env.example`](.env.example) for the full list with descriptions, or [VARS.md](VARS.md) for detailed documentation.
+
+### Database
+
+- `DATABASE_URL` — PostgreSQL connection string (default: `postgresql://collct:collct@localhost:5432/collct`)
+- `DATABASE_TYPE` — `"postgresql"` (default) or `"sqlite"`. When `sqlite`, uses `SQLITE_PATH`.
+- `SQLITE_PATH` — Path to SQLite database file (default: `./data/collct.db`). Only used when `DATABASE_TYPE=sqlite`.
+- `COLLCT_BLOB_DIR` — Local directory for blob storage. Required for self-hosted (photos stored on disk instead of Vercel Blob).
 
 ### Registration & Access
 

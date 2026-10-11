@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
       color: schema.groups.color,
       isPublic: schema.groups.isPublic,
       ownerId: schema.groups.ownerId,
+      momentsEnabled: schema.groups.momentsEnabled,
       createdAt: schema.groups.createdAt,
       role: schema.groupMembers.role,
     })

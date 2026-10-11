@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 const route = useRoute()
 const id = Number(route.params.id)
+const feed = useFeed()
 
 // Instant — read preloaded data passed via route state from the grid
 const preloaded = ref<PostData | null>(import.meta.client ? (history.state as any).preloadedPost ?? null : null)
@@ -37,24 +38,43 @@ const formattedDate = computed(() => {
   return new Intl.DateTimeFormat('en-US', { dateStyle: 'long' }).format(parseSafeDate(post.value.createdAt))
 })
 
+const formattedCaptureTime = computed(() => {
+  if (!post.value?.momentCapturedAt) return ''
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(parseSafeDate(post.value.momentCapturedAt))
+})
+
 function formatEditDate(isoString: string) {
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
-  }).format(parseSafeDate(isoString))
+  }).format(new Date(isoString))
 }
 
-// ─── Delete ───────────────────────────────────────────────────────────────────
+// ─── Delete (optimistic) ──────────────────────────────────────────────────────
 const deleteModal = ref(false)
 const deleting = ref(false)
 
 async function confirmDelete() {
+  if (!post.value) return
+
   deleting.value = true
+  const deletedPost = { ...post.value }
+  const feedIndex = feed.findPostIndex(id)
+
+  // Optimistic: remove from feed immediately
+  feed.removePost(id)
+
   try {
     await $fetch(`/api/photos/${id}`, { method: 'DELETE' })
     toast.add({ title: 'Photo deleted', color: 'success', icon: 'i-lucide-circle-check' })
     router.push('/')
   } catch {
+    // Rollback: restore to feed
+    feed.restorePost(deletedPost, feedIndex >= 0 ? feedIndex : 0)
     toast.add({ title: 'Failed to delete photo', color: 'error', icon: 'i-lucide-triangle-alert' })
   } finally {
     deleting.value = false
@@ -77,16 +97,24 @@ async function fetchLikes() {
   const data = await $fetch<{ liked: boolean; count: number | null }>(`/api/photos/${id}/likes`)
   if (!liking.value) liked.value = data.liked
   likeCount.value = data.count
+
+  // Sync back to feed
+  feed.updatePost(id, { isLiked: data.liked, likeCount: data.count })
 }
 
 async function toggleLike() {
   if (!isLoggedIn.value || liking.value) return
   liking.value = true
 
+  const prevLiked = liked.value
+  const prevCount = likeCount.value
+
+  // Optimistic update
   liked.value = !liked.value
   if (likeCount.value !== null) {
     likeCount.value += liked.value ? 1 : -1
   }
+  feed.updatePost(id, { isLiked: liked.value, likeCount: likeCount.value })
 
   try {
     const result = await $fetch<{ liked: boolean; count: number | null }>(
@@ -95,11 +123,12 @@ async function toggleLike() {
     )
     liked.value = result.liked
     likeCount.value = result.count
+    feed.updatePost(id, { isLiked: result.liked, likeCount: result.count })
   } catch {
-    liked.value = !liked.value
-    if (likeCount.value !== null) {
-      likeCount.value += liked.value ? 1 : -1
-    }
+    // Rollback
+    liked.value = prevLiked
+    likeCount.value = prevCount
+    feed.updatePost(id, { isLiked: prevLiked, likeCount: prevCount })
     toast.add({ title: 'Could not update like', color: 'error', icon: 'i-lucide-triangle-alert' })
   } finally {
     liking.value = false
@@ -132,6 +161,7 @@ async function saveCaption() {
     })
     const merged = { ...post.value, ...updated }
     preloaded.value = merged
+    feed.updatePost(id, { caption: updated.caption })
     editingCaption.value = false
     toast.add({ title: 'Caption updated', color: 'success', icon: 'i-lucide-circle-check' })
   } catch {
@@ -208,12 +238,10 @@ onUnmounted(() => {
 
       <!-- Photo column -->
       <div class="lg:flex-1 lg:min-w-0 order-2 lg:order-1 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100dvh-8rem)]">
-        <NuxtImg
+        <img
           v-if="post"
           :src="freshPost ? post.url : (thumbnailUrl || post.url)"
           :alt="post.caption || `Photo by ${post.user.name}`"
-          sizes="sm:100vw md:800px lg:50vw"
-          format="webp"
           class="max-h-[calc(100dvh-12rem)] lg:max-h-full w-auto max-w-full object-contain rounded-xl mx-auto block"
           :style="{ viewTransitionName: `photo-${post.id}` }"
         />
@@ -275,6 +303,14 @@ onUnmounted(() => {
         <!-- Group chips -->
         <CollctPostGroupChips :groups="post.groups" />
 
+        <!-- Moment badge -->
+        <div v-if="post.isMoment" class="flex items-center gap-2">
+          <UBadge color="success" variant="subtle" size="sm">Moment</UBadge>
+          <span v-if="formattedCaptureTime" class="text-xs text-muted">
+            Captured at {{ formattedCaptureTime }}
+          </span>
+        </div>
+
         <!-- Caption + Like row -->
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1 min-w-0 space-y-1">
@@ -306,7 +342,7 @@ onUnmounted(() => {
             <template v-else>
               <UTextarea
                 v-model="editedCaption"
-                placeholder="Write a caption…"
+                placeholder="Write a caption..."
                 :rows="3"
                 :maxlength="500"
                 class="w-full"

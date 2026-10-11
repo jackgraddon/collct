@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { eq, and } from 'drizzle-orm'
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 
 export default defineEventHandler(async (event) => {
   rateLimit(`totp:verify:${getClientIp(event)}`, RATE_LIMITS.totp)

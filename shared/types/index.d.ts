@@ -49,6 +49,10 @@ declare global {
     captionHistory: Array<{ text: string | null; editedAt: string }> | null
     url: string
     createdAt: string | Date
+    isMoment?: boolean
+    momentCapturedAt?: string | Date | null
+    isLiked?: boolean
+    likeCount?: number | null
     user: {
       id: number
       name: string
@@ -66,6 +70,7 @@ declare global {
     color?: string | null
     isPublic: boolean
     ownerId: number | null
+    momentsEnabled?: boolean
     createdAt: string | Date
     role?: string
     members?: GroupMember[]
@@ -95,7 +100,7 @@ declare global {
 
   interface Notification {
     id: number
-    type: 'like' | 'comment' | 'group_join' | 'new_post'
+    type: 'like' | 'comment' | 'group_join' | 'new_post' | 'moment'
     isRead: boolean
     photoId: number | null
     commentId: number | null

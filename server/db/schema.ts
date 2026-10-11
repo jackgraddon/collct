@@ -12,6 +12,12 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   lastLoginAt: timestamp('last_login_at', { mode: 'date' }),
   toursCompleted: text('tours_completed').default('[]'),
+  // Per-type notification preferences (full suppression: no push, no in-app row)
+  notifyLike: boolean('notify_like').notNull().default(true),
+  notifyComment: boolean('notify_comment').notNull().default(true),
+  notifyGroupJoin: boolean('notify_group_join').notNull().default(true),
+  notifyNewPost: boolean('notify_new_post').notNull().default(true),
+  notifyMoment: boolean('notify_moment').notNull().default(true),
 });
 
 // Security and Authentication
@@ -62,6 +68,8 @@ export const photos = pgTable('photos', {
   caption: text('caption'),
   captionHistory: text('caption_history').default('[]'),
   captionEditedAt: timestamp('caption_edited_at', { mode: 'date' }),
+  isMoment: boolean('is_moment').notNull().default(false),
+  momentCapturedAt: timestamp('moment_captured_at', { mode: 'date' }),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
 });
 
@@ -138,6 +146,7 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'comment',
   'group_join',
   'new_post',
+  'moment',
 ])
 
 export const notifications = pgTable(
@@ -154,12 +163,17 @@ export const notifications = pgTable(
     photoId: integer('photo_id').references(() => photos.id, { onDelete: 'cascade' }),
     commentId: integer('comment_id').references(() => comments.id, { onDelete: 'cascade' }),
     groupId: text('group_id'),
+    notificationTag: text('notification_tag'),
     isRead: boolean('is_read').notNull().default(false),
+    dismissedAt: timestamp('dismissed_at', { mode: 'date' }),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },
   (t) => [
     index('notifications_user_id_idx').on(t.userId),
     index('notifications_user_read_idx').on(t.userId, t.isRead),
+    uniqueIndex('notifications_tag_active_unique')
+      .on(t.notificationTag)
+      .where(sql`${t.isRead} = false`),
   ],
 )
 
@@ -175,6 +189,7 @@ export const groups = pgTable('groups', {
   color: text('color'),
   isPublic: boolean('is_public').notNull().default(false),
   ownerId: integer('owner_id').references(() => users.id),
+  momentsEnabled: boolean('moments_enabled').notNull().default(true),
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   archivedAt: timestamp('archived_at', { mode: 'date' }),
 })
@@ -257,7 +272,10 @@ export const pendingAuthorizations = pgTable('pending_authorizations', {
   authorizationCode: text('authorization_code').unique(), // redirect flow only: exchanged for token
   appName: text('app_name'), // display name of the requesting app
   redirectUri: text('redirect_uri'), // redirect flow only
+  state: text('state'), // redirect flow: echoed back to client on redirect
   status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'denied' | 'expired'
+  codeChallenge: text('code_challenge'), // PKCE: base64url-encoded SHA-256 of code_verifier
+  codeChallengeMethod: text('code_challenge_method').default('S256'), // PKCE: only 'S256' supported
   createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
   approvedAt: timestamp('approved_at', { mode: 'date' }),
@@ -272,9 +290,10 @@ export const pushSubscriptions = pgTable(
     userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    platform: text('platform').notNull().default('web'), // 'web' | 'apns' | 'fcm'
     endpoint: text('endpoint').notNull(),
-    authKey: text('auth_key').notNull(),
-    p256dhKey: text('p256dh_key').notNull(),
+    authKey: text('auth_key'), // web only
+    p256dhKey: text('p256dh_key'), // web only
     userAgent: text('user_agent'),
     createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
   },
@@ -282,6 +301,20 @@ export const pushSubscriptions = pgTable(
     uniqueIndex('idx_push_subscription_unique').on(t.userId, t.endpoint),
   ],
 )
+
+// Presigned URL Cache
+
+export const presignedUrlCache = pgTable('presigned_url_cache', {
+  id: serial('id').primaryKey(),
+  blobPathname: text('blob_pathname').notNull().unique(),
+  presignedUrl: text('presigned_url').notNull(),
+  createdAt: timestamp('created_at', { mode: 'date' }).notNull().defaultNow(),
+  expiresAt: timestamp('expires_at', { mode: 'date' }).notNull(),
+  hitCount: integer('hit_count').notNull().default(0),
+  lastAccessedAt: timestamp('last_accessed_at', { mode: 'date' }),
+}, (t) => [
+  index('presigned_cache_expires_idx').on(t.expiresAt),
+])
 
 // Instance Config (key-value store for auto-generated secrets etc.)
 

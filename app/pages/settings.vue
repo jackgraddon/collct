@@ -31,6 +31,9 @@
               <UFormField label="Full Name" name="name">
                 <UInput v-model="accountState.name" class="w-full" />
               </UFormField>
+              <UFormField label="Username" name="username" hint="Letters, numbers, dots, underscores, hyphens">
+                <UInput v-model="accountState.username" maxlength="30" class="w-full" />
+              </UFormField>
               <UFormField label="Email" name="email">
                 <UInput v-model="accountState.email" type="email" class="w-full" />
               </UFormField>
@@ -57,7 +60,7 @@
 
       <template #notifications>
         <div class="my-4 space-y-4">
-          <p class="text-sm text-muted">Control whether you receive push notifications when friends interact with your photos.</p>
+          <p class="text-sm text-muted">Control which notifications you receive — push and in-app — and test delivery.</p>
 
           <div class="flex items-center gap-3 p-3 rounded-lg border border-(--ui-border)">
             <UIcon
@@ -67,14 +70,16 @@
             />
             <div class="flex-1">
               <p class="text-sm font-medium">
-                {{ isPushGranted ? 'Notifications enabled' : isPushDenied ? 'Notifications blocked' : 'Notifications not enabled' }}
+                {{ isPushGranted ? 'Notifications enabled' : isPushDenied ? 'Notifications blocked' : isPushPermissionGranted ? 'Permission granted' : 'Notifications not enabled' }}
               </p>
               <p class="text-xs text-muted mt-0.5">
                 {{ isPushDenied
                   ? 'You\'ll need to enable notifications in your browser settings.'
                   : isPushGranted
                     ? 'You\'ll receive push notifications for new likes, comments, and group joins.'
-                    : 'Enable notifications to get alerted when friends interact with your photos.'
+                    : isPushPermissionGranted
+                      ? 'Browser permission is granted but you need to re-subscribe to receive notifications.'
+                      : 'Enable notifications to get alerted when friends interact with your photos.'
                 }}
               </p>
             </div>
@@ -84,7 +89,7 @@
               size="xs"
               @click="enableNotifications"
             >
-              Enable
+              {{ isPushPermissionGranted ? 'Re-enable' : 'Enable' }}
             </UButton>
             <UButton
               v-else-if="isPushGranted"
@@ -95,6 +100,44 @@
             >
               Disable
             </UButton>
+          </div>
+
+          <div v-if="isPushGranted" class="flex items-center gap-3 p-3 rounded-lg border border-(--ui-border)">
+            <UIcon name="i-lucide-send" class="w-5 h-5 shrink-0 text-muted" />
+            <div class="flex-1">
+              <p class="text-sm font-medium">Test push delivery</p>
+              <p class="text-xs text-muted mt-0.5">
+                {{ testPushResult || 'Send yourself a test notification to verify delivery without waiting for an event.' }}
+              </p>
+            </div>
+            <UButton
+              color="neutral"
+              variant="outline"
+              size="xs"
+              :loading="testingPush"
+              @click="sendTestPush"
+            >
+              Send test
+            </UButton>
+          </div>
+
+          <div class="p-3 rounded-lg border border-(--ui-border)">
+            <p class="text-sm font-medium">Notify me about</p>
+            <p class="text-xs text-muted mt-0.5 mb-1">Turning a type off suppresses both the push and the in-app entry.</p>
+            <div
+              v-for="t in NOTIF_TYPES"
+              :key="t.key"
+              class="flex items-center justify-between gap-3 py-1.5"
+            >
+              <div class="flex-1">
+                <p class="text-sm">{{ t.label }}</p>
+                <p class="text-xs text-muted">{{ t.hint }}</p>
+              </div>
+              <USwitch
+                :model-value="notifPrefs[t.key]"
+                @update:model-value="(v) => setNotifPref(t.key, v)"
+              />
+            </div>
           </div>
         </div>
       </template>
@@ -342,6 +385,7 @@ const showOobe = ref(false)
 
 const isPushGranted = computed(() => permission.value === 'granted' && isSubscribed.value)
 const isPushDenied = computed(() => permission.value === 'denied')
+const isPushPermissionGranted = computed(() => permission.value === 'granted' && !isSubscribed.value)
 
 async function enableNotifications() {
   const granted = await requestPermission()
@@ -355,6 +399,73 @@ async function enableNotifications() {
 async function disableNotifications() {
   await unsubscribe()
   toast.add({ title: 'Notifications disabled', color: 'success' })
+}
+
+// Per-type notification preferences (push + in-app). A disabled type
+// suppresses new notifications of that type entirely.
+type NotifPrefKey = 'like' | 'comment' | 'groupJoin' | 'newPost' | 'moment'
+
+const NOTIF_TYPES: Array<{ key: NotifPrefKey; label: string; hint: string }> = [
+  { key: 'like', label: 'Likes', hint: 'When someone likes your photo.' },
+  { key: 'comment', label: 'Comments', hint: 'When someone comments on your photo.' },
+  { key: 'groupJoin', label: 'Group joins', hint: 'When someone joins your group.' },
+  { key: 'newPost', label: 'New posts', hint: 'When friends post new photos.' },
+  { key: 'moment', label: 'Moments', hint: 'Daily capture prompts and reminders.' },
+]
+
+const notifPrefs = reactive<Record<NotifPrefKey, boolean>>({
+  like: true,
+  comment: true,
+  groupJoin: true,
+  newPost: true,
+  moment: true,
+})
+
+watch(() => user.value?.notificationPrefs, (prefs) => {
+  if (prefs) Object.assign(notifPrefs, prefs)
+}, { immediate: true })
+
+async function setNotifPref(key: NotifPrefKey, value: boolean) {
+  const prev = notifPrefs[key]
+  notifPrefs[key] = value
+  try {
+    await $fetch('/api/user/notification-prefs', {
+      method: 'PATCH',
+      body: { [key]: value },
+    })
+  } catch {
+    notifPrefs[key] = prev
+    toast.add({ title: 'Could not update preference', color: 'error' })
+  }
+}
+
+const testingPush = ref(false)
+const testPushResult = ref<string | null>(null)
+
+async function sendTestPush() {
+  testingPush.value = true
+  testPushResult.value = null
+  try {
+    const res = await $fetch<{ results: Array<{ platform: string; status: string; error: string | null }> }>('/api/notifications/test', {
+      method: 'POST',
+    })
+    if (!res.results.length) {
+      testPushResult.value = 'No subscriptions found for this account.'
+    } else {
+      const failed = res.results.filter(r => r.status !== 'sent' && r.status !== 'deleted')
+      testPushResult.value = failed.length
+        ? `Delivery issue: ${failed.map(r => `${r.platform}: ${r.status}${r.error ? ` (${r.error})` : ''}`).join('; ')}`
+        : `Test push sent to ${res.results.length} subscription(s) — check your device.`
+    }
+  } catch (err: any) {
+    if (err?.statusCode === 429 || err?.data?.statusCode === 429) {
+      testPushResult.value = err?.data?.statusMessage || 'Too many test pushes — try again shortly.'
+    } else {
+      testPushResult.value = 'Test failed — are notifications enabled on this instance?'
+    }
+  } finally {
+    testingPush.value = false
+  }
 }
 
 // TOTP
@@ -453,6 +564,7 @@ const uploadingAvatar = ref(false)
 
 const accountState = reactive({
   name: user.value?.name ?? '',
+  username: user.value?.username ?? '',
   email: user.value?.email ?? '',
   avatarUrl: user.value?.avatarUrl ?? '',
 })
@@ -468,7 +580,7 @@ async function onAvatarChange(e: Event) {
   uploadingAvatar.value = true
   try {
     const form = new FormData()
-    form.append('file', file)
+    form.append('file', await convertToWebp(file, { maxDimension: 512 }))
 
     const { avatarUrl } = await $fetch<{ avatarUrl: string }>('/api/user/avatar', {
       method: 'PATCH',
@@ -489,6 +601,7 @@ async function onAvatarChange(e: Event) {
 
 function onResetAccount() {
   accountState.name = user.value?.name ?? ''
+  accountState.username = user.value?.username ?? ''
   accountState.email = user.value?.email ?? ''
   accountState.avatarUrl = user.value?.avatarUrl ?? ''
 }
@@ -500,6 +613,7 @@ async function onSaveAccount() {
       method: 'PATCH',
       body: {
         name: accountState.name,
+        username: accountState.username || undefined,
         email: accountState.email,
         avatarUrl: accountState.avatarUrl || null,
       },

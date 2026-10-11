@@ -695,12 +695,19 @@ A session cookie is set with recovery scope. The client should then call `POST /
   "id": 1,
   "name": "Jack",
   "username": "jack",
-  "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?...",
-  "hasSeenOobe": false
+  "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp",
+  "hasSeenOobe": false,
+  "notificationPrefs": {
+    "like": true,
+    "comment": true,
+    "groupJoin": true,
+    "newPost": true,
+    "moment": true
+  }
 }
 ```
 
-Note: `avatarUrl` is a presigned blob URL that expires. It is resolved from the stored pathname at response time.
+Note: `avatarUrl` is a stable `/api/blob/...` path with immutable caching. It is resolved from the stored pathname at response time.
 
 **Status codes:**
 - `200` — success
@@ -712,7 +719,7 @@ Note: `avatarUrl` is a presigned blob URL that expires. It is resolved from the 
 
 **Endpoint:** `PATCH /user/update`
 
-**Description:** Update the authenticated user's name and email.
+**Description:** Update the authenticated user's name, email, and username. Partial update — send only the fields to change. At least one field is required.
 
 **Authentication:** Required
 
@@ -721,12 +728,14 @@ Note: `avatarUrl` is a presigned blob URL that expires. It is resolved from the 
 ```json
 {
   "name": "Jack Graddon",
-  "email": "newemail@example.com"
+  "email": "newemail@example.com",
+  "username": "jack"
 }
 ```
 
-- `name` (required) — 1–100 characters
-- `email` (required) — valid email, max 255 characters
+- `name` (optional) — 1–100 characters
+- `email` (optional) — valid email, max 255 characters
+- `username` (optional) — 1–30 characters, letters, numbers, dots, underscores, and hyphens only. Must be unique.
 
 **Response:**
 
@@ -738,9 +747,52 @@ The session cookie is resealed with the updated values.
 
 **Status codes:**
 - `200` — success
-- `400` — invalid input
+- `400` — invalid input, or no fields to update
 - `401` — not authenticated
 - `404` — user not found
+- `409` — username is already taken
+
+---
+
+### Update Notification Preferences
+
+**Endpoint:** `PATCH /user/notification-prefs`
+
+**Description:** Update per-type notification preferences. Partial update — send only the keys to change. A disabled type suppresses both the push and the in-app entry for new notifications of that type (applies going forward; already-created rows are untouched).
+
+**Authentication:** Required
+
+**Request:**
+
+```json
+{
+  "like": true,
+  "comment": true,
+  "groupJoin": true,
+  "newPost": true,
+  "moment": false
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "notificationPrefs": {
+    "like": true,
+    "comment": true,
+    "groupJoin": true,
+    "newPost": true,
+    "moment": false
+  }
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid input, or no fields to update
+- `401` — not authenticated
 
 ---
 
@@ -762,11 +814,11 @@ The session cookie is resealed with the updated values.
 
 ```json
 {
-  "avatarUrl": "https://<presigned-url>/avatars/1-1720000000000.jpg?..."
+  "avatarUrl": "/api/blob/avatars/1-1720000000000.webp"
 }
 ```
 
-Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is automatically deleted.
+Returns the stable avatar URL (same form as `GET /user/me`). The previous avatar is automatically deleted.
 
 **Rate Limit:** 30 uploads per hour per user.
 
@@ -817,7 +869,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
     "id": 1,
     "username": "jack",
     "name": "Jack",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?...",
+    "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp",
     "createdAt": "2026-01-15T10:00:00.000Z"
   },
   "stats": {
@@ -880,11 +932,11 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
         }
       ],
       "createdAt": "2026-07-15T12:00:00.000Z",
-      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "url": "/api/blob/photos/1/1720000000000-abc123.webp",
       "user": {
         "id": 1,
         "name": "Jack",
-        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
       },
       "groups": [
         {
@@ -936,11 +988,13 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
       "caption": "so hot, and respectful.",
       "captionEditedAt": null,
       "createdAt": "2026-07-15T12:00:00.000Z",
-      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "isMoment": false,
+      "momentCapturedAt": null,
+      "url": "/api/blob/photos/1/1720000000000-abc123.webp",
       "user": {
         "id": 1,
         "name": "Jack",
-        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
       },
       "groups": [
         {
@@ -957,7 +1011,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 ```
 
 - `nextCursor` — a Unix timestamp in milliseconds to pass as `before` for the next page. `null` when there are no more results.
-- `url` — presigned blob URL for the photo image.
+- `url` — stable blob URL for the photo image (immutable, cache permanently).
 - `groups` — only includes groups that the viewer is a member of (visibility-filtered).
 
 **Status codes:**
@@ -989,11 +1043,13 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
   ],
   "blobPathname": "photos/1/1720000000000-abc123.jpg",
   "createdAt": "2026-07-15T12:00:00.000Z",
-  "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+  "isMoment": false,
+  "momentCapturedAt": null,
+  "url": "/api/blob/photos/1/1720000000000-abc123.webp",
   "user": {
     "id": 1,
     "name": "Jack",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+    "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
   },
   "groups": [
     {
@@ -1007,6 +1063,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 ```
 
 - `captionHistory` — present only if the caption has been edited. Array of `{ text, editedAt }` entries in chronological order.
+- `isMoment` — `true` if this photo was captured as part of a Moment.
+- `momentCapturedAt` — ISO timestamp of when the user captured the photo during the moment window (null for non-moment photos).
 
 **Status codes:**
 - `200` — success
@@ -1031,6 +1089,9 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 | `photo` | File | Yes | Image file (JPEG, PNG, WebP, GIF). Max 10 MB. |
 | `caption` | string | No | Text caption, max 500 characters |
 | `groupIds` | string | No | JSON array of group IDs (e.g. `"[10, 11]"`). Defaults to `[publicGroupId]` |
+| `isMoment` | string | No | Set to `"true"` to flag as a moment capture. Requires active moment window. |
+
+**Upload guidance:** The server stores the file as-is with no resizing or transcoding — there is no server-side image optimization. Clients SHOULD convert to WebP (longest edge ≤ 2048px, quality ~0.85) on-device before uploading, e.g. via `canvas.toBlob(blob, 'image/webp', 0.85)`. This keeps uploads small and fast. GIFs must be uploaded unmodified to preserve animation.
 
 **Response:**
 
@@ -1043,7 +1104,9 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
   "createdAt": "2026-07-15T12:00:00.000Z",
   "captionEditedAt": null,
   "captionHistory": null,
-  "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+  "isMoment": false,
+  "momentCapturedAt": null,
+  "url": "/api/blob/photos/1/1720000000000-abc123.webp"
 }
 ```
 
@@ -1051,7 +1114,8 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 - `200` — success
 - `400` — no photo provided
 - `401` — not authenticated
-- `403` — user is not a member of one or more specified groups
+- `403` — user is not a member of one or more specified groups, or moment validation failed
+- `409` — moment window not active, or already captured today
 - `413` — file too large (max 10 MB)
 - `415` — unsupported file type
 - `429` — rate limit exceeded (30 per hour)
@@ -1162,11 +1226,11 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
         }
       ],
       "createdAt": "2026-07-15T12:00:00.000Z",
-      "url": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?...",
+      "url": "/api/blob/photos/1/1720000000000-abc123.webp",
       "user": {
         "id": 1,
         "name": "Jack",
-        "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
       }
     }
   ],
@@ -1262,7 +1326,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
       "id": 2,
       "name": "Friend",
       "username": "friend",
-      "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+      "avatarUrl": "/api/blob/avatars/2-<timestamp>.webp"
     },
     "reactions": {
       "counts": {
@@ -1318,7 +1382,7 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
     "id": 1,
     "name": "Jack",
     "username": "jack",
-    "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+    "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
   },
   "reactions": {
     "counts": {
@@ -1384,6 +1448,31 @@ Returns a presigned blob URL (same as `GET /user/me`). The previous avatar is au
 **Status codes:**
 - `200` — success
 - `400` — invalid input
+- `401` — not authenticated
+- `403` — not the comment author
+- `404` — comment not found
+
+---
+
+### Delete a Comment
+
+**Endpoint:** `DELETE /comments/:id`
+
+**Description:** Delete a comment. Only the comment author can delete. Reactions on the comment are removed automatically. Notifications referencing the comment keep working via their photo link.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "ok": true
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid comment ID
 - `401` — not authenticated
 - `403` — not the comment author
 - `404` — comment not found
@@ -1459,6 +1548,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "ownerId": null,
       "icon": null,
       "color": null,
+      "momentsEnabled": true,
       "createdAt": "2026-01-01T00:00:00.000Z",
       "role": "member"
     },
@@ -1470,6 +1560,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "ownerId": 1,
       "icon": "👥",
       "color": "#ef4444",
+      "momentsEnabled": true,
       "createdAt": "2026-07-15T10:00:00.000Z",
       "role": "owner"
     }
@@ -1478,6 +1569,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
 ```
 
 - `role` — the authenticated user's role in the group: `owner`, `admin`, or `member`.
+- `momentsEnabled` — whether this group participates in Moments.
 
 **Status codes:**
 - `200` — success
@@ -1504,6 +1596,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
   "ownerId": 1,
   "icon": "👥",
   "color": "#ef4444",
+  "momentsEnabled": true,
   "createdAt": "2026-07-15T10:00:00.000Z",
   "archivedAt": null,
   "members": [
@@ -1514,7 +1607,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "joinedAt": "2026-07-15T10:00:00.000Z",
       "username": "jack",
       "name": "Jack",
-      "avatarUrl": "https://<presigned-url>/avatars/1-<timestamp>.jpg?..."
+      "avatarUrl": "/api/blob/avatars/1-<timestamp>.webp"
     },
     {
       "id": 2,
@@ -1523,7 +1616,7 @@ Returns the fresh per-type counts and the user's current reaction on this commen
       "joinedAt": "2026-07-15T10:05:00.000Z",
       "username": "friend",
       "name": "Friend",
-      "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+      "avatarUrl": "/api/blob/avatars/2-<timestamp>.webp"
     }
   ]
 }
@@ -1597,11 +1690,14 @@ Returns the fresh per-type counts and the user's current reaction on this commen
 {
   "name": "The Cool Boys",
   "icon": "😎",
-  "color": "#3b82f6"
+  "color": "#3b82f6",
+  "momentsEnabled": true
 }
 ```
 
 Any subset of fields can be provided; omitted fields are not changed. Setting `icon` or `color` to an empty string clears them.
+
+- `momentsEnabled` (optional) — whether this group participates in Moments. Defaults to `true`. When `false`, members cannot post moments to this group.
 
 **Response:**
 
@@ -1614,6 +1710,7 @@ Any subset of fields can be provided; omitted fields are not changed. Setting `i
   "ownerId": 1,
   "icon": "😎",
   "color": "#3b82f6",
+  "momentsEnabled": true,
   "createdAt": "2026-07-15T10:00:00.000Z",
   "archivedAt": null
 }
@@ -1844,24 +1941,27 @@ Share the code with others; they use it to join via `POST /groups/invites/redeem
       "isRead": false,
       "photoId": 42,
       "commentId": null,
-      "groupId": 10,
+      "groupId": [],
       "createdAt": "2026-07-15T12:00:00.000Z",
       "actor": {
         "id": 2,
         "name": "Friend",
         "username": "friend",
-        "avatarUrl": "https://<presigned-url>/avatars/2-<timestamp>.jpg?..."
+        "avatarUrl": "/api/blob/avatars/2-<timestamp>.webp"
       },
-      "photoUrl": "https://<presigned-url>/photos/1/1720000000000-abc123.jpg?..."
+      "photoUrl": "/api/blob/photos/1/1720000000000-abc123.webp"
     }
   ],
   "nextCursor": 1001
 }
 ```
 
-- `type` — notification type (e.g. `"like"`, `"comment"`, `"group_invite"`).
-- `photoUrl` — presigned thumbnail URL for the associated photo, if applicable.
+- `type` — notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"`.
+- `groupId` — array of group IDs (`[]` when none). Populated on `group_join` notifications; empty for likes, comments, posts, and moments. Always an array, never null.
+- `photoUrl` — stable blob URL for the associated photo thumbnail, if applicable.
 - `nextCursor` — notification ID to pass as `before` for the next page. `null` when there are no more results.
+
+**Like notification consolidation:** Multiple likes on the same photo are consolidated into a single notification. When a new like arrives on a photo that already has an active (unread) like notification, the existing notification is updated with the new like count rather than creating a duplicate. The `actor` field reflects the most recent liker. Push notifications for consolidated likes use the same `tag` value, so the OS replaces the previous notification in-place.
 
 **Status codes:**
 - `200` — success
@@ -1932,11 +2032,45 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ---
 
+### Dismiss Notification
+
+**Endpoint:** `PATCH /notifications/:id/dismiss`
+
+**Description:** Soft-delete a notification by setting `dismissedAt`. Used when the user explicitly clears a notification from the in-app notification view. The notification is hidden from the list but retained in the database until cleanup.
+
+**Authentication:** Required
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | number | Notification ID |
+
+**Response:**
+
+```json
+{ "ok": true }
+```
+
+**Status codes:**
+- `200` — success (notification dismissed or didn't exist)
+- `401` — not authenticated
+- `400` — invalid notification ID
+
+**Notes:**
+- OS-level dismiss (swiping away a push notification) does NOT call this endpoint. The server does not track OS-level dismiss — only explicit in-app dismissal.
+- Dismissed notifications are filtered from `GET /notifications` and `GET /notifications/unread-count`.
+- Old dismissed notifications are cleaned up automatically by the server (configurable retention, default 30 days).
+
+---
+
 ### Get VAPID Public Key
 
 **Endpoint:** `GET /notifications/vapid-key`
 
-**Description:** Returns the VAPID public key needed to subscribe to push notifications. Third-party clients use this key when calling `PushManager.subscribe()` (web) or equivalent platform push APIs.
+**Description:** Returns the VAPID public key needed to subscribe to push notifications. Third-party clients use this key when calling `PushManager.subscribe()` (web) or equivalent platform push APIs. Fetch it live at subscribe time — it is not baked into the web client build.
+
+**Key rotation:** the server operator may rotate VAPID keys. Subscriptions are bound to the key they were created with and stop delivering after a rotation. Clients should store the key used at subscribe time, re-fetch this endpoint on launch, and resubscribe (unsubscribe old endpoint + subscribe new) when it differs. The official web client implements this pattern — mirror it.
 
 **Authentication:** None
 
@@ -1959,16 +2093,17 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `POST /notifications/subscribe`
 
-**Description:** Register a push notification subscription. The server stores the subscription and uses it to send push notifications via Web Push (VAPID). If the subscription endpoint already exists for this user, it is updated.
+**Description:** Register a push notification subscription. Web Push (VAPID) is the only platform with a server-side sender — one subscription serves both classic service-worker push and Declarative Web Push. The `platform` field is left open (`ios` / `android`) so future native clients can register ahead of sender support. If the subscription endpoint already exists for this user, it is updated.
 
 **Note:** This endpoint is gated by the `COLLCT_NOTIFICATIONS_ENABLED` config variable. Returns `403` when notifications are disabled on the instance.
 
 **Authentication:** Required
 
-**Request:**
+**Request (Web):**
 
 ```json
 {
+  "platform": "web",
   "endpoint": "https://fcm.googleapis.com/fcm/send/...",
   "keys": {
     "auth": "abc123...",
@@ -1977,19 +2112,48 @@ Exactly one of `ids` or `all: true` must be provided.
 }
 ```
 
-- `endpoint` (required) — the push service endpoint URL.
-- `keys.auth` (required) — authentication secret.
-- `keys.p256dh` (required) — client public key.
+- `platform` (optional) — `"web"` (default), `"ios"`, or `"android"`
+- `endpoint` (required) — the push service endpoint URL (web) or push token (native)
+- `keys.auth` (required for web) — authentication secret
+- `keys.p256dh` (required for web) — client public key
+
+**Request (native — future):**
+
+```json
+{
+  "platform": "ios",
+  "endpoint": "a1b2c3d4e5f6..."
+}
+```
+
+- `endpoint` (required) — APNs device token (`ios`) or FCM registration token (`android`), 10+ chars
+- Native rows are accepted and stored but skipped at send time — no sender is configured server-side yet.
 
 **Response:**
 
 ```json
-{ "success": true }
+{
+  "subscribed": true,
+  "platform": "web",
+  "endpoint": "https://fcm.googleapis.com/fcm/send/..."
+}
 ```
+
+**Platform validation:**
+
+| Platform | Endpoint format | Required fields |
+|----------|----------------|-----------------|
+| `web` | Valid URL | `keys.auth`, `keys.p256dh` |
+| `ios` / `android` | String, 10+ chars | — (stored, skipped at send time) |
+
+**Behavior:**
+- A user can have multiple subscriptions (e.g. laptop + phone web push).
+- If another user already has the same endpoint registered, the request is rejected.
+- Dead subscriptions are pruned automatically: endpoints that return `410`/`404` are deleted at send time.
 
 **Status codes:**
 - `200` — success
-- `400` — invalid subscription object
+- `400` — invalid subscription object, invalid platform, or endpoint registered to another user
 - `401` — not authenticated
 - `403` — notifications disabled on this instance
 
@@ -1999,7 +2163,7 @@ Exactly one of `ids` or `all: true` must be provided.
 
 **Endpoint:** `POST /notifications/unsubscribe`
 
-**Description:** Remove a push notification subscription by endpoint URL.
+**Description:** Remove a push notification subscription by endpoint URL or push token.
 
 **Authentication:** Required
 
@@ -2011,7 +2175,7 @@ Exactly one of `ids` or `all: true` must be provided.
 }
 ```
 
-- `endpoint` (required) — the push service endpoint URL to remove.
+- `endpoint` (required) — the push endpoint URL or device token to remove.
 
 **Response:**
 
@@ -2026,21 +2190,352 @@ Exactly one of `ids` or `all: true` must be provided.
 
 ---
 
-## Utility Endpoints
+### Send Test Push Notification
 
-### Get Blob File
+**Endpoint:** `POST /notifications/test`
 
-**Endpoint:** `GET /blob/*`
+**Description:** Send yourself a test push notification. Unlike event pushes (fire-and-forget), this returns the per-endpoint delivery results — use it to distinguish "timing never fired" from "delivery failed" when debugging. Endpoint suffixes (last 8 chars) are returned instead of full URLs.
 
-**Description:** Serve a blob file by pathname. Only available in development — returns 404 in production. In production, clients should use the presigned URLs returned by other endpoints.
+**Authentication:** Required
 
-**Authentication:** None
+**Response:**
+
+```json
+{
+  "tested": true,
+  "results": [
+    { "platform": "web", "status": "sent", "error": null, "endpointSuffix": "abc123xy" }
+  ]
+}
+```
+
+- `status` per endpoint: `"sent"`, `"deleted"` (dead subscription pruned), `"failed"` (with `error`), or `"skipped"` (no sender for platform).
+- Empty `results` means the account has no subscriptions.
 
 **Status codes:**
-- `200` — success (dev only)
-- `404` — not found (always in production)
+- `200` — success (even if individual deliveries failed — check `results`)
+- `401` — not authenticated
+- `403` — notifications disabled on this instance
+- `429` — rate-limited (5 per 10 minutes per user)
 
 ---
+
+### Push Notification Payload Format
+
+The server sends notifications to all of a user's subscriptions, transforming the message for each platform.
+
+#### Web Push
+
+Uses [Declarative Web Push](https://w3c.github.io/push-api/#declarative-push-message) (W3C draft). The browser displays the notification natively from the payload without running service worker JavaScript.
+
+**Payload structure:**
+
+```json
+{
+  "web_push": 8030,
+  "mutable": true,
+  "notification": {
+    "title": "Collct",
+    "body": "Friend liked your photo",
+    "icon": "/icon-192x192.png",
+    "tag": "like_42",
+    "navigate": "/post/42",
+    "data": {
+      "notificationId": 1001,
+      "type": "like",
+      "photoId": 42
+    }
+  }
+}
+```
+
+**Envelope fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `web_push` | number | Magic value `8030` — opts into declarative parsing. Browsers that don't recognize this field ignore it and fall back to the service worker. |
+| `mutable` | boolean | When `true`, fires a `push` event to the service worker for optional enhancement (e.g. dismiss tracking). |
+
+**Notification fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `title` | string | Instance name (from `COLLCT_INSTANCE_NAME`) or `"Collct"` |
+| `body` | string | Notification text. For likes: `"1 person liked your photo"` or `"N people liked your photo"` when consolidated. |
+| `icon` | string | App icon path |
+| `tag` | string | OS-level deduplication tag. Same tag = replacement, not stacking. |
+| `navigate` | string | Deep-link URL opened when user taps the notification. Browser navigates natively. |
+| `data` | object | Opaque data passed through to the service worker (for dismiss handling). |
+
+**`data` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `notificationId` | number | The DB notification ID. Used by clients for in-app dismiss handling. |
+| `type` | string | Notification type: `"like"`, `"comment"`, `"group_join"`, `"new_post"`, or `"moment"`. Self test-pushes carry `"test"`. Clients should degrade gracefully on unknown types rather than failing the whole payload. |
+| `photoId` | number | Photo ID, if applicable |
+| `groupId` | number | Group ID, if applicable |
+| `status` | string | Moment pushes only: `"active"` (window open) or `"expired"` (window closed). Use to show/hide capture UI. |
+
+**`navigate` URLs by notification type:**
+
+| Type | Navigate URL |
+|------|-------------|
+| `like` | `/post/{photoId}` |
+| `comment` | `/post/{photoId}` |
+| `group_join` | `/groups/{groupId}` |
+| `new_post` | `/post/{photoId}` |
+| `moment` | `/?moment=capture` |
+
+**Tag format by notification type:**
+
+| Type | Tag | Consolidates? |
+|------|-----|---------------|
+| `like` | `like_{photoId}` | Yes — multiple likes on same photo produce one notification |
+| `comment` | `comment_{photoId}_{commentId}` | No |
+| `group_join` | `group_join_{groupId}_{userId}` | No |
+| `new_post` | `new_post_{photoId}_{userId}` | No |
+| `moment` | `moment_{userId}_{YYYY-MM-DD}` | No |
+
+**Browser compatibility:**
+
+| Browser | Behavior |
+|---------|----------|
+| Safari 18.4+ | Declarative display. `mutable: true` fires push event to service worker for dismiss tracking. |
+| Chrome, Firefox (current) | Ignores `web_push: 8030`. Falls back to service worker `push` handler. |
+| Chrome, Firefox (future) | Will adopt spec when standardized. |
+
+**Service worker requirements:**
+
+Third-party clients implementing a service worker should:
+
+1. Always call `showNotification()` in the `push` handler — this works for both DWP (Safari replaces seamlessly) and legacy (Chrome/Firefox display).
+2. In `notificationclick`, use `data.navigate` if present, otherwise compute from `data.type`/`data.photoId`/`data.groupId`.
+3. OS-level dismiss (`notificationclose`) does NOT modify server state. In-app dismiss uses `PATCH /api/notifications/:id/dismiss`.
+
+```js
+self.addEventListener('push', (event) => {
+  const data = event.data?.json()
+  const isDwp = data?.web_push === 8030 && data?.notification
+  const notif = isDwp ? data.notification : data
+  const options = {
+    body: notif.body,
+    icon: notif.icon || '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    tag: notif.tag || 'collct-notification',
+    data: { ...notif.data, navigate: notif.navigate },
+  }
+  event.waitUntil(self.registration.showNotification(notif.title || 'Collct', options))
+})
+```
+
+#### Native (iOS / Android — future)
+
+Native push senders are not implemented. Clients may register with
+`platform: "ios"` / `"android"` (push token as `endpoint`); those rows are
+stored and skipped at send time until a sender exists. When senders are
+added, dispatch will route by `platform` in `notifyUser()`.
+
+---
+
+## Moments
+
+Moments is a BeReal-style feature: once per day, during a randomly-chosen time within an admin-configured window, users get a notification and a limited window to capture and share a photo. A moment is a regular photo with an `isMoment` flag — no separate data model.
+
+### Get Today's Moment State
+
+**Endpoint:** `GET /moments/today`
+
+**Description:** Returns the current moment state for today, including whether the capture window is active, when it occurs, and which groups the user can post moments to.
+
+**Authentication:** Required
+
+**Response:**
+
+```json
+{
+  "enabled": true,
+  "windowStart": "18:00",
+  "windowEnd": "20:00",
+  "momentTime": "2026-08-15T19:23:00.000Z",
+  "captureDuration": 300,
+  "allowPostToAll": true,
+  "allowLibraryFallback": false,
+  "status": "active",
+  "capturedToday": false,
+  "userMomentsGroups": [
+    {
+      "id": 10,
+      "name": "The Boys",
+      "slug": "the-boys",
+      "icon": "👥",
+      "color": "#ef4444",
+      "isPublic": false
+    }
+  ]
+}
+```
+
+- `enabled` — whether Moments is enabled instance-wide (`COLLCT_MOMENTS_ENABLED`)
+- `windowStart` / `windowEnd` — the admin-configured daily window (server timezone, `HH:mm`)
+- `momentTime` — ISO timestamp of today's randomly chosen moment (null if disabled or not yet computed)
+- `captureDuration` — seconds users have to capture once notified
+- `allowPostToAll` — whether users can post to all moment groups at once (single toggle UX). Controlled by `COLLCT_MOMENTS_ALLOW_POST_TO_ALL`
+- `allowLibraryFallback` — whether desktop users can fall back to photo library selection. Controlled by `COLLCT_MOMENTS_ALLOW_LIBRARY_FALLBACK`
+- `status` — `"before"` (window hasn't opened), `"active"` (capture now!), `"after"` (window closed), `"disabled"` (feature off)
+- `capturedToday` — whether the authenticated user already posted a moment today
+- `userMomentsGroups` — groups where the user can post moments (groups with `momentsEnabled = true` that the user belongs to)
+
+**Notes:**
+- The first request each day lazily computes the random moment time and persists it. All subsequent requests (and clients) see the same time.
+- Notification fan-out is gated on the window: a request before the moment time sends nothing (and stays eligible); the first request inside the window sends the start push. Notifications use a deterministic tag (`moment_{userId}_{date}`) so each user has at most one active moment notification per day.
+- When the window closes, the first request also triggers expiry notifications — updating the notification body to "You missed today's moment..." and marking it as read — but only if the start push went out. If the window passed with no activity at all, the day is silently marked sent.
+- If the user has already captured today, their moment notification is automatically dismissed on this request.
+- On platforms with cron support (Cloudflare Workers), a scheduled task pre-computes the time at midnight.
+- **Recommended:** Use the `GET /moments/trigger` endpoint with an external cron service or Vercel Cron so notifications fire regardless of user activity. The lazy path here serves as a fallback.
+
+**Status codes:**
+- `200` — success
+- `401` — not authenticated
+
+---
+
+### Server-Side Trigger
+
+**Endpoint:** `GET /moments/trigger`
+
+**Description:** Compute the daily moment time and send notifications when the capture window is active. Intended for external cron services and Vercel Cron — no user authentication required. Protected by a shared secret token. Fan-out is gated on the random moment time: ticks before it only compute/store the time and send nothing; the start push fires on the first tick inside the window.
+
+**Authentication:** Bearer token (`CRON_SECRET` env var)
+
+**Request:**
+
+```
+GET /api/moments/trigger
+Authorization: Bearer <CRON_SECRET>
+```
+
+**Response:**
+
+```json
+{
+  "ok": true,
+  "momentTime": "2026-08-15T19:23:00.000Z",
+  "notificationsSent": true,
+  "expirySent": false
+}
+```
+
+- `notificationsSent` — `true` if this tick sent the start notifications (first tick inside the window), `false` if the window hasn't opened yet or they were already sent (idempotent).
+- `expirySent` — `true` if this trigger also sent expiry notifications (window had already closed and the start push went out earlier), `false` otherwise.
+
+**Setup (Vercel):**
+
+Add a `vercel.json` to your project root:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/moments/trigger",
+      "schedule": "* * * * *"
+    }
+  ]
+}
+```
+
+Set `CRON_SECRET` as an environment variable in your Vercel dashboard. Vercel automatically injects this as a Bearer token on cron-triggered requests. (Note: per-minute schedules require a paid plan; on Hobby, use the longest cadence available — the lazy `GET /moments/today` path covers gaps when users open the app.)
+
+**Setup (external cron service):**
+
+Use any cron service (cron-job.org, GitHub Actions, etc.) to send:
+
+```
+GET https://<your-instance>/api/moments/trigger
+Authorization: Bearer <your-CRON_SECRET>
+```
+
+**Timing / delivery mode (`COLLCT_MOMENTS_MODE`, default `external`):** in `external` mode, poll this endpoint every minute during the configured moment window — required on serverless (Vercel has no persistent process). In `internal` mode (Docker/bare-Node), the server ticks itself on the same cadence and no cron is needed. A once-daily tick is NOT sufficient in either mode — a tick before the random moment time sends nothing, and the push only fires on a tick (or app open) inside the window. The trigger is idempotent, and overlapping triggers can't double-send (atomic per-day claim) — so running the scheduler and an external cron together is safe.
+
+**Status codes:**
+- `200` — success
+- `401` — missing or invalid bearer token
+- `500` — `CRON_SECRET` not configured on the server
+
+---
+
+### Moment Upload Flow
+
+Moment uploads use the same `POST /photos` endpoint as regular uploads, with additional fields and validation.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `photo` | File | Yes | Image file (JPEG, PNG, WebP, GIF). Max 10 MB. |
+| `caption` | string | No | Text caption, max 500 characters |
+| `groupIds` | string | No | JSON array of group IDs. For moments, only groups with `momentsEnabled = true` are allowed. |
+| `isMoment` | string | No | Set to `"true"` to flag this as a moment capture |
+| `momentCapturedAt` | string | No | ISO timestamp of when the photo was captured (shutter tap time). If omitted, server time is used. The server validates that this timestamp falls within the capture window, allowing late uploads as long as the photo was captured in-time. |
+
+**Additional validation when `isMoment = "true"`:**
+
+1. Global moments must be enabled (`COLLCT_MOMENTS_ENABLED=true`)
+2. The provided `momentCapturedAt` timestamp (or server time if omitted) must fall within the capture window (momentTime → momentTime + captureDuration)
+3. User must not have already captured a moment today
+4. All specified groups must have `momentsEnabled = true`
+
+**Error responses for moment uploads:**
+
+| Status | Message | Meaning |
+|--------|---------|---------|
+| `403` | "Moments are not enabled on this instance" | Global toggle is off |
+| `403` | "Moments are not enabled in group(s): ..." | One or more groups opted out |
+| `409` | "The moment window has not opened yet" | Too early |
+| `409` | "The moment window has closed" | Too late |
+| `409` | "You've already captured your moment today" | Already posted a moment today |
+
+**Response:** Same as regular photo upload, with additional moment fields:
+
+```json
+{
+  "id": 43,
+  "userId": 1,
+  "caption": "Dinner time!",
+  "blobPathname": "photos/1/1720000000000-abc123.jpg",
+  "createdAt": "2026-08-15T19:25:00.000Z",
+  "captionEditedAt": null,
+  "captionHistory": null,
+  "isMoment": true,
+  "momentCapturedAt": "2026-08-15T19:25:00.000Z",
+  "url": "/api/blob/photos/1/1720000000000-abc123.webp"
+}
+```
+
+---
+
+### Moment Notification Lifecycle
+
+Moment notifications follow a lifecycle driven by the server. Each user receives at most one moment notification per day, identified by a deterministic tag (`moment_{userId}_{YYYY-MM-DD}`).
+
+**States:**
+
+| State | Push body | Trigger |
+|-------|-----------|---------|
+| Initial | `"Your moment is ready! Capture within N minutes"` | Window opens (lazy compute or cron trigger) |
+| Expired | `"You missed today's moment, but you can still post to the feed like usual"` | Window closes (lazy compute or cron trigger) |
+| Dismissed | (notification marked read) | User captures a moment, or user manually dismisses |
+
+**Server behavior:**
+- **Window opens:** Creates an in-app notification and sends a push with the initial body. Uses the same `tag` for all updates, so the OS replaces rather than stacks.
+- **Window closes:** Finds all active (unread) moment notifications for today, updates the body to the expired message, marks them as read, and sends a replacement push.
+- **User captures:** The `POST /photos` endpoint with `isMoment=true` automatically dismisses (marks read) the user's active moment notification.
+- **User visits `GET /moments/today`:** If the user has already captured, their notification is dismissed. If the window has closed, expiry notifications are triggered.
+
+**Client handling:**
+- The client can display a local countdown using `momentTime` + `captureDuration` from the `GET /moments/today` response.
+- The push `data.status` field indicates `"active"` or `"expired"` — the client can use this to show/hide capture UI.
+- When the user dismisses the push notification, the service worker does nothing — OS-level dismiss does not modify server state.
 
 ### Get Version
 
@@ -2055,10 +2550,30 @@ Exactly one of `ids` or `all: true` must be provided.
 ```json
 {
   "name": "collct",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "uptime": 3600
 }
 ```
+
+---
+
+## Blob Files
+
+Image `url` fields returned by the API (photos, avatars, notification thumbnails) are stable paths served by this endpoint — not expiring presigned URLs.
+
+### Get Blob File
+
+**Endpoint:** `GET /blob/:pathname`
+
+**Description:** Serve a blob file by pathname, e.g. `GET /api/blob/photos/1/1720000000000-abc123.webp`. Available in all environments. Responses carry `Cache-Control: public, max-age=31536000, immutable` — blob content never changes once written, so clients should cache permanently (including in service workers / offline caches).
+
+There is no server-side image optimization or resizing proxy — the original uploaded bytes are served. Clients render these URLs directly in `<img>` tags.
+
+**Authentication:** None
+
+**Status codes:**
+- `200` — success (image bytes with appropriate `Content-Type`)
+- `404` — not found
 
 ---
 
@@ -2100,6 +2615,8 @@ To **restrict** CORS to specific origins, set `COLLCT_ALLOWED_ORIGINS` (comma-se
 COLLCT_ALLOWED_ORIGINS=https://collct.vercel.app,https://localhost:3000
 ```
 
+Each entry is either an exact origin (`https://app.example.com`) or a wildcard (`*.example.com`, also accepted as `*example.com`). A wildcard matches the bare domain **and** all subdomains, HTTPS only — e.g. `*.collct.ing` allows `https://collct.ing` and `https://app.collct.ing` but not `http://collct.ing`.
+
 **Headers:**
 
 - `Access-Control-Allow-Origin` — the matched request origin (or `*` if unrestricted)
@@ -2140,6 +2657,18 @@ The OpenAPI 3.1 specification for the full API is available at `/openapi.yaml` o
 - When querying feeds or user photos, results are automatically filtered by the authenticated user's group membership.
 - The Public group is a system group that all users are automatically joined to. It cannot be deleted or left.
 
+### Moments
+
+- Call `GET /moments/today` to get the current moment state. This is idempotent and safe to call frequently.
+- The response includes `status`: `"before"`, `"active"`, `"after"`, or `"disabled"`.
+- When `status` is `"active"`, the client should show the capture UI with a countdown timer (`captureDuration` seconds remaining).
+- When `status` is `"before"`, the client can show "Today's moment window: HH:MM – HH:MM" without revealing the exact time.
+- When `status` is `"after"`, the client should indicate the window has passed.
+- Push notifications with `type: "moment"` deep-link to `/?moment=capture` (the canonical URL the server sends) to auto-open the upload modal in moment mode.
+- Moment uploads use `POST /photos` with `isMoment=true` in the form data. The server validates the capture window server-side.
+- Photo responses include `isMoment` and `momentCapturedAt` fields for display in feeds and detail views.
+- Groups include a `momentsEnabled` field. Group admins can toggle this via `PATCH /groups/:id`.
+
 ### Pagination
 
 Feed and user-photo endpoints support cursor-based pagination:
@@ -2150,9 +2679,10 @@ Feed and user-photo endpoints support cursor-based pagination:
 
 ### Blob Storage
 
-- Image URLs returned by endpoints are presigned Vercel Blob URLs with time-limited delegation tokens (valid for ~1 hour).
-- Clients should not cache these URLs long-term; re-fetch them frequently.
-- In development, blob URLs are served via the `/api/blob/*` proxy endpoint instead.
+- Image URLs returned by endpoints (`url`, `avatarUrl`, `photoUrl`) are stable `/api/blob/<pathname>` paths, served by `GET /api/blob/*` with `Cache-Control: public, max-age=31536000, immutable`. They never expire.
+- Clients should cache these URLs permanently — in-memory, HTTP cache, and service-worker/offline caches. Re-fetching metadata endpoints to "refresh" URLs is unnecessary.
+- There is no image-resizing or format-conversion proxy. Render blob URLs directly in `<img>` tags.
+- The server stores uploads as-is. Clients SHOULD convert photos to WebP (longest edge ≤ 2048px, quality ~0.85) on-device before upload. Upload GIFs unmodified to preserve animation.
 
 ### Rate Limiting
 
@@ -2179,6 +2709,106 @@ When a rate limit is exceeded, the server responds with `429 Too Many Requests`:
 ```
 
 The `data.retryAfter` field indicates the number of seconds until the limit resets.
+
+---
+
+## Dev-Only Endpoints
+
+> **⚠️ These endpoints are only available in development (`pnpm dev`).** They are not registered in production builds and return `403` if somehow reached. They require the `modules/devtools-login/` module, which is auto-discovered and gated behind `nuxt.options.dev`.
+
+These endpoints power the **Dev Tools** panel in Nuxt DevTools, providing one-click login and Moments state controls for testing.
+
+### Login As
+
+**Endpoint:** `POST /api/dev/login-as`
+
+**Description:** Log in as a test user without needing a passkey. Sets an encrypted session cookie via `setUserSession()`. Only accepts pre-defined test usernames.
+
+**Request:**
+
+```json
+{
+  "username": "test1"
+}
+```
+
+- `username` (required) — must be one of: `test1`, `test2`, `test3`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "username": "test1"
+}
+```
+
+**Status codes:**
+- `200` — success, session cookie set
+- `400` — invalid username
+- `403` — endpoint not available in production
+- `404` — user not found (run `pnpm db:seed:dev` first)
+
+---
+
+### Moment Control
+
+**Endpoint:** `POST /api/dev/moment-control`
+
+**Description:** Control the Moments feature state for testing. Manipulates the moment time and notification flags in the database, then triggers or skips notification fan-out as needed. Moments must be enabled (`COLLCT_MOMENTS_ENABLED=true`).
+
+**Request:**
+
+```json
+{
+  "action": "open"
+}
+```
+
+- `action` (required) — one of:
+  - `open` — Sets moment time to 5 seconds ago (window immediately active), resets notification flag, triggers notification fan-out
+  - `close` — Sets moment time far in the past (past capture window, "after" state)
+  - `reset` — Sets moment time 5 minutes in the future ("before" state)
+  - `clearCaptured` — Clears the captured-today flag for a specific user (requires `username`)
+- `username` (optional, required for `clearCaptured`) — must be one of: `test1`, `test2`, `test3`
+
+**Response (open/close/reset):**
+
+```json
+{
+  "success": true,
+  "action": "open",
+  "momentTime": "2026-08-22T06:38:00.000Z",
+  "status": "during",
+  "message": "Moment window opened. Status: during. Notifications sent."
+}
+```
+
+**Response (clearCaptured):**
+
+```json
+{
+  "success": true,
+  "action": "clearCaptured",
+  "username": "test1",
+  "clearedPhotos": 3,
+  "message": "Cleared captured-today flag for test1 (3 photo(s))."
+}
+```
+
+**Status codes:**
+- `200` — success
+- `400` — invalid action, missing username for `clearCaptured`, or Moments not enabled
+- `403` — endpoint not available in production
+- `404` — user not found (for `clearCaptured`)
+
+---
+
+### DevTools Panel
+
+**Endpoint:** `GET /__dev-login__/panel`
+
+**Description:** HTML iframe panel displayed in the Nuxt DevTools "Dev Tools" tab. Provides a UI for the Login and Moment Control endpoints above. Not intended to be accessed directly — loaded as an iframe by Nuxt DevTools.
 
 ---
 

@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq, and, gt } from 'drizzle-orm'
 import { z } from 'zod'
 
@@ -36,6 +36,9 @@ export default defineEventHandler(async (event) => {
   const redirectUrl = new URL(auth.redirectUri!)
   redirectUrl.searchParams.set('code', auth.authorizationCode!)
   redirectUrl.searchParams.set('server_url', serverUrl)
+  if (auth.state) {
+    redirectUrl.searchParams.set('state', auth.state)
+  }
 
   return { redirect_url: redirectUrl.toString() }
 })

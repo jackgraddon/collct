@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { z } from 'zod'
 
 const bodySchema = z.object({

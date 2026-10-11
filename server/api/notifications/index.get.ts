@@ -1,4 +1,4 @@
-import { db, schema } from '@nuxthub/db'
+import { db, schema } from '~~/server/utils/db'
 import { desc, eq, and, sql, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -10,7 +10,10 @@ export default defineEventHandler(async (event) => {
   const before = query.before ? Number(query.before) : null
 
   // Build base conditions
-  const conditions = [eq(schema.notifications.userId, userId)]
+  const conditions = [
+    eq(schema.notifications.userId, userId),
+    sql`${schema.notifications.dismissedAt} IS NULL`,
+  ]
   if (before) {
     conditions.push(sql`${schema.notifications.id} < ${before}`)
   }

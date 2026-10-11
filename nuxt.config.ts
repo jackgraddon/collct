@@ -22,7 +22,7 @@ export default defineNuxtConfig({
   },
 
   site: {
-    url: "https://collct.vercel.app/",
+    url: process.env.COLLCT_APP_URL || 'http://localhost:3000',
     name: instanceName,
   },
 
@@ -35,12 +35,15 @@ export default defineNuxtConfig({
   hub: {
     blob: process.env.COLLCT_BLOB_DIR
       ? { driver: 'fs', dir: process.env.COLLCT_BLOB_DIR }
-      : { driver: 'vercel-blob', access: 'private' },
-    db: 'postgresql',
+      : { driver: 'fs', dir: '.data/blob' },
+    db: {
+      dialect: 'postgresql',
+      driver: 'postgres-js',
+      applyMigrationsDuringBuild: false,
+      applyMigrationsDuringDev: false,
+    },
     kv: false,
   },
-
-  image: { provider: 'vercel' },
 
   session: {
     maxAge: sessionMaxAge,
@@ -52,6 +55,7 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
+    cronSecret: process.env.CRON_SECRET || '',
     session: {
       maxAge: sessionMaxAge,
       cookie: {
@@ -78,7 +82,19 @@ export default defineNuxtConfig({
     },
   },
 
-  experimental: {},
+  experimental: {
+    tasks: true,
+  },
+
+  nitro: {
+    scheduledTasks: {
+      // Pre-computes daily moment time. Fires on platforms with cron support.
+      // Falls back to lazy computation in GET /api/moments/today if not supported.
+      '0 0 * * *': ['moments:daily-compute'],
+      // Clean up expired presigned URL cache entries daily at 2 AM
+      '0 2 * * *': ['cleanup:presigned-cache'],
+    },
+  },
 
   app: {
     head: {
@@ -186,7 +202,7 @@ export default defineNuxtConfig({
       runtimeCaching: offlineModeEnabled ? [
         {
           // Avatars — StaleWhileRevalidate (change occasionally, small, accessed everywhere)
-          urlPattern: /\/_vercel\/image\?url=.*avatars/i,
+          urlPattern: /\/api\/blob\/avatars\//i,
           handler: 'StaleWhileRevalidate',
           options: {
             cacheName: 'collct-avatars-cache',
@@ -195,21 +211,11 @@ export default defineNuxtConfig({
           },
         },
         {
-          // All other proxied images (photos, thumbnails) — CacheFirst (immutable)
-          urlPattern: /\/_vercel\/image\?url=.*/i,
+          // All other images (photos, thumbnails) — CacheFirst (immutable)
+          urlPattern: /\/api\/blob\//i,
           handler: 'CacheFirst',
           options: {
             cacheName: 'collct-images-cache',
-            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
-            cacheableResponse: { statuses: [0, 200] },
-          },
-        },
-        {
-          // Direct blob URLs — CacheFirst
-          urlPattern: /^https:\/\/.*\.blob\.vercel-storage\.com\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'collct-blob-cache',
             expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
             cacheableResponse: { statuses: [0, 200] },
           },
@@ -262,7 +268,6 @@ export default defineNuxtConfig({
     '@nuxt/fonts',
     '@vite-pwa/nuxt',
     '@nuxt/eslint',
-    '@nuxt/image',
     '@nuxt/icon',
     'nuxt-auth-utils',
     '@nuxtjs/seo',
