@@ -18,7 +18,6 @@ Collct is a new kind of social media that puts you and your friends at the cente
 - **Photo Sharing** — Upload photos with captions, likes, comments, and emoji reactions.
 - **Passkey Authentication** — Passwordless login via WebAuthn (no passwords to remember).
 - **Two-Factor Auth** — Optional TOTP 2FA with recovery codes for extra security.
-- **QR Codes** — Generate QR codes for easy group invites.
 - **PWA Support** — Installable as a progressive web app on any device.
 
 ## Tech Stack
