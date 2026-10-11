@@ -28,21 +28,7 @@ Collct is a new kind of social media that puts you and your friends at the cente
 
 ## Deployment
 
-### Vercel (Recommended)
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/jackgraddon/collct)
-
-The fastest way to get started is clicking the deploy button above. Just make sure to set the NUXT_SESSION_PASSWORD environment variable or else it will fail to build. You should also make sure the databases for SQL and Blob are created and connected, as the button won't do that for you!
-
-Or if you prefer the manual way:
-
-1. Fork this repo
-2. Import on [vercel.com/new](https://vercel.com/new)
-3. Link a [Neon](https://neon.tech) PostgreSQL database from the Vercel dashboard
-4. Add Vercel Blob storage from the Vercel dashboard
-5. Deploy
-
-### Docker (Self-Hosted)
+### Docker (Self-Hosted) (Preferred)
 
 Collct provides a multi-stage Dockerfile and Compose files for self-hosted deployment.
 
